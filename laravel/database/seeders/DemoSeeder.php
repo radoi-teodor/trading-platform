@@ -13,6 +13,13 @@ class DemoSeeder extends Seeder
     {
         $now = Carbon::now();
 
+        // Skip if demo user already exists
+        $existing = DB::table('users')->where('email', 'demo@example.com')->first();
+        if ($existing) {
+            $this->command->info('Demo data already exists, skipping.');
+            return;
+        }
+
         // 1. Demo user
         $userId = DB::table('users')->insertGetId([
             'name' => 'Demo User',

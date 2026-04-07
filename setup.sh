@@ -128,7 +128,13 @@ cd "$PROJECT_DIR/laravel"
 # Environment file
 if [ ! -f .env ]; then
     cp "$PROJECT_DIR/.env.example" .env
-    info "Created .env from .env.example"
+    info "Created laravel/.env from .env.example"
+fi
+
+# Also copy to project root for Python agents
+if [ ! -f "$PROJECT_DIR/.env" ]; then
+    cp "$PROJECT_DIR/.env.example" "$PROJECT_DIR/.env"
+    info "Created root .env for Python agents"
 fi
 
 # Composer dependencies
@@ -174,9 +180,21 @@ fi
 source venv/bin/activate
 
 # Install dependencies
-info "Installing Python dependencies..."
-pip install --upgrade pip -q
-pip install -r requirements.txt -q 2>/dev/null || pip install -r requirements.txt
+info "Installing Python dependencies (this may take a minute)..."
+pip install --upgrade pip -q 2>/dev/null || true
+if pip install -r requirements.txt -q 2>/dev/null; then
+    info "Python dependencies installed."
+else
+    warn "Quiet install failed, retrying with output..."
+    pip install -r requirements.txt
+fi
+
+# Verify key packages
+if python -c "import redis; import sqlalchemy; import pandas; print('OK')" 2>/dev/null | grep -q "OK"; then
+    info "Python packages verified."
+else
+    error "Some Python packages failed to import. Check errors above."
+fi
 
 deactivate
 cd "$PROJECT_DIR"

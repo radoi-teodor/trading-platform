@@ -67,18 +67,26 @@ try {
     Write-Host "  [WARN] Claude CLI not found. AI features will not work." -ForegroundColor DarkYellow
 }
 
-# Redis (optional check)
+# Redis (optional check) — supports both redis-cli and memurai-cli
 $redisAvailable = $false
-try {
-    $redisPing = (redis-cli ping 2>&1)
-    if ($redisPing -eq "PONG") {
-        Write-Host "  [OK] Redis is running" -ForegroundColor Green
-        $redisAvailable = $true
-    } else {
-        Write-Host "  [SKIP] Redis not responding. Platform will work without it." -ForegroundColor DarkYellow
-    }
-} catch {
-    Write-Host "  [SKIP] Redis not found. Platform will work without it (no real-time pub/sub)." -ForegroundColor DarkYellow
+$redisCli = $null
+
+# Try redis-cli first, then memurai-cli
+foreach ($cli in @("redis-cli", "memurai-cli", "C:\Program Files\Memurai\memurai-cli.exe")) {
+    try {
+        $redisPing = (& $cli ping 2>&1)
+        if ($redisPing -eq "PONG") {
+            $redisCli = $cli
+            break
+        }
+    } catch { }
+}
+
+if ($redisCli) {
+    Write-Host "  [OK] Redis is running (via $redisCli)" -ForegroundColor Green
+    $redisAvailable = $true
+} else {
+    Write-Host "  [SKIP] Redis/Memurai not detected. Platform will work without it (no real-time pub/sub)." -ForegroundColor DarkYellow
 }
 
 Write-Host ""
@@ -101,7 +109,7 @@ if (-not (Test-Path $laravelDir)) {
     exit 1
 }
 
-# Copy .env file
+# Copy .env file to laravel/
 $envSource = Join-Path $ProjectRoot ".env.example"
 $envDest = Join-Path $laravelDir ".env"
 if (-not (Test-Path $envDest)) {
@@ -115,22 +123,33 @@ if (-not (Test-Path $envDest)) {
     Write-Host "  [OK] .env file already exists" -ForegroundColor Green
 }
 
+# Also copy to project root for Python agents
+$rootEnv = Join-Path $ProjectRoot ".env"
+if (-not (Test-Path $rootEnv)) {
+    if (Test-Path $envSource) {
+        Copy-Item $envSource $rootEnv
+        Write-Host "  [OK] Copied .env.example to root .env (for Python agents)" -ForegroundColor Green
+    }
+}
+
 # Composer install
-Write-Host "  Installing Composer dependencies..." -ForegroundColor Gray
+Write-Host "  Installing Composer dependencies (this may take a minute)..." -ForegroundColor Gray
 Push-Location $laravelDir
-try {
-    composer install --no-interaction 2>&1 | Out-Null
+$composerOutput = composer install --no-interaction 2>&1
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "  [ERROR] Composer install failed:" -ForegroundColor Red
+    $composerOutput | Select-Object -Last 5 | ForEach-Object { Write-Host "    $_" -ForegroundColor Red }
+} else {
     Write-Host "  [OK] Composer dependencies installed" -ForegroundColor Green
-} catch {
-    Write-Host "  [ERROR] Composer install failed: $_" -ForegroundColor Red
 }
 
 # Generate app key
-try {
-    php artisan key:generate --no-interaction 2>&1 | Out-Null
+$keyOutput = php artisan key:generate --no-interaction 2>&1
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "  [ERROR] Key generation failed:" -ForegroundColor Red
+    Write-Host "    $keyOutput" -ForegroundColor Red
+} else {
     Write-Host "  [OK] Application key generated" -ForegroundColor Green
-} catch {
-    Write-Host "  [ERROR] Key generation failed: $_" -ForegroundColor Red
 }
 
 # Create SQLite database
@@ -144,19 +163,21 @@ if (-not (Test-Path $dbFile)) {
 }
 
 # Run migrations
-try {
-    php artisan migrate --no-interaction --force 2>&1 | Out-Null
+$migrateOutput = php artisan migrate --no-interaction --force 2>&1
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "  [ERROR] Migrations failed:" -ForegroundColor Red
+    $migrateOutput | Select-Object -Last 5 | ForEach-Object { Write-Host "    $_" -ForegroundColor Red }
+} else {
     Write-Host "  [OK] Database migrations completed" -ForegroundColor Green
-} catch {
-    Write-Host "  [ERROR] Migrations failed: $_" -ForegroundColor Red
 }
 
 # Seed database
-try {
-    php artisan db:seed --no-interaction --force 2>&1 | Out-Null
+$seedOutput = php artisan db:seed --no-interaction --force 2>&1
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "  [ERROR] Database seeding failed:" -ForegroundColor Red
+    $seedOutput | Select-Object -Last 5 | ForEach-Object { Write-Host "    $_" -ForegroundColor Red }
+} else {
     Write-Host "  [OK] Database seeded" -ForegroundColor Green
-} catch {
-    Write-Host "  [ERROR] Database seeding failed: $_" -ForegroundColor Red
 }
 
 Pop-Location
@@ -189,11 +210,25 @@ if (-not (Test-Path $agentsDir)) {
         # Install requirements
         $reqFile = Join-Path $agentsDir "requirements.txt"
         if (Test-Path $reqFile) {
-            Write-Host "  Installing Python dependencies..." -ForegroundColor Gray
+            Write-Host "  Installing Python dependencies (this may take a minute)..." -ForegroundColor Gray
             $pipPath = Join-Path $venvDir "Scripts\pip.exe"
             if (Test-Path $pipPath) {
-                & $pipPath install -r requirements.txt 2>&1 | Out-Null
-                Write-Host "  [OK] Python dependencies installed" -ForegroundColor Green
+                $pipOutput = & $pipPath install -r requirements.txt 2>&1
+                $pipExitCode = $LASTEXITCODE
+                if ($pipExitCode -ne 0) {
+                    Write-Host "  [ERROR] pip install failed:" -ForegroundColor Red
+                    $pipOutput | Select-Object -Last 10 | ForEach-Object { Write-Host "    $_" -ForegroundColor Red }
+                } else {
+                    # Verify key packages are importable
+                    $pythonExe = Join-Path $venvDir "Scripts\python.exe"
+                    $verifyResult = & $pythonExe -c "import redis; import sqlalchemy; import pandas; print('OK')" 2>&1
+                    if ($verifyResult -match "OK") {
+                        Write-Host "  [OK] Python dependencies installed and verified" -ForegroundColor Green
+                    } else {
+                        Write-Host "  [WARN] Dependencies installed but verification failed:" -ForegroundColor DarkYellow
+                        Write-Host "    $verifyResult" -ForegroundColor DarkYellow
+                    }
+                }
             } else {
                 Write-Host "  [ERROR] pip not found in venv" -ForegroundColor Red
             }
