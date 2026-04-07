@@ -36,6 +36,9 @@ class PromptBuilder:
                     "urgency": "immediate | wait_for_dip | end_of_day",
                     "confidence": "0.0–1.0",
                     "reasoning": "string",
+                    "reentry_allowed": "boolean (default false) – if true, bot re-enters after TP/SL",
+                    "max_entries": "number (default 1) – max times to enter this trade today",
+                    "entry_condition": "price_below | price_above (buy when price <= entry_price, or sell when price >= entry_price)",
                 }
             ],
             "positions_to_close": [
@@ -86,15 +89,34 @@ class PromptBuilder:
 
         # ── System instruction ───────────────────────────────────────────
         sections.append(
-            "SYSTEM: You are an expert AI trading strategist. "
+            "SYSTEM: You are an expert AI trading strategist for a DAY TRADING platform. "
             "Respond ONLY with valid JSON conforming exactly to the schema "
             "provided at the end of this prompt. Do NOT include any markdown, "
-            "explanation, or text outside the JSON object."
+            "explanation, or text outside the JSON object.\n\n"
+            "DAY TRADING RULES:\n"
+            "- You can specify trades that the bot will execute MULTIPLE TIMES throughout the day.\n"
+            "- If reentry_allowed is true, after a position closes (take-profit or stop-loss hit), "
+            "the bot will re-enter the position if the entry condition is met again.\n"
+            "- Use entry_price as the trigger level. The bot monitors prices every 30 seconds.\n"
+            "- entry_condition 'price_below' means buy when price drops to or below entry_price. "
+            "'price_above' means sell/short when price rises to or above entry_price.\n"
+            "- max_entries controls how many times the bot can enter the same trade in one day.\n"
+            "- Think in terms of scalping and intraday momentum. Set tight stop-losses and take-profits."
         )
 
         # ── Section 1: User profile ──────────────────────────────────────
+        broker_type = context.get("broker_type", "paper")
+        broker_info = {
+            "paper": "Paper broker (simulated) — supports all symbols (stocks, crypto, forex)",
+            "binance": "Binance — ONLY crypto pairs (BTC, ETH, BNB, SOL, etc. traded against USDT). Do NOT recommend stocks like AAPL/MSFT.",
+            "alpaca": "Alpaca — US stocks and ETFs only. Do NOT recommend crypto.",
+            "xtb": "XTB — Forex, stocks CFDs, indices, commodities.",
+        }.get(broker_type, "Unknown broker")
+
         sections.append(
             "=== SECTION 1: USER PROFILE ===\n"
+            f"Active broker: {broker_type} — {broker_info}\n"
+            f"IMPORTANT: Only recommend symbols that are tradeable on {broker_type}.\n"
             f"Risk tolerance: {user.get('risk_tolerance', 'moderate')}\n"
             f"Preferred markets: {', '.join(user.get('markets', ['US equities']))}\n"
             f"Available capital: ${user.get('capital', 0):,.2f}\n"
@@ -168,6 +190,22 @@ class PromptBuilder:
             + "\n".join(news_lines or ["  (no recent news)"])
             + "\n\nPer-symbol aggregation:\n"
             + "\n".join(agg_lines or ["  (none)"])
+        )
+
+        # ── Section 4b: Recent trade history ─────────────────────────────
+        recent_trades = context.get("recent_trades", [])
+        trades_lines: list[str] = []
+        for t in recent_trades[:20]:
+            trades_lines.append(
+                f"  {t.get('executed_at', '?')} | {t['side'].upper()} {t['symbol']} "
+                f"qty={t['quantity']} @ ${t['price']:.2f}  "
+                f"P&L=${t.get('pnl', 0):.2f}  fee=${t.get('fee', 0):.2f}"
+            )
+        sections.append(
+            "=== SECTION 4b: RECENT TRADE HISTORY (from broker) ===\n"
+            "These are actual executed trades from the broker account. "
+            "Use this to understand current exposure and recent performance.\n"
+            + "\n".join(trades_lines or ["  (no recent trades)"])
         )
 
         # ── Section 5: Yesterday's results ───────────────────────────────

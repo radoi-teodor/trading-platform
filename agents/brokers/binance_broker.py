@@ -56,13 +56,17 @@ class BinanceBroker(BaseBroker):
         self.client = None
         self.logger.info("Binance disconnected")
 
+    # Stablecoins counted as cash balance
+    STABLECOINS = {"USDT", "USDC", "BUSD", "FDUSD", "TUSD", "DAI"}
+
     def get_balance(self) -> float:
         assert self.client is not None
         account = self.client.get_account()
+        total = 0.0
         for b in account.get("balances", []):
-            if b["asset"] == "USDT":
-                return float(b["free"])
-        return 0.0
+            if b["asset"] in self.STABLECOINS:
+                total += float(b["free"])
+        return total
 
     def get_positions(self) -> list[Position]:
         assert self.client is not None
@@ -70,7 +74,7 @@ class BinanceBroker(BaseBroker):
         positions: list[Position] = []
         for b in account.get("balances", []):
             qty = float(b["free"]) + float(b["locked"])
-            if qty > 0 and b["asset"] not in ("USDT", "USD", "BUSD"):
+            if qty > 0 and b["asset"] not in self.STABLECOINS and b["asset"] != "USD":
                 symbol = b["asset"] + "USDT"
                 try:
                     ticker = self.client.get_symbol_ticker(symbol=symbol)
@@ -117,7 +121,7 @@ class BinanceBroker(BaseBroker):
         side_map = {"buy": SIDE_BUY, "sell": SIDE_SELL}
 
         params: dict[str, Any] = {
-            "symbol": symbol,
+            "symbol": self._to_binance_symbol(symbol),
             "side": side_map.get(side, side.upper()),
             "type": type_map.get(order_type, order_type.upper()),
             "quantity": quantity,
@@ -159,21 +163,36 @@ class BinanceBroker(BaseBroker):
         result = self.client.get_order(symbol=parts[0], orderId=int(parts[1]))
         return self._convert_order(result)
 
+    @staticmethod
+    def _to_binance_symbol(symbol: str) -> str:
+        """Convert common symbol formats to Binance format (e.g. BTC-USD → BTCUSDT)."""
+        s = symbol.upper()
+        if s.endswith("-USD"):
+            return s.replace("-USD", "USDT")
+        if s.endswith("-USDT"):
+            return s.replace("-USDT", "USDT")
+        # If already looks like Binance format (BTCUSDT), return as-is
+        if s.endswith("USDT") or s.endswith("USDC") or s.endswith("BTC"):
+            return s
+        # Try appending USDT for bare symbols like "BTC" or "ETH"
+        return s + "USDT"
+
     def get_ticker_price(self, symbol: str) -> float:
         assert self.client is not None
-        ticker = self.client.get_symbol_ticker(symbol=symbol)
+        binance_sym = self._to_binance_symbol(symbol)
+        ticker = self.client.get_symbol_ticker(symbol=binance_sym)
         return float(ticker["price"])
 
     def get_account_info(self) -> AccountInfo:
         assert self.client is not None
         account = self.client.get_account()
-        usdt = 0.0
+        cash = 0.0
         total = 0.0
         for b in account.get("balances", []):
             free = float(b["free"])
             locked = float(b["locked"])
-            if b["asset"] == "USDT":
-                usdt = free
+            if b["asset"] in self.STABLECOINS:
+                cash += free
                 total += free + locked
             elif (free + locked) > 0:
                 try:
@@ -181,7 +200,7 @@ class BinanceBroker(BaseBroker):
                     total += (free + locked) * float(ticker["price"])
                 except Exception:
                     pass
-        return AccountInfo(equity=total, cash=usdt, buying_power=usdt, currency="USDT")
+        return AccountInfo(equity=total, cash=cash, buying_power=cash, currency="USD")
 
     # ── Binance-specific extras ──────────────────────────────────────────
 

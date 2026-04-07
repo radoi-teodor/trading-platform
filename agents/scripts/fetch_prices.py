@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
-"""Fetch historical OHLCV data and store in the database.
+"""Fetch historical OHLCV data and output as JSON.
 
 Usage: python fetch_prices.py SYMBOL [DAYS]
 Example: python fetch_prices.py AAPL 90
+         python fetch_prices.py BTC 90    (auto-converts to BTC-USD for yfinance)
+         python fetch_prices.py ETH-USD 90
 
-Tries broker APIs first (Binance for crypto, Alpaca for stocks),
-then falls back to yfinance.
-Outputs JSON array to stdout.
+Crypto symbols (BTC, ETH, SOL, etc.) are auto-normalized:
+- For yfinance: BTC → BTC-USD
+- For Binance:  BTC → BTCUSDT
 """
 
 import json
@@ -15,17 +17,47 @@ import os
 from datetime import datetime, timedelta
 from pathlib import Path
 
-# Add project root to path for imports
-project_root = str(Path(__file__).resolve().parent.parent.parent)
-sys.path.insert(0, project_root)
+# Known crypto base symbols
+CRYPTO_BASES = {
+    "BTC", "ETH", "BNB", "SOL", "XRP", "ADA", "DOGE", "DOT",
+    "AVAX", "MATIC", "LINK", "UNI", "ATOM", "LTC", "FIL",
+    "NEAR", "APT", "ARB", "OP", "INJ", "TIA", "SUI", "SEI",
+    "PEPE", "SHIB", "WIF", "BONK", "RENDER", "FET", "TAO",
+}
+
+
+def is_crypto(symbol: str) -> bool:
+    """Check if symbol is a crypto asset."""
+    upper = symbol.upper()
+    base = upper.replace("-USD", "").replace("USDT", "").replace("-USDT", "")
+    return base in CRYPTO_BASES or "-USD" in upper or upper.endswith("USDT")
+
+
+def to_yfinance_symbol(symbol: str) -> str:
+    """Normalize symbol for yfinance (crypto needs -USD suffix)."""
+    upper = symbol.upper()
+    if not is_crypto(upper):
+        return upper  # stocks work as-is
+
+    # Strip any existing suffix
+    base = upper.replace("-USD", "").replace("USDT", "").replace("-USDT", "")
+    return f"{base}-USD"
+
+
+def to_binance_symbol(symbol: str) -> str:
+    """Normalize symbol for Binance API (crypto needs USDT suffix)."""
+    upper = symbol.upper()
+    base = upper.replace("-USD", "").replace("USDT", "").replace("-USDT", "")
+    return f"{base}USDT"
 
 
 def fetch_from_yfinance(symbol: str, days: int) -> list[dict]:
     """Fetch from yfinance (no API key needed)."""
     import yfinance as yf
+    yf_symbol = to_yfinance_symbol(symbol)
     end = datetime.now()
     start = end - timedelta(days=days)
-    ticker = yf.Ticker(symbol)
+    ticker = yf.Ticker(yf_symbol)
     df = ticker.history(start=start.strftime("%Y-%m-%d"), end=end.strftime("%Y-%m-%d"))
     if df.empty:
         return []
@@ -45,8 +77,7 @@ def fetch_from_yfinance(symbol: str, days: int) -> list[dict]:
 def fetch_from_binance(symbol: str, days: int) -> list[dict]:
     """Fetch from Binance public API (no key needed for klines)."""
     import requests
-    # Convert symbol format: BTC-USD -> BTCUSDT
-    binance_symbol = symbol.replace("-USD", "USDT").replace("-", "")
+    binance_symbol = to_binance_symbol(symbol)
     end_ms = int(datetime.now().timestamp() * 1000)
     start_ms = int((datetime.now() - timedelta(days=days)).timestamp() * 1000)
     url = "https://api.binance.com/api/v3/klines"
@@ -75,8 +106,13 @@ def fetch_from_binance(symbol: str, days: int) -> list[dict]:
 
 def fetch_from_alphavantage(symbol: str, days: int) -> list[dict]:
     """Fetch from Alpha Vantage (needs API key)."""
-    from agents.config import Config
-    if not Config.ALPHAVANTAGE_API_KEY:
+    project_root = str(Path(__file__).resolve().parent.parent.parent)
+    sys.path.insert(0, project_root)
+    try:
+        from agents.config import Config
+        if not Config.ALPHAVANTAGE_API_KEY:
+            return []
+    except Exception:
         return []
     import requests
     url = "https://www.alphavantage.co/query"
@@ -107,13 +143,6 @@ def fetch_from_alphavantage(symbol: str, days: int) -> list[dict]:
     return records
 
 
-def is_crypto(symbol: str) -> bool:
-    """Check if symbol looks like crypto."""
-    crypto_patterns = ["BTC", "ETH", "BNB", "SOL", "XRP", "ADA", "DOGE", "DOT", "USDT", "USDC"]
-    upper = symbol.upper().replace("-USD", "").replace("USDT", "")
-    return upper in crypto_patterns or "-USD" in symbol.upper()
-
-
 def main():
     if len(sys.argv) < 2:
         print(json.dumps({"error": "Usage: fetch_prices.py SYMBOL [DAYS]"}))
@@ -125,7 +154,6 @@ def main():
     records = []
 
     # Try sources in priority order
-    sources = []
     if is_crypto(symbol):
         sources = ["binance", "yfinance"]
     else:

@@ -346,6 +346,31 @@ def _gather_context(
         except (json.JSONDecodeError, TypeError):
             pass
 
+    # Recent trade history (last 20 trades from DB)
+    trade_rows = db.execute(
+        text(
+            "SELECT t.symbol, t.side, t.quantity, t.price_cents, t.pnl_cents, "
+            "       t.fee_cents, t.executed_at "
+            "FROM trades t "
+            "JOIN portfolios p ON p.id = t.portfolio_id "
+            "WHERE p.user_id = :uid "
+            "ORDER BY t.executed_at DESC LIMIT 20"
+        ),
+        {"uid": user_id},
+    ).fetchall()
+
+    recent_trades = []
+    for r in trade_rows:
+        recent_trades.append({
+            "symbol": r[0],
+            "side": r[1],
+            "quantity": float(r[2]),
+            "price": float(r[3]) / 100.0,
+            "pnl": float(r[4]) / 100.0 if r[4] else 0,
+            "fee": float(r[5]) / 100.0 if r[5] else 0,
+            "executed_at": str(r[6]),
+        })
+
     # Constraints — only allow symbols from the user's watchlist
     constraints = {
         "max_position_pct": user_cfg.get("max_position_pct", 20),
@@ -366,46 +391,164 @@ def _gather_context(
         "portfolio": portfolio,
         "market_data": market_data,
         "news": news,
+        "recent_trades": recent_trades,
         "yesterday_results": yesterday,
         "constraints": constraints,
+        "broker_type": user_cfg.get("broker_type", "paper"),
     }
 
 
 # ── Broker balance sync ─────────────────────────────────────────────────
 
 def _sync_broker_balance(user_id: int, broker: Any, db: Session) -> None:
-    """Sync the real broker balance to the portfolios table so Laravel can display it."""
+    """Sync real broker state (balance, positions, trades) to DB for Laravel to display."""
     try:
         account = broker.get_account_info()
         balance_cents = int(round(account.cash * 100))
         equity_cents = int(round(account.equity * 100))
 
-        # Update portfolio balance
+        # Get portfolio ID
+        row = db.execute(
+            text("SELECT id FROM portfolios WHERE user_id = :uid LIMIT 1"),
+            {"uid": user_id},
+        ).fetchone()
+        if not row:
+            return
+        portfolio_id = row[0]
+
+        # Update portfolio balance (cash only, NOT equity — dashboard adds positions separately)
         db.execute(
-            text(
-                "UPDATE portfolios SET balance_cents = :balance "
-                "WHERE user_id = :uid"
-            ),
-            {"balance": balance_cents, "uid": user_id},
+            text("UPDATE portfolios SET balance_cents = :balance WHERE id = :pid"),
+            {"balance": balance_cents, "pid": portfolio_id},
         )
 
-        # Also update open positions' current prices
+        # Sync positions from broker
         positions = broker.get_positions()
+        now = datetime.now(timezone.utc)
+
+        # Get existing open positions in DB
+        existing = db.execute(
+            text("SELECT id, symbol FROM positions WHERE portfolio_id = :pid AND closed_at IS NULL"),
+            {"pid": portfolio_id},
+        ).fetchall()
+        existing_symbols = {r[1]: r[0] for r in existing}
+
+        broker_symbols = set()
         for pos in positions:
+            broker_symbols.add(pos.symbol)
             price_cents = int(round(pos.current_price * 100))
-            db.execute(
-                text(
-                    "UPDATE positions SET current_price_cents = :price "
-                    "WHERE portfolio_id = (SELECT id FROM portfolios WHERE user_id = :uid LIMIT 1) "
-                    "AND symbol = :sym AND closed_at IS NULL"
-                ),
-                {"price": price_cents, "uid": user_id, "sym": pos.symbol},
-            )
+            entry_cents = int(round(pos.avg_cost * 100)) if pos.avg_cost else price_cents
+            qty = pos.quantity
+
+            if pos.symbol in existing_symbols:
+                # Update existing position
+                db.execute(
+                    text(
+                        "UPDATE positions SET current_price_cents = :price, "
+                        "quantity = :qty, avg_entry_price_cents = :entry "
+                        "WHERE id = :id"
+                    ),
+                    {"price": price_cents, "qty": qty, "entry": entry_cents, "id": existing_symbols[pos.symbol]},
+                )
+            else:
+                # Insert new position from broker
+                db.execute(
+                    text(
+                        "INSERT INTO positions (portfolio_id, symbol, quantity, avg_entry_price_cents, "
+                        "current_price_cents, side, opened_at, created_at, updated_at) "
+                        "VALUES (:pid, :sym, :qty, :entry, :price, 'long', :now, :now, :now)"
+                    ),
+                    {"pid": portfolio_id, "sym": pos.symbol, "qty": qty,
+                     "entry": entry_cents, "price": price_cents, "now": now},
+                )
+
+        # Close positions that no longer exist on broker
+        for sym, pos_id in existing_symbols.items():
+            if sym not in broker_symbols:
+                db.execute(
+                    text("UPDATE positions SET closed_at = :now WHERE id = :id"),
+                    {"now": now, "id": pos_id},
+                )
+
+        # Sync recent trades from broker (if broker supports it)
+        try:
+            _sync_broker_trades(user_id, portfolio_id, broker, db)
+        except Exception:
+            pass  # Not all brokers support trade history
 
         db.commit()
-        logger.debug("Synced balance for user %d: $%.2f cash, $%.2f equity", user_id, account.cash, account.equity)
+        logger.debug(
+            "Synced user %d: $%.2f equity, %d positions",
+            user_id, account.equity, len(positions),
+        )
     except Exception as exc:
         logger.warning("Balance sync failed for user %d: %s", user_id, exc)
+
+
+def _sync_broker_trades(user_id: int, portfolio_id: int, broker: Any, db: Session) -> None:
+    """Sync trade history from broker to the trades table."""
+    # Get the most recent trade timestamp we have
+    last_row = db.execute(
+        text("SELECT MAX(executed_at) FROM trades WHERE portfolio_id = :pid"),
+        {"pid": portfolio_id},
+    ).fetchone()
+    last_synced = last_row[0] if last_row and last_row[0] else None
+
+    # For Binance, fetch trades per symbol from positions
+    if not hasattr(broker, 'client'):
+        return
+
+    now = datetime.now(timezone.utc)
+
+    # Get symbols we care about (from positions + recent orders)
+    symbols_to_check = set()
+    positions = broker.get_positions()
+    for pos in positions:
+        symbols_to_check.add(pos.symbol)
+
+    # Also check common symbols
+    for sym in symbols_to_check:
+        try:
+            binance_sym = sym.replace("-USD", "USDT")
+            if not binance_sym.endswith("USDT"):
+                binance_sym += "USDT"
+
+            raw_trades = broker.client.get_my_trades(symbol=binance_sym, limit=20)
+            for t in raw_trades:
+                trade_time = datetime.fromtimestamp(t["time"] / 1000, tz=timezone.utc)
+
+                # Skip if we already have this trade (check by time + symbol)
+                if last_synced and str(trade_time) <= str(last_synced):
+                    continue
+
+                side = "buy" if t["isBuyer"] else "sell"
+                price_cents = int(round(float(t["price"]) * 100))
+                qty = float(t["qty"])
+                fee_cents = int(round(float(t["commission"]) * float(t.get("price", 1)) * 100))
+
+                # Create order record
+                order_id = db.execute(
+                    text(
+                        "INSERT INTO orders (portfolio_id, symbol, type, side, quantity, "
+                        "price_cents, status, filled_at, created_at, updated_at) "
+                        "VALUES (:pid, :sym, 'market', :side, :qty, :price, 'filled', :time, :time, :time)"
+                    ),
+                    {"pid": portfolio_id, "sym": sym, "side": side, "qty": qty,
+                     "price": price_cents, "time": trade_time},
+                ).lastrowid
+
+                # Create trade record
+                db.execute(
+                    text(
+                        "INSERT INTO trades (order_id, portfolio_id, symbol, side, quantity, "
+                        "price_cents, fee_cents, executed_at, created_at, updated_at) "
+                        "VALUES (:oid, :pid, :sym, :side, :qty, :price, :fee, :time, :time, :time)"
+                    ),
+                    {"oid": order_id, "pid": portfolio_id, "sym": sym, "side": side,
+                     "qty": qty, "price": price_cents, "fee": fee_cents, "time": trade_time},
+                )
+        except Exception:
+            continue
 
 
 # ── User config loader ──────────────────────────────────────────────────

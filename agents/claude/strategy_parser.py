@@ -221,11 +221,20 @@ class StrategyParser:
                 allowed_symbols
                 and allowed_symbols != "any"
                 and isinstance(allowed_symbols, list)
-                and symbol not in [s.upper() for s in allowed_symbols]
             ):
-                raise StrategyValidationError(
-                    f"{label}: symbol '{symbol}' is not in the allowed list"
-                )
+                # Normalize both sides for comparison: BTC, BTC-USD, BTCUSDT should all match
+                def _normalize(s: str) -> str:
+                    s = s.upper()
+                    for suffix in ("USDT", "USDC", "BUSD", "-USD", "-USDT"):
+                        if s.endswith(suffix):
+                            s = s[: -len(suffix)]
+                    return s
+
+                allowed_normalized = {_normalize(s) for s in allowed_symbols}
+                if _normalize(symbol) not in allowed_normalized:
+                    raise StrategyValidationError(
+                        f"{label}: symbol '{symbol}' is not in the allowed list"
+                    )
 
             # Max position size (percentage of equity) – we can only flag it
             # here; actual dollar validation happens at execution time.

@@ -1,13 +1,12 @@
 """
 TradingBot – executes a DailyStrategy for a single user throughout the day.
 
-Main loop runs every 30 seconds:
-1. Fetch current prices from Redis cache
-2. Execute planned trades when urgency conditions are met
-3. Monitor stop-loss and take-profit on open positions
-4. Check watchlist alert conditions
-5. Enforce risk limits (daily loss cap)
-6. Update heartbeat in Redis
+Supports day-trading with multiple entries/exits per symbol:
+1. Fetch current prices every 30 seconds
+2. Enter positions when strategy entry conditions are met
+3. Exit when take-profit or stop-loss triggers
+4. Re-enter if reentry_allowed and max_entries not exceeded
+5. Track daily trade count, win/loss, and P&L
 """
 
 from __future__ import annotations
@@ -24,7 +23,7 @@ from ..brokers.base import BaseBroker, OrderResult
 
 
 class TradingBot:
-    """Executes a trading strategy for a single user."""
+    """Executes a trading strategy for a single user with day-trading support."""
 
     LOOP_INTERVAL = 30  # seconds
 
@@ -44,16 +43,42 @@ class TradingBot:
         self.logger = logging.getLogger(f"{__name__}.user_{user_id}")
 
         self._running = False
-        self._pending_trades: list[dict[str, Any]] = list(strategy.get("trades", []))
         self._executed_orders: list[OrderResult] = []
         self._starting_equity: float = 0.0
         self._daily_pnl: float = 0.0
-        self._price_cache: dict[str, tuple[float, float]] = {}  # symbol -> (price, timestamp)
+        self._price_cache: dict[str, tuple[float, float]] = {}  # symbol -> (price, ts)
+
+        # ── Day-trading state ────────────────────────────────────────────
+        # All trade specs from the strategy (never removed; re-entry uses these)
+        self._trade_specs: list[dict[str, Any]] = list(strategy.get("trades", []))
+
+        # symbol -> number of times we've entered a position today
+        self._trade_entries: dict[str, int] = {}
+
+        # symbol -> open position info dict:
+        #   { "entry_price": float, "quantity": float, "side": str,
+        #     "stop_loss": float|None, "take_profit": float|None,
+        #     "trade_spec": dict }
+        self._open_positions: dict[str, dict[str, Any]] = {}
+
+        # Aggregate daily counters
+        self._daily_trades_count: int = 0
+        self._wins: int = 0
+        self._losses: int = 0
+        self._total_realized_pnl: float = 0.0
+        self._per_symbol_stats: dict[str, dict[str, Any]] = {}
+        # per_symbol_stats[symbol] = { "entries": 0, "wins": 0, "losses": 0, "pnl": 0.0 }
+
+        # Trades that only fire once at end of day (urgency == "end_of_day")
+        self._eod_trades: list[dict[str, Any]] = [
+            t for t in self._trade_specs if t.get("urgency") == "end_of_day"
+        ]
+
+    # ── Price helper ────────────────────────────────────────────────────
 
     def _get_price(self, symbol: str) -> float | None:
         """Get current price, trying broker first then yfinance as fallback."""
-        import time as _time
-        now = _time.time()
+        now = time.time()
 
         # Check cache (30s TTL)
         if symbol in self._price_cache:
@@ -115,10 +140,26 @@ class TradingBot:
         self._running = False
 
     def update_strategy(self, strategy: dict[str, Any]) -> None:
-        """Hot-update the strategy (e.g. from a midday review)."""
+        """Hot-update the strategy (e.g. from a midday review).
+
+        Merges new trade specs without resetting entry counts for symbols
+        that already have trades in progress.
+        """
         self.logger.info("Strategy updated for user %d", self.user_id)
         self.strategy = strategy
-        self._pending_trades = list(strategy.get("trades", []))
+        new_specs = list(strategy.get("trades", []))
+
+        # Keep entry counts for symbols that carry over
+        existing_symbols = {t["symbol"] for t in self._trade_specs}
+        for spec in new_specs:
+            sym = spec["symbol"]
+            if sym not in existing_symbols:
+                self._trade_entries.setdefault(sym, 0)
+
+        self._trade_specs = new_specs
+        self._eod_trades = [
+            t for t in self._trade_specs if t.get("urgency") == "end_of_day"
+        ]
 
     def get_results(self) -> dict[str, Any]:
         """Return a summary of today's execution for the EOD report."""
@@ -138,13 +179,18 @@ class TradingBot:
             "ending_equity": ending_equity,
             "day_pnl": pnl,
             "day_return_pct": return_pct,
+            "total_trades": self._daily_trades_count,
+            "wins": self._wins,
+            "losses": self._losses,
+            "total_realized_pnl": self._total_realized_pnl,
+            "per_symbol_stats": dict(self._per_symbol_stats),
             "trades": [
                 {
                     "symbol": o.symbol,
                     "action": o.side,
                     "quantity": o.quantity,
                     "fill_price": o.fill_price or 0.0,
-                    "realized_pnl": 0.0,  # computed from position tracking
+                    "realized_pnl": 0.0,  # individual fill P&L tracked separately
                 }
                 for o in self._executed_orders
             ],
@@ -156,79 +202,108 @@ class TradingBot:
 
     def _tick(self) -> None:
         """Single iteration of the main loop."""
-        # 1. Update price cache in Redis
+        # 1. Refresh price cache for all symbols
         self._update_price_cache()
 
-        # 2. Execute pending trades
-        self._process_pending_trades()
+        # 2. Process each trade spec: check entries and exits
+        self._process_trades()
 
-        # 3. Monitor open positions for SL/TP
-        self._monitor_positions()
-
-        # 4. Check watchlist alerts
+        # 3. Check watchlist alerts
         self._check_watchlist()
 
-        # 5. Check risk limits
+        # 4. Check risk limits
         if self._check_risk_limits():
             self.logger.warning("Risk limit reached – stopping bot for user %d", self.user_id)
             self._running = False
             return
 
-        # 6. Heartbeat
+        # 5. Heartbeat
         self._heartbeat()
 
-    # ── Trade execution ──────────────────────────────────────────────────
+    # ── Core day-trading logic ──────────────────────────────────────────
 
-    def _process_pending_trades(self) -> None:
-        """Check each pending trade and execute if urgency conditions are met."""
-        remaining: list[dict[str, Any]] = []
+    def _process_trades(self) -> None:
+        """For each trade spec, manage entry/exit with re-entry support."""
+        max_daily = self.constraints.get("max_trades", 999)
 
-        for trade in self._pending_trades:
-            urgency = trade.get("urgency", "immediate")
-
-            if urgency == "immediate":
-                self._execute_trade(trade)
-            elif urgency == "end_of_day":
-                # end_of_day urgency: defer to EOD processing, keep in pending
-                remaining.append(trade)
-                continue
-            elif urgency == "wait_for_dip":
-                # Check if the price is favourable before executing
-                try:
-                    current = self._get_price(trade["symbol"])
-                    target_cents = trade.get("entry_price")
-                    if target_cents is None:
-                        self._execute_trade(trade)
-                    else:
-                        target = float(target_cents) / 100.0
-                        if trade.get("action") == "buy" and current <= target:
-                            self._execute_trade(trade)
-                        elif trade.get("action") == "sell" and current >= target:
-                            self._execute_trade(trade)
-                        else:
-                            remaining.append(trade)
-                            continue
-                except Exception as exc:
-                    self.logger.warning("Price check failed for %s: %s", trade.get("symbol"), exc)
-                    remaining.append(trade)
-                    continue
-            else:
-                remaining.append(trade)
+        for spec in self._trade_specs:
+            # Skip end_of_day trades – they're handled at EOD
+            if spec.get("urgency") == "end_of_day":
                 continue
 
-        self._pending_trades = remaining
+            symbol = spec["symbol"]
+            reentry_allowed = spec.get("reentry_allowed", False)
+            max_entries = spec.get("max_entries", 1)
+            entries_so_far = self._trade_entries.get(symbol, 0)
 
-    def _execute_trade(self, trade: dict[str, Any]) -> None:
-        """Place an order with the broker."""
-        symbol = trade["symbol"]
-        side = trade["action"]  # buy/sell
-        quantity = float(trade["quantity"])
-        order_type = trade.get("order_type", "market")
-        # entry_price is in cents from the strategy; convert to dollars for broker
-        entry_price_cents = trade.get("entry_price")
+            # ── Case A: We have an open position for this symbol ────────
+            if symbol in self._open_positions:
+                self._check_exit(symbol)
+                continue
+
+            # ── Case B: No open position – check if we should enter ─────
+            # Guard: daily trade limit
+            if self._daily_trades_count >= max_daily:
+                continue
+
+            # Guard: max entries for this symbol
+            if entries_so_far >= max_entries:
+                continue
+
+            # Guard: if we already traded this symbol once and reentry not allowed
+            if entries_so_far > 0 and not reentry_allowed:
+                continue
+
+            # Check entry condition
+            current_price = self._get_price(symbol)
+            if current_price is None:
+                continue
+
+            if self._entry_condition_met(spec, current_price):
+                self._open_position(spec, current_price)
+
+    def _entry_condition_met(self, spec: dict[str, Any], current_price: float) -> bool:
+        """Check if the entry condition for this trade spec is met."""
+        entry_cents = spec.get("entry_price")
+        action = spec.get("action", "buy")
+        urgency = spec.get("urgency", "immediate")
+        entry_condition = spec.get("entry_condition", "")
+
+        # If urgency is "immediate" and no entry_price, always enter on first check
+        if urgency == "immediate" and entry_cents is None:
+            return True
+
+        # If we have an entry_price, use it as the trigger
+        if entry_cents is not None:
+            entry_price = float(entry_cents) / 100.0
+
+            # Use explicit entry_condition if provided
+            if entry_condition == "price_below":
+                return current_price <= entry_price
+            elif entry_condition == "price_above":
+                return current_price >= entry_price
+
+            # Fallback: infer from action
+            if action == "buy":
+                return current_price <= entry_price
+            else:  # sell
+                return current_price >= entry_price
+
+        # wait_for_dip with no entry_price: can't evaluate, skip
+        return False
+
+    def _open_position(self, spec: dict[str, Any], current_price: float) -> None:
+        """Open a new position based on the trade spec."""
+        symbol = spec["symbol"]
+        side = spec["action"]
+        quantity = float(spec["quantity"])
+        order_type = spec.get("order_type", "market")
+
+        # For limit orders, use entry_price; for market orders, no price needed
         price: float | None = None
-        if entry_price_cents is not None:
-            price = float(entry_price_cents) / 100.0
+        entry_cents = spec.get("entry_price")
+        if entry_cents is not None and order_type == "limit":
+            price = float(entry_cents) / 100.0
 
         try:
             result = self.broker.place_order(
@@ -239,72 +314,144 @@ class TradingBot:
                 price=price,
             )
             self._executed_orders.append(result)
+
+            fill_price = result.fill_price or current_price
+            entries = self._trade_entries.get(symbol, 0) + 1
+            self._trade_entries[symbol] = entries
+            self._daily_trades_count += 1
+
+            # Track the open position
+            sl_cents = spec.get("stop_loss")
+            tp_cents = spec.get("take_profit")
+            self._open_positions[symbol] = {
+                "entry_price": fill_price,
+                "quantity": quantity,
+                "side": side,
+                "stop_loss": float(sl_cents) / 100.0 if sl_cents is not None else None,
+                "take_profit": float(tp_cents) / 100.0 if tp_cents is not None else None,
+                "trade_spec": spec,
+            }
+
+            # Init per-symbol stats
+            if symbol not in self._per_symbol_stats:
+                self._per_symbol_stats[symbol] = {
+                    "entries": 0, "wins": 0, "losses": 0, "pnl": 0.0,
+                }
+            self._per_symbol_stats[symbol]["entries"] += 1
+
             self.logger.info(
-                "Order executed: %s %s %.4f %s – status=%s fill=%.2f",
-                side, symbol, quantity, order_type,
-                result.status, result.fill_price or 0,
+                "ENTRY #%d: %s %s %.4f %s @ %.2f (SL=%.2f, TP=%.2f)",
+                entries, side, symbol, quantity, order_type, fill_price,
+                self._open_positions[symbol]["stop_loss"] or 0,
+                self._open_positions[symbol]["take_profit"] or 0,
             )
 
-            # Publish to Redis for Laravel dashboard
-            self.redis.publish(
-                f"trading:user:{self.user_id}:orders",
-                json.dumps({
-                    "order_id": result.order_id,
-                    "symbol": symbol,
-                    "side": side,
-                    "quantity": quantity,
-                    "status": result.status,
-                    "fill_price": result.fill_price,
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
-                }),
-            )
+            # Publish to Redis
+            self._publish_order_event(result, symbol, side, quantity)
+
         except Exception as exc:
-            self.logger.error("Failed to execute trade %s %s: %s", side, symbol, exc)
+            self.logger.error("Failed to open position %s %s: %s", side, symbol, exc)
 
-    # ── Position monitoring ──────────────────────────────────────────────
+    def _check_exit(self, symbol: str) -> None:
+        """Check stop-loss and take-profit for an open position."""
+        pos_info = self._open_positions[symbol]
+        current_price = self._get_price(symbol)
+        if current_price is None:
+            return
 
-    def _monitor_positions(self) -> None:
-        """Check stop-loss and take-profit levels on open positions.
+        sl = pos_info["stop_loss"]
+        tp = pos_info["take_profit"]
+        side = pos_info["side"]
+        reason = ""
 
-        Note: stop_loss and take_profit values in the strategy are stored in
-        cents.  We convert to dollars for comparison with broker prices.
-        """
-        positions = self.broker.get_positions()
-        trades_by_symbol = {t["symbol"]: t for t in self.strategy.get("trades", [])}
+        triggered = False
 
-        for pos in positions:
-            trade_spec = trades_by_symbol.get(pos.symbol, {})
-            sl_cents = trade_spec.get("stop_loss")
-            tp_cents = trade_spec.get("take_profit")
+        if side == "buy":
+            # Long position: SL triggers when price drops, TP when price rises
+            if sl is not None and current_price <= sl:
+                reason = "stop_loss"
+                triggered = True
+            elif tp is not None and current_price >= tp:
+                reason = "take_profit"
+                triggered = True
+        else:
+            # Short position: SL triggers when price rises, TP when price drops
+            if sl is not None and current_price >= sl:
+                reason = "stop_loss"
+                triggered = True
+            elif tp is not None and current_price <= tp:
+                reason = "take_profit"
+                triggered = True
 
-            sl = float(sl_cents) / 100.0 if sl_cents is not None else None
-            tp = float(tp_cents) / 100.0 if tp_cents is not None else None
+        if triggered:
+            self._close_position(symbol, current_price, reason)
 
-            if sl is not None and pos.current_price <= sl:
-                self.logger.warning(
-                    "STOP LOSS triggered for %s at %.2f (SL=%.2f)",
-                    pos.symbol, pos.current_price, sl,
-                )
-                self._execute_trade({
-                    "symbol": pos.symbol,
-                    "action": "sell",
-                    "quantity": pos.quantity,
-                    "order_type": "market",
-                    "urgency": "immediate",
-                })
+    def _close_position(self, symbol: str, current_price: float, reason: str) -> None:
+        """Close an open position and record P&L."""
+        pos_info = self._open_positions[symbol]
+        quantity = pos_info["quantity"]
+        entry_price = pos_info["entry_price"]
+        side = pos_info["side"]
 
-            elif tp is not None and pos.current_price >= tp:
-                self.logger.info(
-                    "TAKE PROFIT triggered for %s at %.2f (TP=%.2f)",
-                    pos.symbol, pos.current_price, tp,
-                )
-                self._execute_trade({
-                    "symbol": pos.symbol,
-                    "action": "sell",
-                    "quantity": pos.quantity,
-                    "order_type": "market",
-                    "urgency": "immediate",
-                })
+        # Determine close side (opposite of entry)
+        close_side = "sell" if side == "buy" else "buy"
+
+        try:
+            result = self.broker.place_order(
+                symbol=symbol,
+                side=close_side,
+                quantity=quantity,
+                order_type="market",
+            )
+            self._executed_orders.append(result)
+
+            fill_price = result.fill_price or current_price
+
+            # Calculate P&L
+            if side == "buy":
+                pnl = (fill_price - entry_price) * quantity
+            else:
+                pnl = (entry_price - fill_price) * quantity
+
+            is_win = pnl >= 0
+            if is_win:
+                self._wins += 1
+            else:
+                self._losses += 1
+            self._total_realized_pnl += pnl
+
+            # Update per-symbol stats
+            stats = self._per_symbol_stats.get(symbol, {
+                "entries": 0, "wins": 0, "losses": 0, "pnl": 0.0,
+            })
+            if is_win:
+                stats["wins"] += 1
+            else:
+                stats["losses"] += 1
+            stats["pnl"] += pnl
+            self._per_symbol_stats[symbol] = stats
+
+            self.logger.info(
+                "EXIT (%s): %s %s %.4f @ %.2f  entry=%.2f  P&L=$%.2f  %s",
+                reason, close_side, symbol, quantity, fill_price,
+                entry_price, pnl, "WIN" if is_win else "LOSS",
+            )
+
+            # Remove from open positions (makes symbol eligible for re-entry)
+            del self._open_positions[symbol]
+
+            # Publish to Redis
+            self._publish_order_event(result, symbol, close_side, quantity)
+
+            # Log daily summary after each close
+            self.logger.info(
+                "Daily stats: trades=%d  wins=%d  losses=%d  realized_pnl=$%.2f",
+                self._daily_trades_count, self._wins, self._losses,
+                self._total_realized_pnl,
+            )
+
+        except Exception as exc:
+            self.logger.error("Failed to close position %s: %s", symbol, exc)
 
     # ── Watchlist alerts ─────────────────────────────────────────────────
 
@@ -318,6 +465,8 @@ class TradingBot:
 
             try:
                 price = self._get_price(symbol)
+                if price is None:
+                    continue
                 triggered = self._evaluate_condition(price, condition)
                 if triggered:
                     self.logger.info(
@@ -381,7 +530,7 @@ class TradingBot:
     def _update_price_cache(self) -> None:
         """Cache current prices of all relevant symbols in Redis."""
         symbols: set[str] = set()
-        for t in self.strategy.get("trades", []):
+        for t in self._trade_specs:
             symbols.add(t.get("symbol", ""))
         for w in self.strategy.get("watchlist_alerts", []):
             symbols.add(w.get("symbol", ""))
@@ -390,7 +539,8 @@ class TradingBot:
         for sym in symbols:
             try:
                 price = self._get_price(sym)
-                self.redis.set(f"price:{sym}", str(price), ex=60)
+                if price is not None:
+                    self.redis.set(f"price:{sym}", str(price), ex=60)
             except Exception:
                 pass
 
@@ -402,13 +552,37 @@ class TradingBot:
             ex=120,
         )
 
+    def _publish_order_event(
+        self, result: OrderResult, symbol: str, side: str, quantity: float,
+    ) -> None:
+        """Publish an order event to Redis for the Laravel dashboard."""
+        self.redis.publish(
+            f"trading:user:{self.user_id}:orders",
+            json.dumps({
+                "order_id": result.order_id,
+                "symbol": symbol,
+                "side": side,
+                "quantity": quantity,
+                "status": result.status,
+                "fill_price": result.fill_price,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            }),
+        )
+
     def _end_of_day(self) -> None:
-        """End-of-day cleanup: execute deferred trades and position closes."""
-        # Execute any remaining pending trades with end_of_day urgency
-        for trade in self._pending_trades:
-            if trade.get("urgency") == "end_of_day":
-                self._execute_trade(trade)
-        self._pending_trades.clear()
+        """End-of-day cleanup: close open positions, execute deferred trades."""
+        # Close any remaining open positions
+        for symbol in list(self._open_positions.keys()):
+            current_price = self._get_price(symbol)
+            if current_price is not None:
+                self.logger.info("EOD: closing open position for %s", symbol)
+                self._close_position(symbol, current_price, "end_of_day")
+
+        # Execute end-of-day urgency trades
+        for trade in self._eod_trades:
+            symbol = trade["symbol"]
+            if symbol not in self._open_positions:
+                self._execute_eod_trade(trade)
 
         # Execute positions_to_close
         for close in self.strategy.get("positions_to_close", []):
@@ -422,12 +596,52 @@ class TradingBot:
                 continue
 
             if pos.quantity > 0:
-                self._execute_trade({
-                    "symbol": symbol,
-                    "action": "sell",
-                    "quantity": pos.quantity,
-                    "order_type": "market",
-                    "urgency": "immediate",
-                })
+                try:
+                    result = self.broker.place_order(
+                        symbol=symbol,
+                        side="sell",
+                        quantity=pos.quantity,
+                        order_type="market",
+                    )
+                    self._executed_orders.append(result)
+                    self.logger.info("EOD: closed position %s per strategy", symbol)
+                except Exception as exc:
+                    self.logger.error("EOD: failed to close %s: %s", symbol, exc)
 
-        self.logger.info("TradingBot end-of-day complete for user %d", self.user_id)
+        self.logger.info(
+            "TradingBot end-of-day complete for user %d  |  "
+            "trades=%d  wins=%d  losses=%d  realized_pnl=$%.2f",
+            self.user_id, self._daily_trades_count,
+            self._wins, self._losses, self._total_realized_pnl,
+        )
+
+    def _execute_eod_trade(self, trade: dict[str, Any]) -> None:
+        """Execute a single end-of-day trade."""
+        symbol = trade["symbol"]
+        side = trade["action"]
+        quantity = float(trade["quantity"])
+        order_type = trade.get("order_type", "market")
+
+        price: float | None = None
+        entry_cents = trade.get("entry_price")
+        if entry_cents is not None and order_type == "limit":
+            price = float(entry_cents) / 100.0
+
+        try:
+            result = self.broker.place_order(
+                symbol=symbol,
+                side=side,
+                quantity=quantity,
+                order_type=order_type,
+                price=price,
+            )
+            self._executed_orders.append(result)
+            self._daily_trades_count += 1
+            self.logger.info(
+                "EOD trade executed: %s %s %.4f %s – status=%s fill=%.2f",
+                side, symbol, quantity, order_type,
+                result.status, result.fill_price or 0,
+            )
+            self._publish_order_event(result, symbol, side, quantity)
+        except Exception as exc:
+            self.logger.error("Failed to execute EOD trade %s %s: %s", side, symbol, exc)
