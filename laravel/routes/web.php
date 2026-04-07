@@ -33,6 +33,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/strategies', [ClaudeStrategyController::class, 'index'])->name('strategies.index');
     Route::get('/strategies/today', [ClaudeStrategyController::class, 'today'])->name('strategies.today');
     Route::post('/strategies/trigger', [ClaudeStrategyController::class, 'trigger'])->name('strategies.trigger');
+    Route::post('/strategies/{id}/cancel', [ClaudeStrategyController::class, 'cancel'])->name('strategies.cancel');
     Route::get('/strategies/{id}', [ClaudeStrategyController::class, 'show'])->name('strategies.show');
 
     // Portfolio
@@ -60,6 +61,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/watchlist', [WatchlistController::class, 'index'])->name('watchlist.index');
     Route::post('/watchlist', [WatchlistController::class, 'store'])->name('watchlist.store');
     Route::delete('/watchlist/{id}', [WatchlistController::class, 'destroy'])->name('watchlist.destroy');
+    Route::get('/watchlist/{symbol}/chart', [WatchlistController::class, 'chart'])->name('watchlist.chart');
 
     // Settings
     Route::get('/settings/strategy', [StrategySettingsController::class, 'edit'])->name('settings.strategy');

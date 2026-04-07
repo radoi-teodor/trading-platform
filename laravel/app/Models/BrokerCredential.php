@@ -21,7 +21,7 @@ class BrokerCredential extends Model
     protected function casts(): array
     {
         return [
-            'credentials' => 'encrypted:array',
+            'credentials' => 'array',
             'is_active' => 'boolean',
         ];
     }

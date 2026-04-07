@@ -55,10 +55,31 @@ logger = logging.getLogger(__name__)
 
 # ── Database / Redis factories ───────────────────────────────────────────
 
+_engine = None
+_session_factory = None
+
+
+def _init_db() -> None:
+    """Initialize the shared engine and session factory (call once at startup)."""
+    global _engine, _session_factory
+    db_url = Config.get_db_url()
+    connect_args = {}
+    if "sqlite" in db_url:
+        connect_args["check_same_thread"] = False
+    _engine = create_engine(db_url, pool_pre_ping=True, pool_recycle=3600, connect_args=connect_args)
+    # Enable WAL mode for SQLite to allow concurrent reads during writes
+    if "sqlite" in db_url:
+        with _engine.connect() as conn:
+            conn.execute(text("PRAGMA journal_mode=WAL"))
+            conn.execute(text("PRAGMA busy_timeout=5000"))
+    _session_factory = sessionmaker(bind=_engine)
+
+
 def _create_db_session() -> Session:
-    engine = create_engine(Config.get_db_url(), pool_pre_ping=True, pool_recycle=3600)
-    factory = sessionmaker(bind=engine)
-    return factory()
+    """Create a new DB session (safe to call from any thread)."""
+    if _session_factory is None:
+        _init_db()
+    return _session_factory()
 
 
 def _create_redis() -> redis_lib.Redis:  # type: ignore[type-arg]
@@ -72,39 +93,79 @@ def _create_redis() -> redis_lib.Redis:  # type: ignore[type-arg]
 
 # ── Broker factory ───────────────────────────────────────────────────────
 
-def _create_broker(user_cfg: dict[str, Any], db: Session) -> Any:
-    """Create the appropriate broker based on user configuration."""
-    broker_type = user_cfg.get("broker_type", "paper")
-
-    if broker_type == "alpaca":
-        broker = AlpacaBroker(
-            api_key=user_cfg.get("alpaca_api_key", Config.ALPACA_API_KEY),
-            secret_key=user_cfg.get("alpaca_secret_key", Config.ALPACA_SECRET_KEY),
-            base_url=user_cfg.get("alpaca_base_url", Config.ALPACA_BASE_URL),
-        )
-    elif broker_type == "binance":
-        broker = BinanceBroker(
-            api_key=user_cfg.get("binance_api_key", Config.BINANCE_API_KEY),
-            secret_key=user_cfg.get("binance_secret_key", Config.BINANCE_SECRET_KEY),
-            testnet=Config.BINANCE_TESTNET,
-        )
-    elif broker_type == "xtb":
-        broker = XTBBroker(
-            user_id=user_cfg.get("xtb_user_id", Config.XTB_USER_ID),
-            password=user_cfg.get("xtb_password", Config.XTB_PASSWORD),
-            demo=Config.XTB_DEMO,
-        )
-    else:
-        market_data = YFinanceData()
-        broker = PaperBroker(
-            db_session=db,
-            user_id=user_cfg["user_id"],
-            market_data_source=market_data,
-            initial_balance=float(user_cfg.get("initial_balance", 100_000)),
-        )
-
+def _create_paper_broker(user_cfg: dict[str, Any], db: Session) -> Any:
+    """Create a paper broker as default/fallback."""
+    market_data = YFinanceData()
+    broker = PaperBroker(
+        db_session=db,
+        user_id=user_cfg["user_id"],
+        market_data_source=market_data,
+        initial_balance=float(user_cfg.get("initial_balance", 100_000)),
+    )
     broker.connect()
     return broker
+
+
+def _create_broker(user_cfg: dict[str, Any], db: Session) -> Any:
+    """Create the appropriate broker. Falls back to paper if keys are missing or connection fails."""
+    broker_type = user_cfg.get("broker_type", "paper")
+    creds = user_cfg.get("broker_credentials", {})
+
+    if broker_type == "paper":
+        return _create_paper_broker(user_cfg, db)
+
+    # For real brokers, check if credentials exist before attempting connection
+    try:
+        if broker_type == "alpaca":
+            api_key = creds.get("api_key") or Config.ALPACA_API_KEY
+            secret_key = creds.get("api_secret") or Config.ALPACA_SECRET_KEY
+            if not api_key or not secret_key:
+                logger.warning("Alpaca API keys not configured — falling back to paper broker")
+                return _create_paper_broker(user_cfg, db)
+            broker = AlpacaBroker(
+                api_key=api_key,
+                secret_key=secret_key,
+                base_url=creds.get("base_url") or Config.ALPACA_BASE_URL,
+            )
+
+        elif broker_type == "binance":
+            api_key = creds.get("api_key") or Config.BINANCE_API_KEY
+            secret_key = creds.get("api_secret") or Config.BINANCE_SECRET_KEY
+            if not api_key or not secret_key:
+                logger.warning("Binance API keys not configured — falling back to paper broker")
+                return _create_paper_broker(user_cfg, db)
+            broker = BinanceBroker(
+                api_key=api_key,
+                secret_key=secret_key,
+                testnet=creds.get("testnet", Config.BINANCE_TESTNET),
+            )
+
+        elif broker_type == "xtb":
+            user_id_xtb = creds.get("user_id") or Config.XTB_USER_ID
+            password = creds.get("password") or Config.XTB_PASSWORD
+            if not user_id_xtb or not password:
+                logger.warning("XTB credentials not configured — falling back to paper broker")
+                return _create_paper_broker(user_cfg, db)
+            broker = XTBBroker(
+                user_id=user_id_xtb,
+                password=password,
+                demo=creds.get("demo", Config.XTB_DEMO),
+            )
+
+        else:
+            logger.warning("Unknown broker type '%s' — using paper broker", broker_type)
+            return _create_paper_broker(user_cfg, db)
+
+        broker.connect()
+        logger.info("Connected to %s broker", broker_type)
+        return broker
+
+    except Exception as exc:
+        logger.warning(
+            "Failed to connect to %s broker (%s) — falling back to paper broker",
+            broker_type, exc,
+        )
+        return _create_paper_broker(user_cfg, db)
 
 
 # ── Data gathering ───────────────────────────────────────────────────────
@@ -113,7 +174,7 @@ def _gather_context(
     user_cfg: dict[str, Any],
     broker: Any,
     db: Session,
-    redis_client: redis_lib.Redis,  # type: ignore[type-arg]
+    redis_client: Any = None,
 ) -> dict[str, Any]:
     """Assemble the full context dict that the ClaudeEngine needs."""
     user_id = user_cfg["user_id"]
@@ -138,13 +199,89 @@ def _gather_context(
         ],
     }
 
-    # Market data – use cached prices from Redis if available
+    # Market data – load OHLCV from stock_prices + compute indicators
     market_data: dict[str, Any] = {}
-    symbols = user_cfg.get("symbols", [])
+
+    # Get watchlist symbols for this user
+    watchlist_rows = db.execute(
+        text(
+            "SELECT wi.symbol FROM watchlist_items wi "
+            "JOIN watchlists w ON w.id = wi.watchlist_id "
+            "WHERE w.user_id = :uid"
+        ),
+        {"uid": user_id},
+    ).fetchall()
+    symbols = [r[0] for r in watchlist_rows]
+
     for sym in symbols:
-        cached = redis_client.get(f"price:{sym}")
-        if cached:
-            market_data[sym] = {"close": float(cached)}
+        # Last 30 days OHLCV
+        ohlcv_rows = db.execute(
+            text(
+                "SELECT date, open, high, low, close, volume "
+                "FROM stock_prices WHERE symbol = :sym "
+                "ORDER BY date DESC LIMIT 30"
+            ),
+            {"sym": sym},
+        ).fetchall()
+
+        if not ohlcv_rows:
+            market_data[sym] = {"note": "no historical data available"}
+            continue
+
+        closes = [float(r[4]) / 100.0 for r in reversed(ohlcv_rows)]  # cents to dollars
+        latest = ohlcv_rows[0]
+
+        # Compute technical indicators
+        indicators: dict[str, Any] = {}
+        try:
+            from .indicators.technical import sma, rsi, macd, bollinger_bands
+            if len(closes) >= 20:
+                sma20 = sma(closes, 20)
+                indicators["SMA_20"] = round(sma20[-1], 2) if sma20 else None
+            if len(closes) >= 14:
+                rsi_values = rsi(closes, 14)
+                indicators["RSI_14"] = round(rsi_values[-1], 2) if rsi_values else None
+            if len(closes) >= 26:
+                macd_data = macd(closes)
+                indicators["MACD"] = round(macd_data["macd"][-1], 4) if macd_data["macd"] else None
+                indicators["MACD_signal"] = round(macd_data["signal"][-1], 4) if macd_data["signal"] else None
+            if len(closes) >= 20:
+                bb = bollinger_bands(closes, 20)
+                indicators["BB_upper"] = round(bb["upper"][-1], 2) if bb["upper"] else None
+                indicators["BB_lower"] = round(bb["lower"][-1], 2) if bb["lower"] else None
+        except Exception:
+            pass  # indicators are optional
+
+        # Volume anomaly check (today vs 20-day avg)
+        volumes = [float(r[5]) for r in reversed(ohlcv_rows)]
+        avg_volume = sum(volumes[:-1]) / max(len(volumes) - 1, 1) if len(volumes) > 1 else volumes[0]
+        current_volume = volumes[-1] if volumes else 0
+        volume_anomaly = None
+        if avg_volume > 0 and current_volume > avg_volume * 2:
+            volume_anomaly = f"{current_volume/avg_volume:.1f}x average"
+
+        # Last 5 days OHLCV for prompt
+        recent_days = []
+        for r in ohlcv_rows[:5]:
+            recent_days.append({
+                "date": str(r[0]),
+                "open": float(r[1]) / 100,
+                "high": float(r[2]) / 100,
+                "low": float(r[3]) / 100,
+                "close": float(r[4]) / 100,
+                "volume": int(r[5]),
+            })
+
+        market_data[sym] = {
+            "open": float(latest[1]) / 100,
+            "high": float(latest[2]) / 100,
+            "low": float(latest[3]) / 100,
+            "close": float(latest[4]) / 100,
+            "volume": int(latest[5]),
+            "recent_days": recent_days,
+            "indicators": indicators,
+            "volume_anomaly": volume_anomaly,
+        }
 
     # News from scraped_articles (join through scrapers to filter by user)
     rows = db.execute(
@@ -209,13 +346,12 @@ def _gather_context(
         except (json.JSONDecodeError, TypeError):
             pass
 
-    # Constraints
+    # Constraints — only allow symbols from the user's watchlist
     constraints = {
         "max_position_pct": user_cfg.get("max_position_pct", 20),
-        "max_daily_loss": user_cfg.get("max_daily_loss", 1000),
-        "max_trades": user_cfg.get("max_trades", 10),
-        "allowed_symbols": user_cfg.get("allowed_symbols", "any"),
-        "forbidden_symbols": user_cfg.get("forbidden_symbols", []),
+        "max_daily_loss_pct": user_cfg.get("max_daily_loss_pct", 5),
+        "max_trades": user_cfg.get("max_daily_trades", 10),
+        "allowed_symbols": symbols if symbols else "any",
     }
 
     return {
@@ -223,9 +359,8 @@ def _gather_context(
         "date": today,
         "user_profile": {
             "risk_tolerance": user_cfg.get("risk_tolerance", "moderate"),
-            "markets": user_cfg.get("markets", ["US equities"]),
+            "markets": user_cfg.get("preferred_markets", ["us_stocks"]),
             "capital": account.equity,
-            "trading_style": user_cfg.get("trading_style", "swing"),
             "custom_instructions": user_cfg.get("custom_instructions", ""),
         },
         "portfolio": portfolio,
@@ -236,36 +371,103 @@ def _gather_context(
     }
 
 
+# ── Broker balance sync ─────────────────────────────────────────────────
+
+def _sync_broker_balance(user_id: int, broker: Any, db: Session) -> None:
+    """Sync the real broker balance to the portfolios table so Laravel can display it."""
+    try:
+        account = broker.get_account_info()
+        balance_cents = int(round(account.cash * 100))
+        equity_cents = int(round(account.equity * 100))
+
+        # Update portfolio balance
+        db.execute(
+            text(
+                "UPDATE portfolios SET balance_cents = :balance "
+                "WHERE user_id = :uid"
+            ),
+            {"balance": balance_cents, "uid": user_id},
+        )
+
+        # Also update open positions' current prices
+        positions = broker.get_positions()
+        for pos in positions:
+            price_cents = int(round(pos.current_price * 100))
+            db.execute(
+                text(
+                    "UPDATE positions SET current_price_cents = :price "
+                    "WHERE portfolio_id = (SELECT id FROM portfolios WHERE user_id = :uid LIMIT 1) "
+                    "AND symbol = :sym AND closed_at IS NULL"
+                ),
+                {"price": price_cents, "uid": user_id, "sym": pos.symbol},
+            )
+
+        db.commit()
+        logger.debug("Synced balance for user %d: $%.2f cash, $%.2f equity", user_id, account.cash, account.equity)
+    except Exception as exc:
+        logger.warning("Balance sync failed for user %d: %s", user_id, exc)
+
+
 # ── User config loader ──────────────────────────────────────────────────
 
 def _load_user_configs(db: Session) -> list[dict[str, Any]]:
-    """Load active trading agent configurations from the database."""
+    """Load active user configurations from user_settings + broker_credentials."""
     rows = db.execute(
         text(
-            "SELECT u.id, u.name, ta.broker_type, ta.settings, ta.is_active, "
-            "       ta.analysis_schedule, ta.midday_review_enabled "
+            "SELECT u.id, u.name, "
+            "       us.risk_tolerance, us.max_daily_trades, us.max_position_pct, "
+            "       us.max_daily_loss_pct, us.preferred_markets, us.custom_instructions, "
+            "       us.analysis_schedule, us.auto_execute, us.timezone, "
+            "       bc.broker, bc.credentials "
             "FROM users u "
-            "JOIN trading_agents ta ON ta.user_id = u.id "
-            "WHERE ta.is_active = 1"
+            "JOIN user_settings us ON us.user_id = u.id "
+            "LEFT JOIN broker_credentials bc ON bc.user_id = u.id AND bc.is_active = 1"
         )
     ).fetchall()
 
     configs: list[dict[str, Any]] = []
     for r in rows:
-        settings: dict[str, Any] = {}
-        if r[3]:
+        # Parse broker credentials JSON
+        broker_creds: dict[str, Any] = {}
+        if r[12]:
             try:
-                settings = json.loads(r[3]) if isinstance(r[3], str) else r[3]
+                broker_creds = json.loads(r[12]) if isinstance(r[12], str) else {}
             except (json.JSONDecodeError, TypeError):
                 pass
+
+        # Parse preferred markets JSON
+        markets: list[str] = []
+        if r[6]:
+            try:
+                markets = json.loads(r[6]) if isinstance(r[6], str) else []
+            except (json.JSONDecodeError, TypeError):
+                pass
+
+        # Map analysis_schedule to a time string
+        schedule_map = {
+            "premarket": "08:00",
+            "market_open": "09:30",
+            "midday": "12:00",
+            "market_close": "16:00",
+        }
+        schedule_val = r[8] or "premarket"
+        analysis_time = schedule_map.get(schedule_val, schedule_val)
 
         configs.append({
             "user_id": r[0],
             "name": r[1],
-            "broker_type": r[2] or "paper",
-            "analysis_schedule": r[5] or "09:30",
-            "midday_review_enabled": bool(r[6]),
-            **settings,
+            "risk_tolerance": r[2] or "moderate",
+            "max_daily_trades": r[3] or 10,
+            "max_position_pct": r[4] or 20,
+            "max_daily_loss_pct": r[5] or 5,
+            "preferred_markets": markets,
+            "custom_instructions": r[7] or "",
+            "analysis_schedule": analysis_time,
+            "auto_execute": bool(r[9]),
+            "timezone": r[10] or "America/New_York",
+            "broker_type": r[11] or "paper",
+            "broker_credentials": broker_creds,
+            "midday_review_enabled": schedule_val in ("midday", "every_4_hours"),
         })
 
     return configs
@@ -360,8 +562,10 @@ def main() -> None:
     _setup_logging()
     logger.info("AI Trading Platform agents starting")
 
-    # Core connections
-    db = _create_db_session()
+    # Initialize DB engine (shared, thread-safe)
+    _init_db()
+
+    # Redis
     try:
         redis_client = _create_redis()
         redis_client.ping()
@@ -370,8 +574,9 @@ def main() -> None:
         logger.warning("Redis not available (%s) – running without real-time features", exc)
         redis_client = None
 
-    claude_engine = ClaudeEngine(db_session=db, binary_path=Config.CLAUDE_BINARY_PATH)
-    scraper_runner = ScraperRunner(db_session=db)
+    # Each component gets its own DB session
+    main_db = _create_db_session()
+    claude_engine = ClaudeEngine(db_session=main_db, binary_path=Config.CLAUDE_BINARY_PATH)
     bot_manager = BotManager(redis_client=redis_client)
 
     shutdown_event = threading.Event()
@@ -388,24 +593,28 @@ def main() -> None:
     # Start bot manager health monitor
     bot_manager.start()
 
-    # Background thread: scraper runner
+    # Background thread: scraper runner (own DB session)
     def _scraper_loop() -> None:
+        scraper_db = _create_db_session()
+        scraper_runner = ScraperRunner(db_session=scraper_db)
         while not shutdown_event.is_set():
             try:
                 scraper_runner.run_all()
             except Exception as exc:
                 logger.error("Scraper run failed: %s", exc, exc_info=True)
-            # Wait 5 minutes between scraper cycles
             shutdown_event.wait(300)
+        scraper_db.close()
 
     scraper_thread = threading.Thread(target=_scraper_loop, daemon=True)
     scraper_thread.start()
 
-    # Background thread: Redis command listener (only if Redis is available)
+    # Background thread: Redis command listener (own DB session, only if Redis available)
     if redis_client is not None:
+        listener_db = _create_db_session()
+        listener_engine = ClaudeEngine(db_session=listener_db, binary_path=Config.CLAUDE_BINARY_PATH)
         listener_thread = threading.Thread(
             target=_redis_listener,
-            args=(redis_client, bot_manager, claude_engine, db, shutdown_event),
+            args=(redis_client, bot_manager, listener_engine, listener_db, shutdown_event),
             daemon=True,
         )
         listener_thread.start()
@@ -418,6 +627,8 @@ def main() -> None:
     analysis_done_today: set[int] = set()
     midday_done_today: set[int] = set()
     eod_done_today: set[int] = set()
+    user_brokers: dict[int, Any] = {}  # cached broker instances per user
+    last_balance_sync: dict[int, datetime] = {}  # last sync time per user
     last_date = ""
 
     while not shutdown_event.is_set():
@@ -430,10 +641,11 @@ def main() -> None:
             analysis_done_today.clear()
             midday_done_today.clear()
             eod_done_today.clear()
+            user_brokers.clear()  # reconnect brokers daily
             last_date = current_date
 
         try:
-            user_configs = _load_user_configs(db)
+            user_configs = _load_user_configs(main_db)
         except Exception as exc:
             logger.error("Failed to load user configs: %s", exc)
             shutdown_event.wait(60)
@@ -442,13 +654,48 @@ def main() -> None:
         for user_cfg in user_configs:
             user_id = user_cfg["user_id"]
 
+            # ── Get or create broker (cached per user) ──────────────────
+            if user_id not in user_brokers:
+                try:
+                    user_brokers[user_id] = _create_broker(user_cfg, main_db)
+                except Exception as exc:
+                    logger.warning("Broker creation failed for user %d: %s", user_id, exc)
+                    continue
+
+            broker = user_brokers[user_id]
+
+            # ── Sync broker balance + agent health (once per minute) ───
+            if user_id not in last_balance_sync or (datetime.now(timezone.utc) - last_balance_sync[user_id]).seconds >= 60:
+                _sync_broker_balance(user_id, broker, main_db)
+                last_balance_sync[user_id] = datetime.now(timezone.utc)
+
+                # Update agent_health for this user's bot
+                bot_running = user_id in bot_manager._bots
+                try:
+                    existing = main_db.execute(
+                        text("SELECT id FROM agent_health WHERE agent_type='trading_bot' AND user_id=:uid"),
+                        {"uid": user_id},
+                    ).fetchone()
+                    if existing:
+                        main_db.execute(
+                            text("UPDATE agent_health SET status=:status, last_heartbeat_at=:now, metadata=:meta WHERE id=:id"),
+                            {"status": "running" if bot_running else "stopped", "now": now, "meta": json.dumps({"broker": user_cfg.get("broker_type", "paper")}), "id": existing[0]},
+                        )
+                    else:
+                        main_db.execute(
+                            text("INSERT INTO agent_health (agent_type, agent_id, user_id, status, last_heartbeat_at, metadata) VALUES ('trading_bot', :aid, :uid, :status, :now, :meta)"),
+                            {"aid": f"bot-user-{user_id}", "uid": user_id, "status": "running" if bot_running else "stopped", "now": now, "meta": json.dumps({"broker": user_cfg.get("broker_type", "paper")})},
+                        )
+                    main_db.commit()
+                except Exception:
+                    pass
+
             # ── Morning analysis ─────────────────────────────────────────
             scheduled_time = user_cfg.get("analysis_schedule", "09:30")
             if current_time >= scheduled_time and user_id not in analysis_done_today:
                 logger.info("Running daily analysis for user %d", user_id)
                 try:
-                    broker = _create_broker(user_cfg, db)
-                    context = _gather_context(user_cfg, broker, db, redis_client)
+                    context = _gather_context(user_cfg, broker, main_db, redis_client)
                     strategy = claude_engine.daily_analysis(context)
 
                     bot_manager.spawn_bot(
@@ -463,6 +710,19 @@ def main() -> None:
                     logger.error(
                         "Daily analysis failed for user %d: %s", user_id, exc, exc_info=True,
                     )
+                    # Mark any pending analyses as failed
+                    try:
+                        main_db.execute(
+                            text(
+                                "UPDATE claude_analyses SET status = 'failed', "
+                                "reasoning = :err "
+                                "WHERE user_id = :uid AND status = 'pending'"
+                            ),
+                            {"uid": user_id, "err": f"Analysis failed: {str(exc)[:500]}"},
+                        )
+                        main_db.commit()
+                    except Exception:
+                        pass
                     analysis_done_today.add(user_id)  # avoid retry storm
 
             # ── Midday review ────────────────────────────────────────────
@@ -516,7 +776,7 @@ def main() -> None:
                     if results:
                         summary = claude_engine.end_of_day_summary(results)
                         # Store EOD summary as a bot log entry
-                        db.execute(
+                        main_db.execute(
                             text(
                                 "INSERT INTO bot_logs "
                                 "(user_id, level, message, context, created_at) "
@@ -535,7 +795,7 @@ def main() -> None:
                                 "now": now,
                             },
                         )
-                        db.commit()
+                        main_db.commit()
 
                         # Publish to Redis for Laravel (if available)
                         if redis_client is not None:
@@ -561,7 +821,7 @@ def main() -> None:
     # ── Shutdown ─────────────────────────────────────────────────────────
     logger.info("Shutting down…")
     bot_manager.stop()
-    db.close()
+    main_db.close()
     redis_client.close()
     logger.info("Shutdown complete")
 

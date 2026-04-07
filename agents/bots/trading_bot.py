@@ -48,6 +48,41 @@ class TradingBot:
         self._executed_orders: list[OrderResult] = []
         self._starting_equity: float = 0.0
         self._daily_pnl: float = 0.0
+        self._price_cache: dict[str, tuple[float, float]] = {}  # symbol -> (price, timestamp)
+
+    def _get_price(self, symbol: str) -> float | None:
+        """Get current price, trying broker first then yfinance as fallback."""
+        import time as _time
+        now = _time.time()
+
+        # Check cache (30s TTL)
+        if symbol in self._price_cache:
+            cached_price, cached_at = self._price_cache[symbol]
+            if now - cached_at < 30:
+                return cached_price
+
+        # Try broker first
+        try:
+            price = self.broker.get_ticker_price(symbol)
+            if price and price > 0:
+                self._price_cache[symbol] = (price, now)
+                return price
+        except Exception:
+            pass
+
+        # Fallback to yfinance
+        try:
+            import yfinance as yf
+            ticker = yf.Ticker(symbol)
+            price = float(ticker.fast_info.last_price)
+            if price > 0:
+                self._price_cache[symbol] = (price, now)
+                return price
+        except Exception as exc:
+            self.logger.debug("yfinance fallback failed for %s: %s", symbol, exc)
+
+        self.logger.warning("Could not get price for %s from any source", symbol)
+        return None
 
     # ── Public API ───────────────────────────────────────────────────────
 
@@ -160,7 +195,7 @@ class TradingBot:
             elif urgency == "wait_for_dip":
                 # Check if the price is favourable before executing
                 try:
-                    current = self.broker.get_ticker_price(trade["symbol"])
+                    current = self._get_price(trade["symbol"])
                     target_cents = trade.get("entry_price")
                     if target_cents is None:
                         self._execute_trade(trade)
@@ -282,7 +317,7 @@ class TradingBot:
                 continue
 
             try:
-                price = self.broker.get_ticker_price(symbol)
+                price = self._get_price(symbol)
                 triggered = self._evaluate_condition(price, condition)
                 if triggered:
                     self.logger.info(
@@ -354,7 +389,7 @@ class TradingBot:
 
         for sym in symbols:
             try:
-                price = self.broker.get_ticker_price(sym)
+                price = self._get_price(sym)
                 self.redis.set(f"price:{sym}", str(price), ex=60)
             except Exception:
                 pass

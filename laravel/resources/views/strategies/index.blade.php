@@ -59,10 +59,18 @@
                         {{ ($analysis->total_pnl_cents ?? 0) >= 0 ? '+' : '' }}${{ number_format(abs($analysis->total_pnl_cents ?? 0) / 100, 2) }}
                     </td>
                     <td class="px-4 py-3">
-                        <x-badge
-                            :color="$analysis->status === 'completed' ? 'green' : ($analysis->status === 'active' ? 'blue' : ($analysis->status === 'failed' ? 'red' : 'gray'))"
-                            :text="ucfirst($analysis->status ?? 'pending')"
-                        />
+                        <div class="flex items-center space-x-2">
+                            <x-badge
+                                :color="$analysis->status === 'completed' ? 'green' : ($analysis->status === 'active' ? 'blue' : ($analysis->status === 'failed' ? 'red' : 'amber'))"
+                                :text="ucfirst($analysis->status ?? 'pending')"
+                            />
+                            @if($analysis->status === 'pending')
+                                <form method="POST" action="{{ url('/strategies/' . $analysis->id . '/cancel') }}" onclick="event.stopPropagation()">
+                                    @csrf
+                                    <button type="submit" class="text-xs text-[#ef4444] hover:text-red-400" onclick="return confirm('Cancel this analysis?')">Cancel</button>
+                                </form>
+                            @endif
+                        </div>
                     </td>
                 </tr>
             @empty

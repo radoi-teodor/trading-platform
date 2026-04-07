@@ -188,13 +188,19 @@ class PromptBuilder:
         )
 
         # ── Section 6: Constraints ───────────────────────────────────────
+        allowed = constraints.get('allowed_symbols', 'any')
+        if isinstance(allowed, list):
+            allowed_str = ', '.join(allowed)
+        else:
+            allowed_str = str(allowed)
+
         sections.append(
             "=== SECTION 6: CONSTRAINTS ===\n"
             f"Max position size (% of equity): {constraints.get('max_position_pct', 20)}%\n"
-            f"Max daily loss: ${constraints.get('max_daily_loss', 0):,.2f}\n"
+            f"Max daily loss (% of equity): {constraints.get('max_daily_loss_pct', 5)}%\n"
             f"Max trades per day: {constraints.get('max_trades', 10)}\n"
-            f"Allowed symbols: {constraints.get('allowed_symbols', 'any')}\n"
-            f"Forbidden symbols: {constraints.get('forbidden_symbols', 'none')}"
+            f"ALLOWED SYMBOLS (ONLY trade these): {allowed_str}\n"
+            "IMPORTANT: Do NOT recommend trades for any symbol not listed above."
         )
 
         # ── Required response schema ─────────────────────────────────────

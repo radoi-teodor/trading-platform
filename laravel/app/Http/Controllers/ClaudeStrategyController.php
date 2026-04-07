@@ -48,7 +48,7 @@ class ClaudeStrategyController extends Controller
         $analysis = ClaudeAnalysis::where('user_id', Auth::id())
             ->whereDate('date', Carbon::today())
             ->with(['analysisTrades.executedOrder', 'analysisCloses', 'analysisAlerts.resultOrder'])
-            ->latest()
+            ->latest('created_at')
             ->first();
 
         return view('strategies.today', compact('analysis'));
@@ -58,16 +58,47 @@ class ClaudeStrategyController extends Controller
     {
         $user = Auth::user();
 
+        // Create a pending analysis record immediately so the user sees it
+        $analysis = ClaudeAnalysis::create([
+            'user_id' => $user->id,
+            'date' => Carbon::today(),
+            'market_outlook' => 'neutral',
+            'confidence' => 0,
+            'reasoning' => '',
+            'strategy_json' => '{}',
+            'status' => 'pending',
+            'trades_planned' => 0,
+            'prompt_sent' => 'Pending — analysis triggered manually.',
+            'raw_response' => '',
+            'created_at' => now(),
+        ]);
+
+        // Notify Python agents via Redis
         try {
             Redis::publish('trading:commands', json_encode([
-                'type' => 'trigger_analysis',
+                'command' => 'trigger_analysis',
                 'user_id' => $user->id,
+                'analysis_id' => $analysis->id,
                 'timestamp' => now()->toISOString(),
             ]));
-
-            return back()->with('success', 'Analysis triggered. Results will appear shortly.');
         } catch (\Exception $e) {
-            return back()->with('error', 'Failed to trigger analysis: ' . $e->getMessage());
+            // Redis might not be available — Python will still pick it up on next cycle
         }
+
+        return redirect('/strategies')->with('success', 'Analysis triggered — status: pending. Refresh to see results when ready.');
+    }
+
+    public function cancel($id)
+    {
+        $analysis = ClaudeAnalysis::where('user_id', Auth::id())
+            ->where('status', 'pending')
+            ->findOrFail($id);
+
+        $analysis->update([
+            'status' => 'failed',
+            'reasoning' => 'Cancelled by user.',
+        ]);
+
+        return back()->with('success', 'Analysis cancelled.');
     }
 }

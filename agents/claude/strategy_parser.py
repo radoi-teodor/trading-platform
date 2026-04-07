@@ -69,11 +69,58 @@ class StrategyParser:
 
     @staticmethod
     def _parse_json(text: str) -> dict[str, Any]:
-        """Attempt to parse *text* as JSON."""
+        """Extract and parse the first JSON object from *text*.
+
+        Claude sometimes adds extra text before/after the JSON.
+        This method finds the first { ... } block and parses it.
+        """
+        # Try direct parse first
         try:
             data = json.loads(text)
+            if isinstance(data, dict):
+                return data
+        except json.JSONDecodeError:
+            pass
+
+        # Find the first { and match to its closing }
+        start = text.find("{")
+        if start == -1:
+            raise StrategyValidationError("No JSON object found in response")
+
+        depth = 0
+        in_string = False
+        escape_next = False
+        end = start
+
+        for i in range(start, len(text)):
+            ch = text[i]
+            if escape_next:
+                escape_next = False
+                continue
+            if ch == "\\":
+                escape_next = True
+                continue
+            if ch == '"' and not escape_next:
+                in_string = not in_string
+                continue
+            if in_string:
+                continue
+            if ch == "{":
+                depth += 1
+            elif ch == "}":
+                depth -= 1
+                if depth == 0:
+                    end = i + 1
+                    break
+
+        if depth != 0:
+            raise StrategyValidationError("Unbalanced braces in JSON response")
+
+        json_str = text[start:end]
+        try:
+            data = json.loads(json_str)
         except json.JSONDecodeError as exc:
-            raise StrategyValidationError(f"Response is not valid JSON: {exc}") from exc
+            raise StrategyValidationError(f"Extracted JSON is invalid: {exc}") from exc
 
         if not isinstance(data, dict):
             raise StrategyValidationError(

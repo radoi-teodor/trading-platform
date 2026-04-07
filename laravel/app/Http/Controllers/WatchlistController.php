@@ -6,6 +6,7 @@ use App\Models\Watchlist;
 use App\Models\WatchlistItem;
 use App\Models\StockPrice;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 
 class WatchlistController extends Controller
@@ -58,7 +59,78 @@ class WatchlistController extends Controller
             'symbol' => $symbol,
         ]);
 
+        // Auto-backfill 90 days of price data if none exists
+        $hasData = StockPrice::where('symbol', $symbol)->exists();
+        if (!$hasData) {
+            try {
+                $projectRoot = dirname(base_path());
+                $agentsDir = $projectRoot . DIRECTORY_SEPARATOR . 'agents';
+                $script = $agentsDir . DIRECTORY_SEPARATOR . 'scripts' . DIRECTORY_SEPARATOR . 'fetch_prices.py';
+                $venvPython = $agentsDir . DIRECTORY_SEPARATOR . 'venv' . DIRECTORY_SEPARATOR
+                    . (PHP_OS_FAMILY === 'Windows' ? 'Scripts' : 'bin')
+                    . DIRECTORY_SEPARATOR . (PHP_OS_FAMILY === 'Windows' ? 'python.exe' : 'python');
+                $python = file_exists($venvPython) ? $venvPython : 'python';
+
+                $cmd = '"' . $python . '" "' . $script . '" ' . $symbol . ' 90';
+                $result = \Illuminate\Support\Facades\Process::timeout(120)->run($cmd);
+                $output = $result->output();
+
+                $jsonStart = strpos($output, '[');
+                if ($jsonStart !== false) {
+                    $data = json_decode(substr($output, $jsonStart), true);
+                    if (is_array($data) && !empty($data)) {
+                        $count = 0;
+                        foreach ($data as $row) {
+                            StockPrice::updateOrCreate(
+                                ['symbol' => $symbol, 'date' => $row['date']],
+                                [
+                                    'open' => (int) round($row['open'] * 100),
+                                    'high' => (int) round($row['high'] * 100),
+                                    'low' => (int) round($row['low'] * 100),
+                                    'close' => (int) round($row['close'] * 100),
+                                    'volume' => (int) ($row['volume'] ?? 0),
+                                ]
+                            );
+                            $count++;
+                        }
+                        return back()->with('success', "{$symbol} added. Loaded {$count} days of price data.");
+                    }
+                }
+                return back()->with('success', "{$symbol} added.")->with('warning', 'Could not load historical data.');
+            } catch (\Exception $e) {
+                return back()->with('success', "{$symbol} added.")->with('warning', 'Price data: ' . $e->getMessage());
+            }
+        }
+
         return back()->with('success', "{$symbol} added to watchlist.");
+    }
+
+    public function chart($symbol)
+    {
+        $symbol = strtoupper($symbol);
+
+        $prices = StockPrice::where('symbol', $symbol)
+            ->orderBy('date')
+            ->get();
+
+        $chartData = $prices->map(function ($p) {
+            return [
+                'date' => $p->date->format('Y-m-d'),
+                'open' => $p->open / 100,
+                'high' => $p->high / 100,
+                'low' => $p->low / 100,
+                'close' => $p->close / 100,
+                'volume' => $p->volume,
+            ];
+        })->values()->toArray();
+
+        $latestPrice = $prices->last();
+        $previousPrice = $prices->count() >= 2 ? $prices[$prices->count() - 2] : null;
+        $change = $latestPrice && $previousPrice
+            ? (($latestPrice->close - $previousPrice->close) / $previousPrice->close) * 100
+            : 0;
+
+        return view('watchlist.chart', compact('symbol', 'chartData', 'latestPrice', 'change'));
     }
 
     public function destroy($id)

@@ -31,9 +31,24 @@ class BinanceBroker(BaseBroker):
     def connect(self) -> None:
         from binance.client import Client  # type: ignore[import-untyped]
 
-        self.client = Client(self.api_key, self.secret_key, testnet=self.testnet)
-        status = self.client.get_system_status()
-        self.logger.info("Binance connected – system status: %s", status)
+        if self.testnet:
+            # Binance Demo uses https://demo-api.binance.com
+            self.client = Client(self.api_key, self.secret_key)
+            self.client.API_URL = "https://demo-api.binance.com/api"
+            self.logger.info("Binance connected in DEMO mode (demo-api.binance.com)")
+        else:
+            self.client = Client(self.api_key, self.secret_key)
+            self.logger.info("Binance connected in LIVE mode")
+
+        try:
+            # Verify connection by fetching account
+            account = self.client.get_account()
+            self.logger.info(
+                "Binance account verified — can_trade: %s",
+                account.get("canTrade", False),
+            )
+        except Exception as exc:
+            self.logger.warning("Binance account check failed: %s", exc)
 
     def disconnect(self) -> None:
         if self.client:

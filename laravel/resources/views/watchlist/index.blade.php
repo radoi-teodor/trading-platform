@@ -38,7 +38,11 @@
                     $change = $openPrice > 0 ? (($closePrice - $openPrice) / $openPrice) * 100 : 0;
                 @endphp
                 <tr class="hover:bg-[#0f1117]/50 transition-colors">
-                    <td class="px-4 py-3 text-white font-medium">{{ $item->symbol }}</td>
+                    <td class="px-4 py-3">
+                        <a href="{{ url('/watchlist/' . $item->symbol . '/chart') }}" class="text-white font-medium hover:text-[#3b82f6] transition-colors">
+                            {{ $item->symbol }}
+                        </a>
+                    </td>
                     <td class="px-4 py-3 text-right text-gray-300">${{ number_format($closePrice / 100, 2) }}</td>
                     <td class="px-4 py-3 text-right {{ $change >= 0 ? 'text-[#22c55e]' : 'text-[#ef4444]' }}">
                         {{ $change >= 0 ? '+' : '' }}{{ number_format($change, 2) }}%

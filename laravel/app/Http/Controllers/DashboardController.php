@@ -7,10 +7,8 @@ use App\Models\BotLog;
 use App\Models\ClaudeAnalysis;
 use App\Models\Portfolio;
 use App\Models\Position;
-use App\Models\PortfolioSnapshot;
 use App\Models\Scraper;
 use App\Models\StockPrice;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 
@@ -22,7 +20,7 @@ class DashboardController extends Controller
         $portfolio = Portfolio::where('user_id', $user->id)->first();
 
         $openPositions = $portfolio
-            ? Position::where('portfolio_id', $portfolio->id)->open()->get()
+            ? Position::where('portfolio_id', $portfolio->id)->whereNull('closed_at')->get()
             : collect();
 
         $positionsValue = $openPositions->sum(function ($pos) {
@@ -31,23 +29,24 @@ class DashboardController extends Controller
 
         $totalValue = $portfolio ? $portfolio->balance_cents + $positionsValue : 0;
 
-        // Today's P&L from today's strategy or trades
+        // Today's strategy
         $todayStrategy = ClaudeAnalysis::where('user_id', $user->id)
             ->whereDate('date', Carbon::today())
-            ->latest()
+            ->orderByDesc('created_at')
             ->first();
         $todayPnl = $todayStrategy ? $todayStrategy->total_pnl_cents : 0;
 
-        // Active agents
+        // Active agents — count bots from agent_health
         $activeAgents = AgentHealth::where('user_id', $user->id)
             ->where('status', 'running')
             ->count();
 
+        // Active scrapers
         $activeScrapers = Scraper::where('user_id', $user->id)
             ->where('is_active', true)
             ->count();
 
-        // Recent activity
+        // Recent activity (last 20 logs)
         $recentActivity = BotLog::where('user_id', $user->id)
             ->orderByDesc('created_at')
             ->limit(20)
@@ -59,10 +58,9 @@ class DashboardController extends Controller
 
         $watchlistPrices = [];
         foreach ($watchlistItems as $item) {
-            $latestPrice = StockPrice::where('symbol', $item->symbol)
+            $watchlistPrices[$item->symbol] = StockPrice::where('symbol', $item->symbol)
                 ->orderByDesc('date')
                 ->first();
-            $watchlistPrices[$item->symbol] = $latestPrice;
         }
 
         return view('dashboard.index', compact(
