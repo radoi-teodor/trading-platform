@@ -1,0 +1,17 @@
+aiohttp>=3.9
+redis>=5.0
+pymysql>=1.1
+SQLAlchemy>=2.0
+pandas>=2.1
+numpy>=1.26
+ta>=0.11
+beautifulsoup4>=4.12
+feedparser>=6.0
+requests>=2.31
+textblob>=0.18
+yfinance>=0.2
+python-dotenv>=1.0
+python-binance>=1.0
+websockets>=12.0
+alpaca-trade-api>=3.0
+schedule>=1.2
