@@ -12,6 +12,7 @@ An AI-powered stock trading platform that uses Claude Code CLI to analyze market
 | [API & Integrations](api-integration.md) | Claude CLI, broker APIs, market data sources, notifications |
 | [Development Guide](development.md) | Project structure, extending the platform, commands, env vars |
 | [Windows Setup](setup-windows.md) | Installation guide for Windows 10/11 with PowerShell scripts |
+| [Crypto Scrapers](scrapers-crypto.md) | Ready-to-use RSS feeds for Bitcoin, Ethereum, crypto news |
 
 ## Quick Start
 

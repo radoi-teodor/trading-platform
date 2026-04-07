@@ -30,9 +30,11 @@ class PromptBuilder:
                     "action": "buy | sell",
                     "order_type": "market | limit",
                     "quantity": "number",
-                    "entry_price": "number | null (price in cents; null for market orders)",
-                    "stop_loss": "number | null (price in cents)",
-                    "take_profit": "number | null (price in cents)",
+                    "entry_price": "number | null (price in cents; null = enter at market price immediately)",
+                    "stop_loss": "number | null (price in cents — OR use stop_loss_pct instead)",
+                    "take_profit": "number | null (price in cents — OR use take_profit_pct instead)",
+                    "stop_loss_pct": "number | null (e.g. 0.5 = exit if price drops 0.5% from entry)",
+                    "take_profit_pct": "number | null (e.g. 1.0 = exit if price rises 1.0% from entry)",
                     "urgency": "immediate | wait_for_dip | end_of_day",
                     "confidence": "0.0–1.0",
                     "reasoning": "string",
@@ -84,25 +86,67 @@ class PromptBuilder:
         yesterday = context.get("yesterday_results", {})
         constraints = context.get("constraints", {})
         date = context.get("date", "today")
+        custom_notes = context.get("custom_notes", "")
+
+        # ── Strategy style instructions ──────────────────────────────────
+        strategy_style = context.get("strategy_style", "day_trading")
+        style_instructions = {
+            "scalping": (
+                "SCALPING MODE: Generate 20-50 small trades. Target 0.1-0.3% profit per trade. "
+                "Very tight stop losses (0.1-0.2%). Set reentry_allowed=true and max_entries=10-20 "
+                "per symbol. Use 1-3% of capital per trade."
+            ),
+            "day_trading": (
+                "DAY TRADING MODE: Generate 5-15 trades. Target 0.5-2% profit per trade. "
+                "Moderate stop losses (0.5-1%). Set reentry_allowed=true and max_entries=3-5 "
+                "per symbol. Use 3-8% of capital per trade."
+            ),
+            "swing_trading": (
+                "SWING TRADING MODE: Generate 1-3 high-conviction trades. Target 2-5% profit. "
+                "Wider stop losses (1-3%). Set reentry_allowed=false. Use 10-20% of capital per trade. "
+                "Hold for hours to days."
+            ),
+            "conservative": (
+                "CONSERVATIVE MODE: Generate 1-2 very carefully selected trades only. "
+                "Target 1-3% profit. Only enter on strong technical + fundamental confluence. "
+                "Use 5-10% of capital per trade. If no clear opportunity exists, recommend 0 trades."
+            ),
+        }
+        active_style_instruction = style_instructions.get(strategy_style, style_instructions["day_trading"])
 
         sections: list[str] = []
 
         # ── System instruction ───────────────────────────────────────────
-        sections.append(
-            "SYSTEM: You are an expert AI trading strategist for a DAY TRADING platform. "
+        system_text = (
+            "SYSTEM: You are an expert AI trading strategist. "
             "Respond ONLY with valid JSON conforming exactly to the schema "
             "provided at the end of this prompt. Do NOT include any markdown, "
             "explanation, or text outside the JSON object.\n\n"
-            "DAY TRADING RULES:\n"
+            f"STRATEGY STYLE: {active_style_instruction}\n\n"
+            "TRADING RULES:\n"
             "- You can specify trades that the bot will execute MULTIPLE TIMES throughout the day.\n"
-            "- If reentry_allowed is true, after a position closes (take-profit or stop-loss hit), "
+            "- If reentry_allowed is true, after a position closes (TP or SL hit), "
             "the bot will re-enter the position if the entry condition is met again.\n"
-            "- Use entry_price as the trigger level. The bot monitors prices every 30 seconds.\n"
             "- entry_condition 'price_below' means buy when price drops to or below entry_price. "
             "'price_above' means sell/short when price rises to or above entry_price.\n"
-            "- max_entries controls how many times the bot can enter the same trade in one day.\n"
-            "- Think in terms of scalping and intraday momentum. Set tight stop-losses and take-profits."
+            "- max_entries controls how many times the bot can enter the same trade in one day.\n\n"
+            "STOP LOSS & TAKE PROFIT — TWO MODES:\n"
+            "You can set exits in two ways (use whichever is more appropriate):\n"
+            "  Mode A — Fixed price: set stop_loss and take_profit as exact prices in cents.\n"
+            "  Mode B — Percentage from entry: set stop_loss_pct and take_profit_pct as percentages.\n"
+            "    Example: stop_loss_pct=0.5 means exit if price drops 0.5% from entry price.\n"
+            "    Example: take_profit_pct=1.2 means exit if price rises 1.2% from entry price.\n"
+            "  PREFER percentage mode for scalping and day trading — it adapts to actual entry price.\n"
+            "  Use fixed price mode only when you have a specific technical level in mind.\n"
+            "  You can mix both: e.g. stop_loss_pct with a fixed take_profit, or vice versa.\n"
+            "  If both fixed and pct are provided for the same side, percentage takes priority.\n\n"
+            "IMPORTANT: Consider the user's existing positions and capital. Do not over-allocate."
         )
+
+        if custom_notes:
+            system_text += f"\n\nUSER CUSTOM NOTES FOR THIS ANALYSIS: {custom_notes}"
+
+        sections.append(system_text)
 
         # ── Section 1: User profile ──────────────────────────────────────
         broker_type = context.get("broker_type", "paper")
@@ -206,6 +250,24 @@ class PromptBuilder:
             "These are actual executed trades from the broker account. "
             "Use this to understand current exposure and recent performance.\n"
             + "\n".join(trades_lines or ["  (no recent trades)"])
+        )
+
+        # ── Section 4c: Currently pending trades ────────────────────────
+        pending_trades = context.get("pending_trades", [])
+        pending_lines: list[str] = []
+        for t in pending_trades:
+            entry = f"${t['entry_price']:.2f}" if t.get("entry_price") else "market"
+            sl = f"${t['stop_loss']:.2f}" if t.get("stop_loss") else "none"
+            tp = f"${t['take_profit']:.2f}" if t.get("take_profit") else "none"
+            pending_lines.append(
+                f"  {t['action'].upper()} {t['symbol']} qty={t['quantity']} "
+                f"entry={entry} SL={sl} TP={tp} urgency={t.get('urgency', '?')}"
+            )
+        sections.append(
+            "=== SECTION 4c: CURRENTLY PENDING TRADES ===\n"
+            "These trades are already planned from a previous strategy and are waiting to execute.\n"
+            "You may keep, modify, or cancel them. If you don't mention them, they will remain active.\n"
+            + "\n".join(pending_lines or ["  (no pending trades)"])
         )
 
         # ── Section 5: Yesterday's results ───────────────────────────────

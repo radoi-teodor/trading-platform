@@ -371,6 +371,28 @@ def _gather_context(
             "executed_at": str(r[6]),
         })
 
+    # Pending trades from active strategies (so Claude knows what's already planned)
+    pending_rows = db.execute(
+        text(
+            "SELECT cat.symbol, cat.action, cat.quantity, cat.entry_price_cents, "
+            "       cat.stop_loss_cents, cat.take_profit_cents, cat.status, cat.urgency "
+            "FROM claude_analysis_trades cat "
+            "JOIN claude_analyses ca ON ca.id = cat.claude_analysis_id "
+            "WHERE ca.user_id = :uid AND ca.status = 'active' AND cat.status = 'pending'"
+        ),
+        {"uid": user_id},
+    ).fetchall()
+
+    pending_trades = []
+    for r in pending_rows:
+        pending_trades.append({
+            "symbol": r[0], "action": r[1], "quantity": float(r[2]),
+            "entry_price": float(r[3]) / 100 if r[3] else None,
+            "stop_loss": float(r[4]) / 100 if r[4] else None,
+            "take_profit": float(r[5]) / 100 if r[5] else None,
+            "status": r[6], "urgency": r[7],
+        })
+
     # Constraints — only allow symbols from the user's watchlist
     constraints = {
         "max_position_pct": user_cfg.get("max_position_pct", 20),
@@ -392,9 +414,12 @@ def _gather_context(
         "market_data": market_data,
         "news": news,
         "recent_trades": recent_trades,
+        "pending_trades": pending_trades,
         "yesterday_results": yesterday,
         "constraints": constraints,
         "broker_type": user_cfg.get("broker_type", "paper"),
+        "strategy_style": user_cfg.get("strategy_style", "day_trading"),
+        "custom_notes": user_cfg.get("custom_notes", ""),
     }
 
 
@@ -561,7 +586,8 @@ def _load_user_configs(db: Session) -> list[dict[str, Any]]:
             "       us.risk_tolerance, us.max_daily_trades, us.max_position_pct, "
             "       us.max_daily_loss_pct, us.preferred_markets, us.custom_instructions, "
             "       us.analysis_schedule, us.auto_execute, us.timezone, "
-            "       bc.broker, bc.credentials "
+            "       bc.broker, bc.credentials, "
+            "       us.strategy_style "
             "FROM users u "
             "JOIN user_settings us ON us.user_id = u.id "
             "LEFT JOIN broker_credentials bc ON bc.user_id = u.id AND bc.is_active = 1"
@@ -611,6 +637,7 @@ def _load_user_configs(db: Session) -> list[dict[str, Any]]:
             "broker_type": r[11] or "paper",
             "broker_credentials": broker_creds,
             "midday_review_enabled": schedule_val in ("midday", "every_4_hours"),
+            "strategy_style": r[13] if len(r) > 13 and r[13] else "day_trading",
         })
 
     return configs
@@ -646,7 +673,11 @@ def _redis_listener(
 
                 if command == "trigger_analysis" and user_id:
                     # Manual trigger from dashboard
-                    _handle_manual_trigger(user_id, claude_engine, bot_manager, db, redis_client)
+                    _handle_manual_trigger(
+                        user_id, claude_engine, bot_manager, db, redis_client,
+                        strategy_style=data.get("strategy_style"),
+                        custom_notes=data.get("custom_notes", ""),
+                    )
 
                 elif command == "stop_bot" and user_id:
                     bot_manager.stop_bot(int(user_id))
@@ -673,6 +704,8 @@ def _handle_manual_trigger(
     bot_manager: BotManager,
     db: Session,
     redis_client: redis_lib.Redis,  # type: ignore[type-arg]
+    strategy_style: str | None = None,
+    custom_notes: str = "",
 ) -> None:
     """Handle a manually triggered analysis from the Laravel dashboard."""
     log = logging.getLogger(f"{__name__}.manual_trigger")
@@ -683,15 +716,25 @@ def _handle_manual_trigger(
             log.warning("No config found for user %d", user_id)
             return
 
+        # Override strategy style and custom notes from the trigger request
+        if strategy_style:
+            user_cfg["strategy_style"] = strategy_style
+        if custom_notes:
+            user_cfg["custom_notes"] = custom_notes
+
         broker = _create_broker(user_cfg, db)
         context = _gather_context(user_cfg, broker, db, redis_client)
         strategy = claude_engine.daily_analysis(context)
+        analysis_id = strategy.pop("_analysis_id", None)
 
+        bot_db = _create_db_session()  # separate session for bot thread
         bot_manager.spawn_bot(
             user_id=user_id,
             broker=broker,
             strategy=strategy,
             constraints=context.get("constraints"),
+            db_session=bot_db,
+            analysis_id=analysis_id,
         )
         log.info("Manual analysis + bot spawn complete for user %d", user_id)
     except Exception as exc:
@@ -833,19 +876,32 @@ def main() -> None:
                 except Exception:
                     pass
 
-            # ── Morning analysis ─────────────────────────────────────────
-            scheduled_time = user_cfg.get("analysis_schedule", "09:30")
-            if current_time >= scheduled_time and user_id not in analysis_done_today:
-                logger.info("Running daily analysis for user %d", user_id)
+            # ── Check for pending analyses in DB (fallback if Redis missed the trigger)
+            pending_row = main_db.execute(
+                text(
+                    "SELECT id FROM claude_analyses "
+                    "WHERE user_id = :uid AND status = 'pending' "
+                    "ORDER BY created_at DESC LIMIT 1"
+                ),
+                {"uid": user_id},
+            ).fetchone()
+
+            if pending_row and user_id not in analysis_done_today:
+                pending_analysis_id = pending_row[0]
+                logger.info("Found pending analysis id=%d for user %d — running now", pending_analysis_id, user_id)
                 try:
                     context = _gather_context(user_cfg, broker, main_db, redis_client)
                     strategy = claude_engine.daily_analysis(context)
+                    analysis_id = strategy.pop("_analysis_id", pending_analysis_id)
 
+                    bot_db = _create_db_session()
                     bot_manager.spawn_bot(
                         user_id=user_id,
                         broker=broker,
                         strategy=strategy,
                         constraints=context.get("constraints"),
+                        db_session=bot_db,
+                        analysis_id=analysis_id,
                     )
                     analysis_done_today.add(user_id)
                     logger.info("Daily analysis complete for user %d", user_id)

@@ -28,6 +28,7 @@ class ClaudeAnalysis extends Model
         'prompt_sent',
         'raw_response',
         'next_review',
+        'strategy_style',
         'created_at',
         'completed_at',
     ];

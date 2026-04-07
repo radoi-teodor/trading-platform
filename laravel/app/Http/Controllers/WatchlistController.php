@@ -109,9 +109,25 @@ class WatchlistController extends Controller
     {
         $symbol = strtoupper($symbol);
 
+        // Normalize symbol for lookup: BTCUSDT -> BTC (same as ClaudeStrategyController::tradeChart)
+        $lookupSymbol = $symbol;
+        foreach (['USDT', 'USDC', 'BUSD', '-USD', '-USDT'] as $suffix) {
+            if (str_ends_with($lookupSymbol, $suffix)) {
+                $lookupSymbol = substr($lookupSymbol, 0, -strlen($suffix));
+                break;
+            }
+        }
+
+        // Try exact match first, then normalized
         $prices = StockPrice::where('symbol', $symbol)
             ->orderBy('date')
             ->get();
+
+        if ($prices->isEmpty() && $lookupSymbol !== $symbol) {
+            $prices = StockPrice::where('symbol', $lookupSymbol)
+                ->orderBy('date')
+                ->get();
+        }
 
         $chartData = $prices->map(function ($p) {
             return [
@@ -130,7 +146,32 @@ class WatchlistController extends Controller
             ? (($latestPrice->close - $previousPrice->close) / $previousPrice->close) * 100
             : 0;
 
-        return view('watchlist.chart', compact('symbol', 'chartData', 'latestPrice', 'change'));
+        // Get executed trades for this symbol
+        $executedTrades = \App\Models\Trade::where('symbol', $symbol)
+            ->whereHas('portfolio', fn($q) => $q->where('user_id', Auth::id()))
+            ->orderBy('executed_at')
+            ->get()
+            ->map(fn($t) => [
+                'time' => $t->executed_at->format('Y-m-d'),
+                'side' => $t->side,
+                'price' => $t->price_cents / 100,
+                'quantity' => $t->quantity,
+            ])->values()->toArray();
+
+        // Get planned trades for this symbol (from active strategies)
+        $plannedTrades = \App\Models\ClaudeAnalysisTrade::where('symbol', $symbol)
+            ->whereHas('claudeAnalysis', fn($q) => $q->where('user_id', Auth::id())->where('status', 'active'))
+            ->where('status', 'pending')
+            ->get()
+            ->map(fn($t) => [
+                'entry_price' => $t->entry_price_cents ? $t->entry_price_cents / 100 : null,
+                'stop_loss' => $t->stop_loss_cents ? $t->stop_loss_cents / 100 : null,
+                'take_profit' => $t->take_profit_cents ? $t->take_profit_cents / 100 : null,
+                'action' => $t->action,
+                'quantity' => $t->quantity,
+            ])->values()->toArray();
+
+        return view('watchlist.chart', compact('symbol', 'chartData', 'latestPrice', 'change', 'executedTrades', 'plannedTrades'));
     }
 
     public function destroy($id)

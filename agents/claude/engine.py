@@ -36,8 +36,14 @@ class ClaudeEngine:
         retries = 3
         delays = [5, 15, 45]
         last_error: Exception | None = None
+        prompt_len = len(prompt)
 
         for attempt in range(retries):
+            self.logger.info(
+                "Claude CLI call attempt %d/%d — prompt size: %d chars, timeout: %ds",
+                attempt + 1, retries, prompt_len, timeout,
+            )
+            start_time = time.time()
             try:
                 result = subprocess.run(
                     [self.binary_path, "-p", prompt, "--output-format", "json"],
@@ -45,17 +51,50 @@ class ClaudeEngine:
                     text=True,
                     timeout=timeout,
                 )
+                elapsed = time.time() - start_time
+
                 if result.returncode != 0:
+                    self.logger.error(
+                        "Claude CLI returned code %d after %.1fs — stderr: %s",
+                        result.returncode, elapsed, result.stderr[:500],
+                    )
                     raise RuntimeError(
-                        f"Claude CLI error (code {result.returncode}): {result.stderr}"
+                        f"Claude CLI error (code {result.returncode}): {result.stderr[:300]}"
                     )
 
+                self.logger.info(
+                    "Claude CLI responded in %.1fs — output size: %d chars",
+                    elapsed, len(result.stdout),
+                )
+
                 response = json.loads(result.stdout)
-                return response.get("result", result.stdout)
-            except Exception as exc:
-                last_error = exc
-                self.logger.warning("Claude attempt %d failed: %s", attempt + 1, exc)
+                answer = response.get("result", result.stdout)
+                self.logger.info(
+                    "Claude response parsed — result size: %d chars, first 100: %s",
+                    len(answer), answer[:100].replace("\n", " "),
+                )
+                return answer
+
+            except subprocess.TimeoutExpired:
+                elapsed = time.time() - start_time
+                self.logger.error(
+                    "Claude CLI TIMED OUT after %.1fs (limit: %ds) on attempt %d/%d",
+                    elapsed, timeout, attempt + 1, retries,
+                )
+                last_error = TimeoutError(f"Claude timed out after {timeout}s")
                 if attempt < retries - 1:
+                    self.logger.info("Retrying in %ds...", delays[attempt])
+                    time.sleep(delays[attempt])
+
+            except Exception as exc:
+                elapsed = time.time() - start_time
+                last_error = exc
+                self.logger.warning(
+                    "Claude attempt %d/%d failed after %.1fs: %s",
+                    attempt + 1, retries, elapsed, exc,
+                )
+                if attempt < retries - 1:
+                    self.logger.info("Retrying in %ds...", delays[attempt])
                     time.sleep(delays[attempt])
 
         raise RuntimeError(f"Claude failed after {retries} attempts: {last_error}")
@@ -71,29 +110,52 @@ class ClaudeEngine:
         from .prompt_builder import PromptBuilder
         from .strategy_parser import StrategyParser
 
-        prompt = PromptBuilder.build_daily_analysis(context)
+        self.logger.info("=== DAILY ANALYSIS START for user %s ===", context.get("user_id"))
+        style = context.get("strategy_style", "day_trading")
+        self.logger.info("Strategy style: %s | Symbols: %s", style, context.get("constraints", {}).get("allowed_symbols", "any"))
 
-        # Log the outgoing prompt
+        self.logger.info("Building prompt...")
+        prompt = PromptBuilder.build_daily_analysis(context)
+        self.logger.info("Prompt built — %d chars", len(prompt))
+
+        # Log the outgoing prompt to DB
         analysis_id = self._log_prompt(
             user_id=context.get("user_id"),
             date=context.get("date"),
             prompt=prompt,
         )
+        self.logger.info("Sending to Claude CLI (analysis_id=%d)...", analysis_id)
 
+        total_start = time.time()
         raw_response = self.ask(prompt)
+        total_elapsed = time.time() - total_start
+        self.logger.info("Claude responded in %.1fs total", total_elapsed)
 
         # Log the raw response
         self._log_response(analysis_id, raw_response)
 
         # Parse and validate
+        self.logger.info("Parsing Claude response...")
         strategy = StrategyParser.parse(raw_response, context.get("constraints", {}))
+        num_trades = len(strategy.get("trades", []))
+        self.logger.info(
+            "Strategy parsed — outlook: %s, confidence: %.0f%%, trades: %d",
+            strategy.get("market_outlook", "?"),
+            strategy.get("confidence", 0) * 100,
+            num_trades,
+        )
 
         # Persist the parsed strategy
         self._update_analysis(analysis_id, strategy)
 
+        # Cancel old pending trades from previous strategies
+        self._cancel_old_pending_trades(context.get("user_id"), analysis_id, strategy)
+
         # Insert individual trade recommendations
         self._insert_analysis_trades(analysis_id, strategy)
 
+        self.logger.info("=== DAILY ANALYSIS COMPLETE — %d trades planned ===", num_trades)
+        strategy["_analysis_id"] = analysis_id
         return strategy
 
     def midday_review(self, context: dict[str, Any]) -> dict[str, Any]:
@@ -120,8 +182,34 @@ class ClaudeEngine:
         date: str | None,
         prompt: str,
     ) -> int:
-        """Insert an initial ``claude_analyses`` row and return its ID."""
+        """Find existing pending analysis or create a new one. Return its ID."""
         now = datetime.now(timezone.utc)
+
+        # Check if Laravel already created a pending analysis for this user
+        existing = self.db.execute(
+            text(
+                "SELECT id FROM claude_analyses "
+                "WHERE user_id = :uid AND status = 'pending' "
+                "ORDER BY created_at DESC LIMIT 1"
+            ),
+            {"uid": user_id},
+        ).fetchone()
+
+        if existing:
+            # Update the existing pending record with the prompt
+            analysis_id = existing[0]
+            self.db.execute(
+                text(
+                    "UPDATE claude_analyses SET prompt_sent = :prompt "
+                    "WHERE id = :id"
+                ),
+                {"prompt": prompt, "id": analysis_id},
+            )
+            self.db.commit()
+            self.logger.info("Using existing pending analysis id=%s for user=%s", analysis_id, user_id)
+            return analysis_id
+
+        # No pending exists — create a new one
         result = self.db.execute(
             text(
                 "INSERT INTO claude_analyses "
@@ -147,8 +235,8 @@ class ClaudeEngine:
             },
         )
         self.db.commit()
-        analysis_id: int = result.lastrowid  # type: ignore[assignment]
-        self.logger.info("Logged claude_analyses prompt id=%s for user=%s", analysis_id, user_id)
+        analysis_id = result.lastrowid  # type: ignore[assignment]
+        self.logger.info("Created new analysis id=%s for user=%s", analysis_id, user_id)
         return analysis_id
 
     def _log_response(self, analysis_id: int, raw_response: str) -> None:
@@ -292,3 +380,61 @@ class ClaudeEngine:
             len(strategy.get("watchlist_alerts", [])),
             analysis_id,
         )
+
+    def _cancel_old_pending_trades(
+        self, user_id: int | None, new_analysis_id: int, strategy: dict[str, Any]
+    ) -> None:
+        """Cancel pending trades from old strategies that are NOT carried over."""
+        if not user_id:
+            return
+
+        # Symbols in the new strategy
+        new_symbols = {t.get("symbol", "").upper() for t in strategy.get("trades", [])}
+        # Also normalize: BTCUSDT → BTC
+        new_bases = set()
+        for s in new_symbols:
+            base = s
+            for suffix in ("USDT", "USDC", "BUSD", "-USD", "-USDT"):
+                if base.endswith(suffix):
+                    base = base[:-len(suffix)]
+                    break
+            new_bases.add(base)
+            new_bases.add(s)  # keep original too
+
+        # Find old pending trades (from other analyses)
+        rows = self.db.execute(
+            text(
+                "SELECT cat.id, cat.symbol "
+                "FROM claude_analysis_trades cat "
+                "JOIN claude_analyses ca ON ca.id = cat.claude_analysis_id "
+                "WHERE ca.user_id = :uid AND cat.status = 'pending' "
+                "AND cat.claude_analysis_id != :new_id"
+            ),
+            {"uid": user_id, "new_id": new_analysis_id},
+        ).fetchall()
+
+        cancelled = 0
+        for row in rows:
+            trade_id, symbol = row[0], row[1].upper()
+            # Normalize old symbol too
+            base = symbol
+            for suffix in ("USDT", "USDC", "BUSD", "-USD", "-USDT"):
+                if base.endswith(suffix):
+                    base = base[:-len(suffix)]
+                    break
+
+            # If new strategy has a trade for this symbol, the old one is superseded
+            # If not, cancel it — Claude chose not to include it
+            self.db.execute(
+                text(
+                    "UPDATE claude_analysis_trades SET status = 'skipped', "
+                    "skip_reason = 'Superseded by new strategy' "
+                    "WHERE id = :id"
+                ),
+                {"id": trade_id},
+            )
+            cancelled += 1
+
+        if cancelled:
+            self.db.commit()
+            self.logger.info("Cancelled %d old pending trades for user %s", cancelled, user_id)

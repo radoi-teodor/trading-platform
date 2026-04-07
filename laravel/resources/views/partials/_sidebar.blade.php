@@ -22,6 +22,14 @@
             <span>Strategies</span>
         </a>
 
+        {{-- Planned Trades --}}
+        <a href="{{ route('trades.planned') }}"
+           class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
+                  {{ request()->is('trades/planned*') ? 'bg-[#1a1d29] text-white border-l-2 border-[#3b82f6]' : 'text-gray-400 hover:text-white hover:bg-[#1a1d29]' }}">
+            <x-icons.list-bullet class="w-5 h-5" />
+            <span>Planned Trades</span>
+        </a>
+
         {{-- Portfolio --}}
         <a href="{{ route('portfolio.index') }}"
            class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors

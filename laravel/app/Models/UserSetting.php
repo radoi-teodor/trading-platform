@@ -16,6 +16,7 @@ class UserSetting extends Model
         'preferred_markets',
         'custom_instructions',
         'analysis_schedule',
+        'strategy_style',
         'auto_execute',
         'timezone',
     ];

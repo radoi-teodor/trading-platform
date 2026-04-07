@@ -18,6 +18,10 @@
             />
         </div>
         <p class="text-sm text-gray-400">
+            @if($analysis->strategy_style)
+                @php $styleIcons = ['scalping'=>'🔥','day_trading'=>'📊','swing_trading'=>'📈','conservative'=>'🎯']; @endphp
+                {{ $styleIcons[$analysis->strategy_style] ?? '' }} {{ ucfirst(str_replace('_', ' ', $analysis->strategy_style)) }} &middot;
+            @endif
             Confidence: <span class="text-white font-medium">{{ number_format($analysis->confidence * 100, 0) }}%</span>
             &middot; Trades: {{ $analysis->trades_executed }}/{{ $analysis->trades_planned }} executed
             &middot; Next Review: {{ ucfirst(str_replace('_', ' ', $analysis->next_review)) }}
@@ -74,7 +78,12 @@
                 <tbody class="divide-y divide-[#2a2d3a]">
                     @foreach($analysis->analysisTrades as $trade)
                         <tr class="hover:bg-[#0f1117]/50 transition-colors">
-                            <td class="px-4 py-3 text-white font-medium">{{ $trade->symbol }}</td>
+                            <td class="px-4 py-3">
+                                <a href="{{ url('/strategies/' . $analysis->id . '/trade/' . $trade->id . '/chart') }}"
+                                   class="text-white font-medium hover:text-[#3b82f6] transition-colors">
+                                    {{ $trade->symbol }}
+                                </a>
+                            </td>
                             <td class="px-4 py-3">
                                 <x-badge :color="$trade->action === 'buy' ? 'green' : 'red'" :text="strtoupper($trade->action)" />
                             </td>
@@ -115,13 +124,20 @@
                                 />
                             </td>
                             <td class="px-4 py-3">
-                                <details class="text-sm">
-                                    <summary class="text-[#3b82f6] cursor-pointer hover:text-blue-400">View</summary>
-                                    <p class="mt-2 text-gray-400 text-xs max-w-xs">{{ $trade->reasoning }}</p>
-                                    @if($trade->skip_reason)
-                                        <p class="mt-1 text-[#f59e0b] text-xs">Skipped: {{ $trade->skip_reason }}</p>
-                                    @endif
-                                </details>
+                                <div class="flex items-center space-x-3">
+                                    <a href="{{ url('/strategies/' . $analysis->id . '/trade/' . $trade->id . '/chart') }}"
+                                       class="inline-flex items-center text-xs text-[#3b82f6] hover:text-blue-400 transition-colors">
+                                        <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"/></svg>
+                                        Chart
+                                    </a>
+                                    <details class="text-sm">
+                                        <summary class="text-[#3b82f6] cursor-pointer hover:text-blue-400">View</summary>
+                                        <p class="mt-2 text-gray-400 text-xs max-w-xs">{{ $trade->reasoning }}</p>
+                                        @if($trade->skip_reason)
+                                            <p class="mt-1 text-[#f59e0b] text-xs">Skipped: {{ $trade->skip_reason }}</p>
+                                        @endif
+                                    </details>
+                                </div>
                             </td>
                         </tr>
                     @endforeach

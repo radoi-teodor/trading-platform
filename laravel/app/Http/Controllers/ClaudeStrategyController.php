@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\ClaudeAnalysis;
+use App\Models\ClaudeAnalysisTrade;
+use App\Models\StockPrice;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redis;
@@ -31,7 +33,18 @@ class ClaudeStrategyController extends Controller
 
         $analyses = $query->paginate(15)->withQueryString();
 
-        return view('strategies.index', compact('analyses'));
+        $settings = \App\Models\UserSetting::where('user_id', $user->id)->first();
+        $portfolio = \App\Models\Portfolio::where('user_id', $user->id)->first();
+        $openPositions = $portfolio
+            ? \App\Models\Position::where('portfolio_id', $portfolio->id)->whereNull('closed_at')->get()
+            : collect();
+        $positionsValue = $openPositions->sum(fn($p) => (int) round((float) $p->quantity * $p->current_price_cents));
+        $totalEquity = $portfolio ? $portfolio->balance_cents + $positionsValue : 0;
+        $brokerCred = \App\Models\BrokerCredential::where('user_id', $user->id)->where('is_active', true)->first();
+
+        return view('strategies.index', compact(
+            'analyses', 'settings', 'portfolio', 'openPositions', 'totalEquity', 'brokerCred'
+        ));
     }
 
     public function show($id)
@@ -58,7 +71,21 @@ class ClaudeStrategyController extends Controller
     {
         $user = Auth::user();
 
-        // Create a pending analysis record immediately so the user sees it
+        // Save strategy style preference
+        $style = $request->input('strategy_style', 'day_trading');
+        $customNotes = $request->input('custom_notes', '');
+
+        $settings = \App\Models\UserSetting::where('user_id', $user->id)->first();
+        if ($settings) {
+            $settings->update(['strategy_style' => $style]);
+        }
+
+        // Mark previous active/pending strategies as completed
+        ClaudeAnalysis::where('user_id', $user->id)
+            ->whereIn('status', ['active', 'pending'])
+            ->update(['status' => 'completed']);
+
+        // Create pending analysis
         $analysis = ClaudeAnalysis::create([
             'user_id' => $user->id,
             'date' => Carbon::today(),
@@ -67,25 +94,85 @@ class ClaudeStrategyController extends Controller
             'reasoning' => '',
             'strategy_json' => '{}',
             'status' => 'pending',
+            'strategy_style' => $style,
             'trades_planned' => 0,
-            'prompt_sent' => 'Pending — analysis triggered manually.',
+            'prompt_sent' => 'Pending — ' . $style . ' analysis triggered.',
             'raw_response' => '',
             'created_at' => now(),
         ]);
 
-        // Notify Python agents via Redis
+        // Publish to Redis
         try {
             Redis::publish('trading:commands', json_encode([
                 'command' => 'trigger_analysis',
                 'user_id' => $user->id,
                 'analysis_id' => $analysis->id,
+                'strategy_style' => $style,
+                'custom_notes' => $customNotes,
                 'timestamp' => now()->toISOString(),
             ]));
-        } catch (\Exception $e) {
-            // Redis might not be available — Python will still pick it up on next cycle
+        } catch (\Exception $e) {}
+
+        return redirect('/strategies')->with('success', 'Analysis triggered (' . ucfirst(str_replace('_', ' ', $style)) . '). Refresh to see results.');
+    }
+
+    public function tradeChart($analysisId, $tradeId)
+    {
+        $analysis = ClaudeAnalysis::where('user_id', Auth::id())
+            ->findOrFail($analysisId);
+
+        $trade = ClaudeAnalysisTrade::where('claude_analysis_id', $analysis->id)
+            ->findOrFail($tradeId);
+
+        // Normalize symbol: BTCUSDT → BTC, ETH-USD → ETH (to match stock_prices)
+        $symbol = $trade->symbol;
+        $lookupSymbol = strtoupper($symbol);
+        foreach (['USDT', 'USDC', 'BUSD', '-USD', '-USDT'] as $suffix) {
+            if (str_ends_with($lookupSymbol, $suffix)) {
+                $lookupSymbol = substr($lookupSymbol, 0, -strlen($suffix));
+                break;
+            }
         }
 
-        return redirect('/strategies')->with('success', 'Analysis triggered — status: pending. Refresh to see results when ready.');
+        // Try exact match first, then normalized
+        $chartData = StockPrice::where('symbol', $symbol)
+            ->where('date', '>=', Carbon::today()->subDays(90))
+            ->orderBy('date')
+            ->get();
+
+        if ($chartData->isEmpty()) {
+            $chartData = StockPrice::where('symbol', $lookupSymbol)
+                ->where('date', '>=', Carbon::today()->subDays(90))
+                ->orderBy('date')
+                ->get();
+        }
+
+        $chartData = $chartData->map(fn ($p) => [
+                'time'   => $p->date->format('Y-m-d'),
+                'open'   => $p->open / 100,
+                'high'   => $p->high / 100,
+                'low'    => $p->low / 100,
+                'close'  => $p->close / 100,
+                'volume' => $p->volume,
+            ])
+            ->values()
+            ->toArray();
+
+        return view('strategies.trade-chart', compact('trade', 'analysis', 'chartData', 'symbol'));
+    }
+
+    public function plannedTrades()
+    {
+        // Get ALL pending/active trades from ALL strategies for this user
+        $trades = ClaudeAnalysisTrade::whereHas('claudeAnalysis', function ($q) {
+                $q->where('user_id', Auth::id())
+                  ->whereIn('status', ['active', 'pending']);
+            })
+            ->with('claudeAnalysis')
+            ->orderByDesc('created_at')
+            ->get();
+
+        return view('strategies.planned-trades', compact('trades'));
     }
 
     public function cancel($id)

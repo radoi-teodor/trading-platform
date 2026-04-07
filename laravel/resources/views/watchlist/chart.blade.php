@@ -130,6 +130,58 @@ document.addEventListener('DOMContentLoaded', function() {
         };
     });
     candleSeries.setData(candles);
+
+    // Executed trade markers
+    var executedTrades = @json($executedTrades ?? []);
+    var markers = [];
+    executedTrades.forEach(function(t) {
+        markers.push({
+            time: t.time,
+            position: t.side === 'buy' ? 'belowBar' : 'aboveBar',
+            color: t.side === 'buy' ? '#22c55e' : '#ef4444',
+            shape: t.side === 'buy' ? 'arrowUp' : 'arrowDown',
+            text: t.side.toUpperCase() + ' ' + t.quantity,
+        });
+    });
+    if (markers.length > 0) {
+        candleSeries.setMarkers(markers);
+    }
+
+    // Planned trade price lines (entry, SL, TP)
+    var plannedTrades = @json($plannedTrades ?? []);
+    plannedTrades.forEach(function(t) {
+        if (t.entry_price) {
+            candleSeries.createPriceLine({
+                price: t.entry_price,
+                color: '#3b82f6',
+                lineWidth: 2,
+                lineStyle: LightweightCharts.LineStyle.Dashed,
+                axisLabelVisible: true,
+                title: 'ENTRY ' + t.action.toUpperCase() + ' $' + t.entry_price.toFixed(2),
+            });
+        }
+        if (t.stop_loss) {
+            candleSeries.createPriceLine({
+                price: t.stop_loss,
+                color: '#ef4444',
+                lineWidth: 1,
+                lineStyle: LightweightCharts.LineStyle.Dashed,
+                axisLabelVisible: true,
+                title: 'SL $' + t.stop_loss.toFixed(2),
+            });
+        }
+        if (t.take_profit) {
+            candleSeries.createPriceLine({
+                price: t.take_profit,
+                color: '#22c55e',
+                lineWidth: 1,
+                lineStyle: LightweightCharts.LineStyle.Dashed,
+                axisLabelVisible: true,
+                title: 'TP $' + t.take_profit.toFixed(2),
+            });
+        }
+    });
+
     chart.timeScale().fitContent();
 
     // Volume chart

@@ -35,6 +35,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/strategies/trigger', [ClaudeStrategyController::class, 'trigger'])->name('strategies.trigger');
     Route::post('/strategies/{id}/cancel', [ClaudeStrategyController::class, 'cancel'])->name('strategies.cancel');
     Route::get('/strategies/{id}', [ClaudeStrategyController::class, 'show'])->name('strategies.show');
+    Route::get('/strategies/{analysisId}/trade/{tradeId}/chart', [ClaudeStrategyController::class, 'tradeChart'])->name('strategies.trade.chart');
+
+    // Planned Trades (all strategies)
+    Route::get('/trades/planned', [ClaudeStrategyController::class, 'plannedTrades'])->name('trades.planned');
 
     // Portfolio
     Route::get('/portfolio', [PortfolioController::class, 'index'])->name('portfolio.index');

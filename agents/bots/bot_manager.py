@@ -70,6 +70,8 @@ class BotManager:
         broker: BaseBroker,
         strategy: dict[str, Any],
         constraints: dict[str, Any] | None = None,
+        db_session: Any = None,
+        analysis_id: int | None = None,
     ) -> None:
         """Create and start a TradingBot for *user_id*."""
         if user_id in self._bots:
@@ -82,6 +84,8 @@ class BotManager:
             redis_client=self.redis,
             strategy=strategy,
             constraints=constraints,
+            db_session=db_session,
+            analysis_id=analysis_id,
         )
         thread = threading.Thread(target=self._run_bot, args=(user_id, bot), daemon=True)
 
