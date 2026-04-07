@@ -63,15 +63,18 @@
                 <thead class="text-xs text-gray-400 uppercase bg-[#0f1117]">
                     <tr>
                         <th class="px-4 py-3">Symbol</th>
-                        <th class="px-4 py-3">Action</th>
+                        <th class="px-4 py-3">Direction</th>
                         <th class="px-4 py-3">Type</th>
                         <th class="px-4 py-3">Qty</th>
                         <th class="px-4 py-3 text-right">Entry</th>
                         <th class="px-4 py-3 text-right">Stop Loss</th>
+                        <th class="px-4 py-3 text-right">SL%</th>
                         <th class="px-4 py-3 text-right">Take Profit</th>
+                        <th class="px-4 py-3 text-right">TP%</th>
                         <th class="px-4 py-3">Urgency</th>
                         <th class="px-4 py-3">Confidence</th>
                         <th class="px-4 py-3">Status</th>
+                        <th class="px-4 py-3">Reentry</th>
                         <th class="px-4 py-3">Reasoning</th>
                     </tr>
                 </thead>
@@ -85,7 +88,10 @@
                                 </a>
                             </td>
                             <td class="px-4 py-3">
-                                <x-badge :color="$trade->action === 'buy' ? 'green' : 'red'" :text="strtoupper($trade->action)" />
+                                @php
+                                    $direction = $trade->direction ?? ($trade->action === 'buy' ? 'long' : 'short');
+                                @endphp
+                                <x-badge :color="$direction === 'long' ? 'green' : 'red'" :text="strtoupper($direction)" />
                             </td>
                             <td class="px-4 py-3 text-gray-300">{{ ucfirst($trade->order_type) }}</td>
                             <td class="px-4 py-3 text-gray-300">{{ $trade->quantity }}</td>
@@ -103,9 +109,23 @@
                                     —
                                 @endif
                             </td>
+                            <td class="px-4 py-3 text-right text-[#ef4444]">
+                                @if($trade->stop_loss_pct)
+                                    {{ number_format($trade->stop_loss_pct, 2) }}%
+                                @else
+                                    —
+                                @endif
+                            </td>
                             <td class="px-4 py-3 text-right text-[#22c55e]">
                                 @if($trade->take_profit_cents)
                                     ${{ number_format($trade->take_profit_cents / 100, 2) }}
+                                @else
+                                    —
+                                @endif
+                            </td>
+                            <td class="px-4 py-3 text-right text-[#22c55e]">
+                                @if($trade->take_profit_pct)
+                                    {{ number_format($trade->take_profit_pct, 2) }}%
                                 @else
                                     —
                                 @endif
@@ -122,6 +142,9 @@
                                     :color="$trade->status === 'executed' ? 'green' : ($trade->status === 'pending' ? 'amber' : ($trade->status === 'failed' ? 'red' : 'gray'))"
                                     :text="ucfirst($trade->status)"
                                 />
+                            </td>
+                            <td class="px-4 py-3 text-gray-300 text-xs">
+                                {{ ($trade->reentry_allowed ?? false) ? 'Yes (' . ($trade->max_entries ?? 1) . 'x)' : 'No' }}
                             </td>
                             <td class="px-4 py-3">
                                 <div class="flex items-center space-x-3">

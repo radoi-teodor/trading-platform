@@ -300,22 +300,29 @@ class ClaudeEngine:
         """Insert individual trade recommendations into claude_analysis_trades."""
         now = datetime.now(timezone.utc)
         for trade in strategy.get("trades", []):
+            # Derive action from direction for backward compatibility
+            direction = trade.get("direction", "long")
+            if direction not in ("long", "short"):
+                direction = "long"
+            action = trade.get("action", "buy") if trade.get("action") in ("buy", "sell") else ("buy" if direction == "long" else "sell")
+
             self.db.execute(
                 text(
                     "INSERT INTO claude_analysis_trades "
-                    "(claude_analysis_id, symbol, action, order_type, quantity, "
+                    "(claude_analysis_id, symbol, action, direction, order_type, quantity, "
                     " entry_price_cents, stop_loss_cents, take_profit_cents, "
+                    " stop_loss_pct, take_profit_pct, reentry_allowed, max_entries, "
                     " urgency, confidence, reasoning, status, created_at, updated_at) "
-                    "VALUES (:analysis_id, :symbol, :action, :order_type, :quantity, "
+                    "VALUES (:analysis_id, :symbol, :action, :direction, :order_type, :quantity, "
                     " :entry_price, :stop_loss, :take_profit, "
+                    " :stop_loss_pct, :take_profit_pct, :reentry_allowed, :max_entries, "
                     " :urgency, :confidence, :reasoning, :status, :now, :now)"
                 ),
                 {
                     "analysis_id": analysis_id,
                     "symbol": trade.get("symbol", ""),
-                    "action": trade.get("action", "buy")
-                        if trade.get("action") in ("buy", "sell")
-                        else "buy",
+                    "action": action,
+                    "direction": direction,
                     "order_type": trade.get("order_type", "market")
                         if trade.get("order_type") in ("market", "limit")
                         else "market",
@@ -323,6 +330,10 @@ class ClaudeEngine:
                     "entry_price": trade.get("entry_price"),
                     "stop_loss": trade.get("stop_loss"),
                     "take_profit": trade.get("take_profit"),
+                    "stop_loss_pct": trade.get("stop_loss_pct"),
+                    "take_profit_pct": trade.get("take_profit_pct"),
+                    "reentry_allowed": bool(trade.get("reentry_allowed", False)),
+                    "max_entries": trade.get("max_entries", 1),
                     "urgency": trade.get("urgency", "immediate")
                         if trade.get("urgency") in ("immediate", "wait_for_dip", "end_of_day")
                         else "immediate",

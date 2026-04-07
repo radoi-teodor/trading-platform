@@ -25,7 +25,7 @@ class StrategyParser:
     VALID_URGENCIES = {"immediate", "wait_for_dip", "end_of_day"}
 
     REQUIRED_TOP_LEVEL = {"date", "market_outlook", "confidence", "reasoning", "trades"}
-    REQUIRED_TRADE_FIELDS = {"symbol", "action", "order_type", "quantity"}
+    REQUIRED_TRADE_FIELDS = {"symbol", "quantity"}
 
     @classmethod
     def parse(cls, raw_text: str, constraints: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -178,25 +178,26 @@ class StrategyParser:
             if missing:
                 raise StrategyValidationError(f"{label}: missing fields {missing}")
 
-            # Enum checks
+            # Normalize direction → action (backward compat)
+            if "direction" in trade and "action" not in trade:
+                d = trade["direction"].lower()
+                trade["action"] = "buy" if d == "long" else "sell"
+            elif "action" not in trade:
+                trade["action"] = "buy"  # default
+
+            if "order_type" not in trade:
+                trade["order_type"] = "market"
+
+            # Enum checks (lenient)
             if trade["action"] not in cls.VALID_ACTIONS:
-                raise StrategyValidationError(
-                    f"{label}: invalid action '{trade['action']}'; "
-                    f"must be one of {cls.VALID_ACTIONS}"
-                )
+                trade["action"] = "buy"
 
             if trade["order_type"] not in cls.VALID_ORDER_TYPES:
-                raise StrategyValidationError(
-                    f"{label}: invalid order_type '{trade['order_type']}'; "
-                    f"must be one of {cls.VALID_ORDER_TYPES}"
-                )
+                trade["order_type"] = "market"
 
-            urgency = trade.get("urgency", "normal")
+            urgency = trade.get("urgency", "immediate")
             if urgency not in cls.VALID_URGENCIES:
-                raise StrategyValidationError(
-                    f"{label}: invalid urgency '{urgency}'; "
-                    f"must be one of {cls.VALID_URGENCIES}"
-                )
+                trade["urgency"] = "immediate"
 
             # Quantity must be positive
             try:

@@ -74,6 +74,7 @@ class ClaudeStrategyController extends Controller
         // Save strategy style preference
         $style = $request->input('strategy_style', 'day_trading');
         $customNotes = $request->input('custom_notes', '');
+        $includeScraperData = $request->boolean('include_scraper_data', true);
 
         $settings = \App\Models\UserSetting::where('user_id', $user->id)->first();
         if ($settings) {
@@ -109,6 +110,7 @@ class ClaudeStrategyController extends Controller
                 'analysis_id' => $analysis->id,
                 'strategy_style' => $style,
                 'custom_notes' => $customNotes,
+                'include_scraper_data' => $includeScraperData,
                 'timestamp' => now()->toISOString(),
             ]));
         } catch (\Exception $e) {}

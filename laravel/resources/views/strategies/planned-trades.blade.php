@@ -60,11 +60,13 @@
                 <tr>
                     <th class="px-4 py-3">Strategy Date</th>
                     <th class="px-4 py-3">Symbol</th>
-                    <th class="px-4 py-3">Action</th>
+                    <th class="px-4 py-3">Direction</th>
                     <th class="px-4 py-3 text-right">Qty</th>
                     <th class="px-4 py-3 text-right">Entry Price</th>
                     <th class="px-4 py-3 text-right">SL</th>
+                    <th class="px-4 py-3 text-right">SL%</th>
                     <th class="px-4 py-3 text-right">TP</th>
+                    <th class="px-4 py-3 text-right">TP%</th>
                     <th class="px-4 py-3">Urgency</th>
                     <th class="px-4 py-3 text-right">Confidence</th>
                     <th class="px-4 py-3">Status</th>
@@ -91,9 +93,12 @@
                             </a>
                         </td>
                         <td class="px-4 py-3">
+                            @php
+                                $direction = $trade->direction ?? ($trade->action === 'buy' ? 'long' : 'short');
+                            @endphp
                             <x-badge
-                                :color="$trade->action === 'buy' ? 'green' : 'red'"
-                                :text="strtoupper($trade->action)"
+                                :color="$direction === 'long' ? 'green' : 'red'"
+                                :text="strtoupper($direction)"
                             />
                         </td>
                         <td class="px-4 py-3 text-right text-gray-300">{{ $trade->quantity }}</td>
@@ -111,9 +116,23 @@
                                 &mdash;
                             @endif
                         </td>
+                        <td class="px-4 py-3 text-right text-red-400">
+                            @if($trade->stop_loss_pct)
+                                {{ number_format($trade->stop_loss_pct, 2) }}%
+                            @else
+                                &mdash;
+                            @endif
+                        </td>
                         <td class="px-4 py-3 text-right text-green-400">
                             @if($trade->take_profit_cents)
                                 ${{ number_format($trade->take_profit_cents / 100, 2) }}
+                            @else
+                                &mdash;
+                            @endif
+                        </td>
+                        <td class="px-4 py-3 text-right text-green-400">
+                            @if($trade->take_profit_pct)
+                                {{ number_format($trade->take_profit_pct, 2) }}%
                             @else
                                 &mdash;
                             @endif
@@ -134,7 +153,7 @@
                             />
                         </td>
                         <td class="px-4 py-3 text-gray-300">
-                            {{ $trade->re_entry_allowed ? 'Yes' : 'No' }}
+                            {{ ($trade->reentry_allowed ?? $trade->re_entry_allowed) ? 'Yes' : 'No' }}
                         </td>
                         <td class="px-4 py-3 text-right text-gray-300">
                             {{ $trade->max_entries ?? 1 }}
@@ -148,7 +167,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="13" class="px-4 py-8 text-center text-gray-500">
+                        <td colspan="15" class="px-4 py-8 text-center text-gray-500">
                             No planned trades found.
                         </td>
                     </tr>

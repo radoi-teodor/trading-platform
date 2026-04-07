@@ -204,6 +204,18 @@
                         class="w-full px-4 py-3 bg-[#0f1117] border border-[#2a2d3a] rounded-lg text-gray-200 text-sm placeholder-gray-600 focus:outline-none focus:border-[#3b82f6] resize-none"></textarea>
                     <p class="text-xs text-gray-600 mt-1">Optional. These notes are one-time and will not be saved.</p>
                 </div>
+
+                {{-- Include Scraper Data --}}
+                <div>
+                    <label class="flex items-center space-x-3 cursor-pointer">
+                        <input type="checkbox" name="include_scraper_data" value="1" checked
+                               class="w-4 h-4 rounded bg-[#0f1117] border-[#2a2d3a] text-[#3b82f6] focus:ring-[#3b82f6]">
+                        <div>
+                            <span class="text-sm text-white">Include news & scraper data</span>
+                            <p class="text-xs text-gray-500">Send scraped articles and sentiment analysis to Claude. Uncheck for faster, data-only analysis.</p>
+                        </div>
+                    </label>
+                </div>
             </div>
 
             {{-- Footer --}}

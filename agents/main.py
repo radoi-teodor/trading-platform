@@ -14,10 +14,12 @@ from __future__ import annotations
 import json
 import logging
 import signal
+import subprocess
 import sys
 import threading
 import time
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 import redis as redis_lib
@@ -284,49 +286,50 @@ def _gather_context(
         }
 
     # News from scraped_articles (join through scrapers to filter by user)
-    rows = db.execute(
-        text(
-            "SELECT sa.id, sa.title, sa.content, sa.url, sa.source, "
-            "       sa.sentiment_score, sa.symbols "
-            "FROM scraped_articles sa "
-            "JOIN scrapers s ON s.id = sa.scraper_id "
-            "WHERE s.user_id = :uid AND sa.fed_to_claude = 0 "
-            "ORDER BY sa.created_at DESC LIMIT 30"
-        ),
-        {"uid": user_id},
-    ).fetchall()
-
     news = []
     article_ids: list[int] = []
-    for r in rows:
-        article_ids.append(r[0])
-        syms = []
-        if r[6]:
-            try:
-                syms = json.loads(r[6]) if isinstance(r[6], str) else r[6]
-            except (json.JSONDecodeError, TypeError):
-                pass
-        news.append({
-            "title": r[1],
-            "content": r[2][:500] if r[2] else "",
-            "url": r[3],
-            "source": r[4],
-            "sentiment_score": r[5],
-            "symbols": syms,
-        })
-
-    # Mark articles as fed
-    if article_ids:
-        placeholders = ", ".join(f":id_{i}" for i in range(len(article_ids)))
-        params = {f"id_{i}": aid for i, aid in enumerate(article_ids)}
-        db.execute(
+    if user_cfg.get("include_scraper_data", True):
+        rows = db.execute(
             text(
-                f"UPDATE scraped_articles SET fed_to_claude = 1 "
-                f"WHERE id IN ({placeholders})"
+                "SELECT sa.id, sa.title, sa.content, sa.url, sa.source, "
+                "       sa.sentiment_score, sa.symbols "
+                "FROM scraped_articles sa "
+                "JOIN scrapers s ON s.id = sa.scraper_id "
+                "WHERE s.user_id = :uid AND sa.fed_to_claude = 0 "
+                "ORDER BY sa.created_at DESC LIMIT 30"
             ),
-            params,
-        )
-        db.commit()
+            {"uid": user_id},
+        ).fetchall()
+
+        for r in rows:
+            article_ids.append(r[0])
+            syms = []
+            if r[6]:
+                try:
+                    syms = json.loads(r[6]) if isinstance(r[6], str) else r[6]
+                except (json.JSONDecodeError, TypeError):
+                    pass
+            news.append({
+                "title": r[1],
+                "content": r[2][:500] if r[2] else "",
+                "url": r[3],
+                "source": r[4],
+                "sentiment_score": r[5],
+                "symbols": syms,
+            })
+
+        # Mark articles as fed
+        if article_ids:
+            placeholders = ", ".join(f":id_{i}" for i in range(len(article_ids)))
+            params = {f"id_{i}": aid for i, aid in enumerate(article_ids)}
+            db.execute(
+                text(
+                    f"UPDATE scraped_articles SET fed_to_claude = 1 "
+                    f"WHERE id IN ({placeholders})"
+                ),
+                params,
+            )
+            db.commit()
 
     # Yesterday's results
     yesterday_row = db.execute(
@@ -502,6 +505,62 @@ def _sync_broker_balance(user_id: int, broker: Any, db: Session) -> None:
             pass  # Not all brokers support trade history
 
         db.commit()
+
+        # Auto-add position symbols to watchlist + backfill if needed
+        for pos in positions:
+            sym = pos.symbol
+            # Normalize: BTCUSDT -> BTC for watchlist
+            base_sym = sym
+            for suffix in ("USDT", "USDC", "BUSD"):
+                if base_sym.endswith(suffix):
+                    base_sym = base_sym[:-len(suffix)]
+                    break
+
+            # Check if symbol is in watchlist
+            wl_row = db.execute(text(
+                "SELECT wi.id FROM watchlist_items wi "
+                "JOIN watchlists w ON w.id = wi.watchlist_id "
+                "WHERE w.user_id = :uid AND wi.symbol = :sym"
+            ), {"uid": user_id, "sym": base_sym}).fetchone()
+
+            if not wl_row:
+                # Get or create watchlist
+                wl = db.execute(text("SELECT id FROM watchlists WHERE user_id = :uid"), {"uid": user_id}).fetchone()
+                if not wl:
+                    db.execute(text("INSERT INTO watchlists (user_id, created_at, updated_at) VALUES (:uid, :now, :now)"),
+                               {"uid": user_id, "now": now})
+                    db.commit()
+                    wl = db.execute(text("SELECT id FROM watchlists WHERE user_id = :uid"), {"uid": user_id}).fetchone()
+
+                db.execute(text("INSERT INTO watchlist_items (watchlist_id, symbol, created_at, updated_at) VALUES (:wid, :sym, :now, :now)"),
+                           {"wid": wl[0], "sym": base_sym, "now": now})
+                db.commit()
+                logger.info("Auto-added %s to watchlist for user %d", base_sym, user_id)
+
+            # Check if we have price history
+            has_prices = db.execute(text("SELECT COUNT(*) FROM stock_prices WHERE symbol = :sym"), {"sym": base_sym}).fetchone()
+            if has_prices and has_prices[0] == 0:
+                # Backfill via subprocess
+                try:
+                    script = str(Path(__file__).resolve().parent / "scripts" / "fetch_prices.py")
+                    python = sys.executable
+                    result = subprocess.run([python, script, base_sym, "90"], capture_output=True, text=True, timeout=60)
+                    output = result.stdout
+                    json_start = output.find("[")
+                    if json_start >= 0:
+                        data = json.loads(output[json_start:])
+                        for row in data:
+                            db.execute(text(
+                                "INSERT OR IGNORE INTO stock_prices (symbol, date, open, high, low, close, volume) "
+                                "VALUES (:sym, :date, :o, :h, :l, :c, :v)"
+                            ), {"sym": base_sym, "date": row["date"],
+                                "o": int(row["open"]*100), "h": int(row["high"]*100),
+                                "l": int(row["low"]*100), "c": int(row["close"]*100), "v": row["volume"]})
+                        db.commit()
+                        logger.info("Auto-backfilled %d days for %s", len(data), base_sym)
+                except Exception as exc:
+                    logger.debug("Auto-backfill failed for %s: %s", base_sym, exc)
+
         logger.debug(
             "Synced user %d: $%.2f equity, %d positions",
             user_id, account.equity, len(positions),
@@ -677,6 +736,7 @@ def _redis_listener(
                         user_id, claude_engine, bot_manager, db, redis_client,
                         strategy_style=data.get("strategy_style"),
                         custom_notes=data.get("custom_notes", ""),
+                        include_scraper_data=data.get("include_scraper_data", True),
                     )
 
                 elif command == "stop_bot" and user_id:
@@ -706,6 +766,7 @@ def _handle_manual_trigger(
     redis_client: redis_lib.Redis,  # type: ignore[type-arg]
     strategy_style: str | None = None,
     custom_notes: str = "",
+    include_scraper_data: bool = True,
 ) -> None:
     """Handle a manually triggered analysis from the Laravel dashboard."""
     log = logging.getLogger(f"{__name__}.manual_trigger")
@@ -721,6 +782,7 @@ def _handle_manual_trigger(
             user_cfg["strategy_style"] = strategy_style
         if custom_notes:
             user_cfg["custom_notes"] = custom_notes
+        user_cfg["include_scraper_data"] = include_scraper_data
 
         broker = _create_broker(user_cfg, db)
         context = _gather_context(user_cfg, broker, db, redis_client)

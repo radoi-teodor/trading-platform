@@ -20,27 +20,27 @@ class PromptBuilder:
             "date": "YYYY-MM-DD",
             "market_outlook": "bullish | bearish | neutral",
             "confidence": "0.0–1.0",
-            "reasoning": "string – free-form explanation",
-            "risk_assessment": "string – overall risk warnings and assessment",
-            "lessons_from_yesterday": "string – what was learned from the previous session",
+            "reasoning": "string – detailed market analysis",
+            "risk_assessment": "string – risk warnings",
+            "lessons_from_yesterday": "string – what was learned",
             "next_review": "midday | end_of_day | tomorrow",
+            "max_open_positions": "number (max positions open at same time, e.g. 2-3)",
             "trades": [
                 {
                     "symbol": "string",
-                    "action": "buy | sell",
+                    "direction": "long | short",
+                    "quantity": "number (amount to buy/sell)",
                     "order_type": "market | limit",
-                    "quantity": "number",
-                    "entry_price": "number | null (price in cents; null = enter at market price immediately)",
-                    "stop_loss": "number | null (price in cents — OR use stop_loss_pct instead)",
-                    "take_profit": "number | null (price in cents — OR use take_profit_pct instead)",
-                    "stop_loss_pct": "number | null (e.g. 0.5 = exit if price drops 0.5% from entry)",
-                    "take_profit_pct": "number | null (e.g. 1.0 = exit if price rises 1.0% from entry)",
-                    "urgency": "immediate | wait_for_dip | end_of_day",
+                    "entry_price": "number | null (cents; null = market price)",
+                    "entry_condition": "price_below | price_above",
+                    "stop_loss_pct": "number (e.g. 0.3 = close if -0.3% from entry)",
+                    "take_profit_pct": "number (e.g. 0.8 = close if +0.8% from entry)",
+                    "stop_loss": "number | null (fixed price in cents, alternative to pct)",
+                    "take_profit": "number | null (fixed price in cents, alternative to pct)",
                     "confidence": "0.0–1.0",
                     "reasoning": "string",
-                    "reentry_allowed": "boolean (default false) – if true, bot re-enters after TP/SL",
-                    "max_entries": "number (default 1) – max times to enter this trade today",
-                    "entry_condition": "price_below | price_above (buy when price <= entry_price, or sell when price >= entry_price)",
+                    "reentry_allowed": "boolean – re-open after TP/SL close",
+                    "max_entries": "number (max cycles for this setup today)",
                 }
             ],
             "positions_to_close": [
@@ -53,11 +53,8 @@ class PromptBuilder:
             "watchlist_alerts": [
                 {
                     "symbol": "string",
-                    "condition_text": "string – e.g. 'price drops below 15000'",
-                    "parsed": {
-                        "operator": "lt | gt | lte | gte",
-                        "value": "number (cents)",
-                    },
+                    "condition_text": "string",
+                    "parsed": {"operator": "lt | gt", "value": "number (cents)"},
                 }
             ],
         },
@@ -123,24 +120,43 @@ class PromptBuilder:
             "provided at the end of this prompt. Do NOT include any markdown, "
             "explanation, or text outside the JSON object.\n\n"
             f"STRATEGY STYLE: {active_style_instruction}\n\n"
-            "TRADING RULES:\n"
-            "- You can specify trades that the bot will execute MULTIPLE TIMES throughout the day.\n"
-            "- If reentry_allowed is true, after a position closes (TP or SL hit), "
-            "the bot will re-enter the position if the entry condition is met again.\n"
-            "- entry_condition 'price_below' means buy when price drops to or below entry_price. "
-            "'price_above' means sell/short when price rises to or above entry_price.\n"
-            "- max_entries controls how many times the bot can enter the same trade in one day.\n\n"
-            "STOP LOSS & TAKE PROFIT — TWO MODES:\n"
-            "You can set exits in two ways (use whichever is more appropriate):\n"
-            "  Mode A — Fixed price: set stop_loss and take_profit as exact prices in cents.\n"
-            "  Mode B — Percentage from entry: set stop_loss_pct and take_profit_pct as percentages.\n"
-            "    Example: stop_loss_pct=0.5 means exit if price drops 0.5% from entry price.\n"
-            "    Example: take_profit_pct=1.2 means exit if price rises 1.2% from entry price.\n"
-            "  PREFER percentage mode for scalping and day trading — it adapts to actual entry price.\n"
-            "  Use fixed price mode only when you have a specific technical level in mind.\n"
-            "  You can mix both: e.g. stop_loss_pct with a fixed take_profit, or vice versa.\n"
-            "  If both fixed and pct are provided for the same side, percentage takes priority.\n\n"
-            "IMPORTANT: Consider the user's existing positions and capital. Do not over-allocate."
+            "POSITION-BASED TRADING (MANDATORY RULES):\n"
+            "Every trade you recommend MUST be a complete position with ALL of these:\n"
+            "  - symbol: the trading pair\n"
+            "  - direction: \"long\" (bot buys to open, sells to close) or \"short\" (bot sells to open, buys to close)\n"
+            "  - quantity: how much to buy/sell\n"
+            "  - stop_loss_pct: MANDATORY — percentage to exit at loss (e.g., 0.3 for 0.3%)\n"
+            "  - take_profit_pct: MANDATORY — percentage to exit at profit (e.g., 0.8 for 0.8%)\n\n"
+            "The bot handles the full lifecycle automatically:\n"
+            "  1. OPENS position when entry condition is met\n"
+            "  2. MONITORS price every 30 seconds\n"
+            "  3. CLOSES when take_profit_pct or stop_loss_pct is hit\n"
+            "  4. Optionally RE-ENTERS if reentry_allowed=true\n\n"
+            "DO NOT send separate \"buy\" and \"sell\" trades for the same symbol.\n"
+            "Each trade IS a complete round-trip position.\n\n"
+            "CRITICAL: Every trade MUST have stop_loss_pct and take_profit_pct set.\n"
+            "If you cannot determine good levels, do not recommend the trade.\n\n"
+            "EXISTING POSITIONS:\n"
+            "You MUST address ALL existing open positions in your strategy.\n"
+            "For each open position, either:\n"
+            "  a) Include it in positions_to_close with a reason, OR\n"
+            "  b) Acknowledge it in your reasoning and explain why you're keeping it\n"
+            "Do NOT ignore existing positions.\n\n"
+            "POSITION LIMITS:\n"
+            "- Set max_open_positions to control how many positions can be open AT THE SAME TIME\n"
+            "- The bot will NOT open a new position if max_open_positions is reached\n"
+            "- Consider the user's EXISTING positions when setting this limit\n"
+            "- DO NOT over-allocate capital. Total position sizes should not exceed available cash.\n\n"
+            "STOP LOSS & TAKE PROFIT:\n"
+            "  PREFER percentage mode (stop_loss_pct, take_profit_pct) — adapts to actual entry price.\n"
+            "  Example: stop_loss_pct=0.3 means close if price moves -0.3% from entry.\n"
+            "  Example: take_profit_pct=0.8 means close if price moves +0.8% from entry.\n"
+            "  You can also use fixed prices in cents (stop_loss, take_profit) for key levels.\n"
+            "  If both pct and fixed are set, percentage takes priority.\n\n"
+            "ENTRY CONDITIONS:\n"
+            "  entry_condition='price_below' + entry_price=X → open when price drops to X\n"
+            "  entry_condition='price_above' + entry_price=X → open when price rises to X\n"
+            "  entry_price=null → open immediately at market price"
         )
 
         if custom_notes:

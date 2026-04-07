@@ -224,36 +224,47 @@ class TradingBot:
         # 5. Heartbeat
         self._heartbeat()
 
-    # ── Core day-trading logic ──────────────────────────────────────────
+    # ── Core position-based trading logic ─────────────────────────────
 
     def _process_trades(self) -> None:
-        """For each trade spec, manage entry/exit with re-entry support."""
+        """Position-based trading: each spec is a full OPEN→MONITOR→CLOSE cycle."""
         if not hasattr(self, "_logged_skip_reasons"):
             self._logged_skip_reasons: set[str] = set()
 
         max_daily = self.constraints.get("max_trades", 999)
+        max_open = self.strategy.get("max_open_positions", 3)
+        current_open = len(self._open_positions)
 
+        # First: check exits on ALL open positions
+        for symbol in list(self._open_positions.keys()):
+            self._check_exit(symbol)
+
+        # Then: check entries for specs that don't have an open position
         for spec in self._trade_specs:
-            if spec.get("urgency") == "end_of_day":
-                continue
-
             symbol = spec["symbol"]
-            action = spec.get("action", "buy")
+            direction = spec.get("direction", spec.get("action", "long"))
+            # Normalize: buy = long, sell = short
+            if direction == "buy":
+                direction = "long"
+            elif direction == "sell":
+                direction = "short"
+
             reentry_allowed = spec.get("reentry_allowed", False)
             max_entries = spec.get("max_entries", 1)
             entries_so_far = self._trade_entries.get(symbol, 0)
 
-            # ── Case A: We have an open position for this symbol ────────
+            # Skip if we already have this position open
             if symbol in self._open_positions:
-                self._check_exit(symbol)
                 continue
 
-            # ── Case B: No open position – check if we should enter ─────
+            # Check limits
             skip_reason = None
             if self._daily_trades_count >= max_daily:
-                skip_reason = f"daily limit reached ({max_daily})"
+                skip_reason = f"daily trade limit ({max_daily})"
+            elif len(self._open_positions) >= max_open:
+                skip_reason = f"max open positions ({max_open})"
             elif entries_so_far >= max_entries:
-                skip_reason = f"max entries reached ({entries_so_far}/{max_entries})"
+                skip_reason = f"max entries for {symbol} ({entries_so_far}/{max_entries})"
             elif entries_so_far > 0 and not reentry_allowed:
                 skip_reason = "reentry not allowed"
 
@@ -261,7 +272,7 @@ class TradingBot:
                 log_key = f"{symbol}:{skip_reason}"
                 if log_key not in self._logged_skip_reasons:
                     self._logged_skip_reasons.add(log_key)
-                    self.logger.debug("SKIP %s %s: %s", action.upper(), symbol, skip_reason)
+                    self.logger.info("SKIP %s %s: %s", direction.upper(), symbol, skip_reason)
                 continue
 
             current_price = self._get_price(symbol)
@@ -271,7 +282,6 @@ class TradingBot:
             if self._entry_condition_met(spec, current_price):
                 self._open_position(spec, current_price)
             else:
-                # Log waiting status periodically (every 5 minutes)
                 log_key = f"waiting:{symbol}"
                 if log_key not in self._logged_skip_reasons:
                     self._logged_skip_reasons.add(log_key)
@@ -304,8 +314,9 @@ class TradingBot:
             elif entry_condition == "price_above":
                 return current_price >= entry_price
 
-            # Fallback: infer from action
-            if action == "buy":
+            # Fallback: infer from direction
+            direction = spec.get("direction", spec.get("action", "long"))
+            if direction in ("buy", "long"):
                 return current_price <= entry_price
             else:  # sell
                 return current_price >= entry_price
@@ -314,9 +325,15 @@ class TradingBot:
         return False
 
     def _open_position(self, spec: dict[str, Any], current_price: float) -> None:
-        """Open a new position based on the trade spec."""
+        """Open a new position. Long=buy to open, Short=sell to open."""
         symbol = spec["symbol"]
-        side = spec["action"]
+        direction = spec.get("direction", spec.get("action", "long"))
+        if direction == "buy":
+            direction = "long"
+        elif direction == "sell":
+            direction = "short"
+        # Entry side: long opens with buy, short opens with sell
+        side = "buy" if direction == "long" else "sell"
         quantity = float(spec["quantity"])
         order_type = spec.get("order_type", "market")
 
@@ -348,8 +365,8 @@ class TradingBot:
             tp_cents = spec.get("take_profit")
 
             if sl_pct is not None:
-                # Calculate SL from actual entry price
-                if side == "buy":
+                # SL: for long, price drops; for short, price rises
+                if direction == "long":
                     stop_loss = fill_price * (1 - float(sl_pct) / 100)
                 else:
                     stop_loss = fill_price * (1 + float(sl_pct) / 100)
@@ -359,8 +376,8 @@ class TradingBot:
                 stop_loss = None
 
             if tp_pct is not None:
-                # Calculate TP from actual entry price
-                if side == "buy":
+                # TP: for long, price rises; for short, price drops
+                if direction == "long":
                     take_profit = fill_price * (1 + float(tp_pct) / 100)
                 else:
                     take_profit = fill_price * (1 - float(tp_pct) / 100)
@@ -372,7 +389,8 @@ class TradingBot:
             self._open_positions[symbol] = {
                 "entry_price": fill_price,
                 "quantity": quantity,
-                "side": side,
+                "direction": direction,
+                "side": side,  # the entry side (buy for long, sell for short)
                 "stop_loss": stop_loss,
                 "take_profit": take_profit,
                 "sl_pct": float(sl_pct) if sl_pct is not None else None,
@@ -470,13 +488,13 @@ class TradingBot:
 
         sl = pos_info["stop_loss"]
         tp = pos_info["take_profit"]
-        side = pos_info["side"]
+        direction = pos_info.get("direction", "long")
         reason = ""
 
         triggered = False
 
-        if side == "buy":
-            # Long position: SL triggers when price drops, TP when price rises
+        if direction == "long":
+            # Long: SL when price drops, TP when price rises
             if sl is not None and current_price <= sl:
                 reason = "stop_loss"
                 triggered = True
@@ -484,7 +502,7 @@ class TradingBot:
                 reason = "take_profit"
                 triggered = True
         else:
-            # Short position: SL triggers when price rises, TP when price drops
+            # Short: SL when price rises, TP when price drops
             if sl is not None and current_price >= sl:
                 reason = "stop_loss"
                 triggered = True
@@ -500,10 +518,10 @@ class TradingBot:
         pos_info = self._open_positions[symbol]
         quantity = pos_info["quantity"]
         entry_price = pos_info["entry_price"]
-        side = pos_info["side"]
+        direction = pos_info.get("direction", "long")
 
-        # Determine close side (opposite of entry)
-        close_side = "sell" if side == "buy" else "buy"
+        # Close side: long closes with sell, short closes with buy
+        close_side = "sell" if direction == "long" else "buy"
 
         try:
             result = self.broker.place_order(
@@ -516,8 +534,8 @@ class TradingBot:
 
             fill_price = result.fill_price or current_price
 
-            # Calculate P&L
-            if side == "buy":
+            # Calculate P&L: long profits when price goes up, short when down
+            if direction == "long":
                 pnl = (fill_price - entry_price) * quantity
             else:
                 pnl = (entry_price - fill_price) * quantity
