@@ -47,6 +47,7 @@ class TradingBot:
         self.logger = logging.getLogger(f"{__name__}.user_{user_id}")
 
         self._running = False
+        self.needs_new_strategy = False
         self._executed_orders: list[OrderResult] = []
         self._starting_equity: float = 0.0
         self._daily_pnl: float = 0.0
@@ -577,8 +578,84 @@ class TradingBot:
                 self._total_realized_pnl,
             )
 
+            # Check if all trades are done (no pending, no open positions)
+            self._check_all_trades_complete()
+
         except Exception as exc:
             self.logger.error("Failed to close position %s: %s", symbol, exc)
+
+    def _check_all_trades_complete(self) -> None:
+        """After a position closes, check if all trades are done. If so, signal for new strategy."""
+        # Any open positions still running?
+        if self._open_positions:
+            return
+
+        # Any trade specs still eligible for entry?
+        has_eligible = False
+        for spec in self._trade_specs:
+            symbol = spec["symbol"]
+            max_entries = spec.get("max_entries", 1)
+            reentry_allowed = spec.get("reentry_allowed", False)
+            entries_so_far = self._trade_entries.get(symbol, 0)
+
+            if entries_so_far == 0:
+                has_eligible = True
+                break
+            if reentry_allowed and entries_so_far < max_entries:
+                has_eligible = True
+                break
+
+        if not has_eligible:
+            self.logger.info(
+                "ALL TRADES COMPLETE — no pending, no open positions. "
+                "Signaling for new strategy generation."
+            )
+            self.needs_new_strategy = True
+            # Publish signal via Redis
+            if self.redis:
+                try:
+                    self.redis.publish(
+                        "trading:commands",
+                        json.dumps({
+                            "command": "trigger_analysis",
+                            "user_id": self.user_id,
+                            "auto_regenerate": True,
+                            "timestamp": datetime.now(timezone.utc).isoformat(),
+                        }),
+                    )
+                    self.logger.info("Auto-regeneration signal sent via Redis")
+                except Exception:
+                    pass
+            # Also signal via DB for the polling fallback
+            if self.db and self.analysis_id:
+                try:
+                    from sqlalchemy import text
+                    self.db.execute(
+                        text("UPDATE claude_analyses SET status = 'completed' WHERE id = :aid"),
+                        {"aid": self.analysis_id},
+                    )
+                    # Create a new pending analysis to trigger regeneration
+                    # Get the strategy style from current analysis
+                    row = self.db.execute(
+                        text("SELECT strategy_style FROM claude_analyses WHERE id = :aid"),
+                        {"aid": self.analysis_id},
+                    ).fetchone()
+                    style = row[0] if row and row[0] else "day_trading"
+
+                    self.db.execute(
+                        text(
+                            "INSERT INTO claude_analyses "
+                            "(user_id, date, market_outlook, confidence, reasoning, strategy_json, "
+                            " status, strategy_style, trades_planned, prompt_sent, raw_response, created_at) "
+                            "VALUES (:uid, date('now'), 'neutral', 0, '', '{}', "
+                            " 'pending', :style, 0, 'Auto-regeneration after all trades completed.', '', datetime('now'))"
+                        ),
+                        {"uid": self.user_id, "style": style},
+                    )
+                    self.db.commit()
+                    self.logger.info("Created pending analysis for auto-regeneration (style: %s)", style)
+                except Exception as exc:
+                    self.logger.warning("Failed to create auto-regeneration analysis: %s", exc)
 
     # ── Watchlist alerts ─────────────────────────────────────────────────
 

@@ -938,7 +938,38 @@ def main() -> None:
                 except Exception:
                     pass
 
-            # ── Check for pending analyses in DB (fallback if Redis missed the trigger)
+            # ── Resume active strategy after restart (respawn bot if needed) ──
+            if user_id not in bot_manager._bots:
+                active_row = main_db.execute(
+                    text(
+                        "SELECT ca.id, ca.strategy_json FROM claude_analyses ca "
+                        "WHERE ca.user_id = :uid AND ca.status = 'active' "
+                        "AND EXISTS (SELECT 1 FROM claude_analysis_trades cat "
+                        "            WHERE cat.claude_analysis_id = ca.id AND cat.status = 'pending') "
+                        "ORDER BY ca.created_at DESC LIMIT 1"
+                    ),
+                    {"uid": user_id},
+                ).fetchone()
+
+                if active_row:
+                    import json as _json
+                    try:
+                        strategy = _json.loads(active_row[1]) if active_row[1] else {}
+                        if strategy:
+                            bot_db = _create_db_session()
+                            bot_manager.spawn_bot(
+                                user_id=user_id,
+                                broker=broker,
+                                strategy=strategy,
+                                constraints={"max_trades": user_cfg.get("max_daily_trades", 10)},
+                                db_session=bot_db,
+                                analysis_id=active_row[0],
+                            )
+                            logger.info("Resumed bot for user %d with active strategy id=%d", user_id, active_row[0])
+                    except Exception as exc:
+                        logger.warning("Failed to resume bot for user %d: %s", user_id, exc)
+
+            # ── Check for pending analyses in DB (new strategy to generate) ──
             pending_row = main_db.execute(
                 text(
                     "SELECT id FROM claude_analyses "
