@@ -1,0 +1,261 @@
+# Source catalog. Format and rules: docs/sources.md.
+# Nothing here is enabled yet. Each source is enabled from the Sources screen only after
+# `php artisan sources:check <id>` passes; endpoints and terms are verified at that step.
+
+version: 1
+
+sources:
+  # Market data ------------------------------------------------------------------------------
+
+  - id: binance-spot
+    kind: market
+    title: Binance spot market data
+    connector: ccxt
+    exchange: binance
+    channels: [ohlcv, trades, ticker]
+    poll: stream
+    auth: none
+    rate_limit: exchange
+    trust: 1.0
+    license: Binance API terms of use
+    instruments: universe
+    used_by: [market-data, strategies, analyst, simulation]
+    status: planned
+
+  - id: binance-usdm
+    kind: market
+    title: Binance USD-M perpetuals, public data
+    connector: ccxt
+    exchange: binanceusdm
+    channels: [ohlcv, funding_rate, open_interest, mark_price]
+    poll: stream
+    auth: none
+    rate_limit: exchange
+    trust: 1.0
+    license: Binance API terms of use
+    instruments: universe
+    used_by: [market-data, strategies, analyst, simulation]
+    status: planned
+    notes: Public data is useful to spot strategies too (funding, open interest). Trading perps waits on O-1.
+
+  - id: bybit
+    kind: market
+    title: Bybit market data, cross-check
+    connector: ccxt
+    exchange: bybit
+    channels: [ohlcv, ticker, funding_rate]
+    poll: 1m
+    auth: none
+    rate_limit: exchange
+    trust: 0.9
+    license: Bybit API terms of use
+    instruments: universe
+    used_by: [market-data, analyst]
+    status: candidate
+    notes: Second venue for price sanity checks; trading on it comes after the engine is proven on Binance (D-4).
+
+  # Derivatives -------------------------------------------------------------------------------
+
+  - id: deribit-public
+    kind: derivatives
+    title: Deribit public API, volatility index
+    connector: http_json
+    url: https://www.deribit.com/api/v2/public/
+    poll: 15m
+    auth: none
+    rate_limit: 60/h
+    trust: 0.9
+    license: Deribit API terms
+    instruments: [BTC, ETH]
+    used_by: [analyst]
+    status: candidate
+
+  # Reference ---------------------------------------------------------------------------------
+
+  - id: coingecko
+    kind: reference
+    title: CoinGecko market cap, supply, categories
+    connector: http_json
+    url: https://api.coingecko.com/api/v3/
+    poll: 6h
+    auth: {type: header, secret: COINGECKO_API_KEY}
+    rate_limit: 30/h
+    trust: 0.8
+    license: CoinGecko API terms; attribution required on the free plan
+    instruments: auto
+    used_by: [analyst]
+    status: candidate
+
+  # On-chain ----------------------------------------------------------------------------------
+
+  - id: defillama
+    kind: onchain
+    title: DefiLlama TVL and stablecoin supply
+    connector: http_json
+    url: https://api.llama.fi/
+    poll: 6h
+    auth: none
+    rate_limit: 30/h
+    trust: 0.8
+    license: DefiLlama API terms
+    instruments: auto
+    used_by: [analyst]
+    status: candidate
+    notes: Stablecoin endpoints are served from a separate host; declare it in the connector config when built.
+
+  - id: mempool-space
+    kind: onchain
+    title: Bitcoin network fees and mempool
+    connector: http_json
+    url: https://mempool.space/api/
+    poll: 15m
+    auth: none
+    rate_limit: 30/h
+    trust: 0.8
+    license: mempool.space API terms
+    instruments: [BTC]
+    used_by: [analyst]
+    status: candidate
+
+  # Sentiment ---------------------------------------------------------------------------------
+
+  - id: fear-greed
+    kind: sentiment
+    title: Alternative.me crypto fear and greed index
+    connector: http_json
+    url: https://api.alternative.me/fng/
+    poll: 6h
+    auth: none
+    rate_limit: 10/h
+    trust: 0.5
+    license: Alternative.me terms; attribution required
+    instruments: [BTC]
+    used_by: [analyst]
+    status: candidate
+    notes: A slow, crowd-mood indicator. Context for the analyst, not a trading signal on its own.
+
+  # News --------------------------------------------------------------------------------------
+
+  - id: coindesk-rss
+    kind: news
+    title: CoinDesk headlines
+    connector: rss
+    url: https://www.coindesk.com/arc/outboundfeeds/rss/
+    poll: 5m
+    auth: none
+    rate_limit: 12/h
+    language: en
+    trust: 0.7
+    license: Headlines and summaries only; link to the original; no full-text storage
+    instruments: auto
+    used_by: [event-extractor]
+    status: planned
+
+  - id: cointelegraph-rss
+    kind: news
+    title: Cointelegraph headlines
+    connector: rss
+    url: https://cointelegraph.com/rss
+    poll: 5m
+    auth: none
+    rate_limit: 12/h
+    language: en
+    trust: 0.6
+    license: Headlines and summaries only; link to the original
+    instruments: auto
+    used_by: [event-extractor]
+    status: candidate
+
+  - id: decrypt-rss
+    kind: news
+    title: Decrypt headlines
+    connector: rss
+    url: https://decrypt.co/feed
+    poll: 10m
+    auth: none
+    rate_limit: 6/h
+    language: en
+    trust: 0.6
+    license: Headlines and summaries only; link to the original
+    instruments: auto
+    used_by: [event-extractor]
+    status: candidate
+
+  - id: cryptopanic
+    kind: news
+    title: CryptoPanic news aggregator
+    connector: http_json
+    url: https://cryptopanic.com/
+    poll: 5m
+    auth: {type: query_key, secret: CRYPTOPANIC_TOKEN}
+    rate_limit: 12/h
+    language: en
+    trust: 0.5
+    license: CryptoPanic API terms
+    instruments: auto
+    used_by: [event-extractor]
+    status: candidate
+    notes: Confirm the current API path and plan limits before building the connector.
+
+  # Announcements -----------------------------------------------------------------------------
+
+  - id: binance-announcements
+    kind: announcements
+    title: Binance listings, delistings and maintenance
+    connector: tbd
+    poll: 2m
+    auth: none
+    trust: 1.0
+    license: To be confirmed
+    instruments: auto
+    used_by: [event-extractor, risk]
+    status: candidate
+    notes: Use an official channel only. Do not scrape the announcement pages. Delistings feed risk flags.
+
+  # Regulatory and macro ----------------------------------------------------------------------
+
+  - id: sec-press
+    kind: regulatory
+    title: SEC press releases
+    connector: rss
+    url: https://www.sec.gov/news/pressreleases.rss
+    poll: 30m
+    auth: none
+    rate_limit: 4/h
+    language: en
+    trust: 1.0
+    license: US government work
+    instruments: auto
+    used_by: [event-extractor]
+    status: candidate
+    notes: The SEC requires automated clients to declare a contact in the User-Agent; the operator sets it in settings.
+
+  - id: fed-press
+    kind: macro
+    title: Federal Reserve press releases
+    connector: rss
+    url: https://www.federalreserve.gov/feeds/press_all.xml
+    poll: 30m
+    auth: none
+    rate_limit: 4/h
+    language: en
+    trust: 1.0
+    license: US government work
+    instruments: auto
+    used_by: [event-extractor, analyst]
+    status: candidate
+
+  - id: fred
+    kind: macro
+    title: FRED macro series
+    connector: http_json
+    url: https://api.stlouisfed.org/fred/
+    poll: 1d
+    auth: {type: query_key, secret: FRED_API_KEY}
+    rate_limit: 60/h
+    trust: 1.0
+    license: FRED API terms; some series carry their own copyright
+    series: [DFF, DGS10, CPIAUCSL, DTWEXBGS]
+    used_by: [analyst]
+    status: candidate
+    notes: Fed funds rate, 10-year yield, CPI, broad dollar index.
