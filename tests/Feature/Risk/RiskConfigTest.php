@@ -15,8 +15,8 @@ use App\Support\Number\Decimal;
 function documentedLimits(): array
 {
     $document = (string) file_get_contents(base_path('docs/risk-policy.md'));
-    $section = explode('## 2.', explode('## 1. Account limits', $document)[1])[0];
-    preg_match_all('/^\| ([^|]+?) \| ([\d.]+)(?: %)?[^|]*\| ([\d.]+)(?: %)? \|/m', $section, $rows, PREG_SET_ORDER);
+    $section = explode('## 3.', explode('## 1. Account limits', $document)[1])[0];
+    preg_match_all('/^\| ([^|]+?) \| ([\d.]+)(?: %|x)?[^|]*\| ([\d.]+|n\/a)(?: %|x)? \|/m', $section, $rows, PREG_SET_ORDER);
     $limits = [];
 
     foreach ($rows as [, $label, $default, $ceiling]) {
@@ -35,6 +35,10 @@ const DOCUMENTED_KEYS = [
     'Weekly loss (from Monday 00:00 UTC)' => 'weekly_loss',
     'Drawdown from equity peak' => 'drawdown_halt',
     'Hard drawdown from equity peak' => 'drawdown_flatten',
+    'Gross exposure (both legs of a carry pair count)' => 'gross_exposure',
+    'Net directional exposure' => 'net_exposure',
+    'Leverage per position' => 'perpetual_leverage',
+    'Extra margin on carry legs' => 'carry_extra_margin',
 ];
 
 it('configures exactly the defaults of the risk policy document, below its ceilings', function (): void {
@@ -45,9 +49,18 @@ it('configures exactly the defaults of the risk policy document, below its ceili
         expect($documented)->toHaveKey($label);
         [$default, $ceiling] = $documented[$label];
 
-        if ($key === 'max_open_positions') {
+        if ($key === 'max_open_positions' || $key === 'perpetual_leverage') {
             expect($config[$key])->toBe((int) $default)
-                ->and(RiskPolicy::MAX_OPEN_POSITIONS_CEILING)->toBe((int) $ceiling);
+                ->and($key === 'max_open_positions' ? RiskPolicy::MAX_OPEN_POSITIONS_CEILING : RiskPolicy::MAX_LEVERAGE_CEILING)->toBe((int) $ceiling);
+
+            continue;
+        }
+
+        if ($key === 'carry_extra_margin') {
+            // No ceiling: the documented default is the least extra margin a carry may keep.
+            expect((string) Decimal::of(is_string($config[$key]) ? $config[$key] : ''))->toBe('0.5')
+                ->and(RiskPolicy::MIN_CARRY_EXTRA_MARGIN)->toBe('0.50')
+                ->and($ceiling)->toBe('n/a');
 
             continue;
         }

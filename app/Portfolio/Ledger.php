@@ -13,6 +13,7 @@ use App\Support\Asset;
 use App\Support\Number\Decimal;
 use App\Support\Number\Money;
 use App\Support\Number\Price;
+use App\Support\Perpetual;
 use App\Support\Side;
 use App\Support\Symbol;
 use Carbon\CarbonImmutable;

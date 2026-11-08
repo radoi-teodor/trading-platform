@@ -12,27 +12,20 @@ use App\Risk\RiskEngine;
 use App\Risk\RiskPolicy;
 use App\Risk\RiskState;
 use App\Strategy\Data\MoveStop;
+use App\Strategy\Data\OpenCarry;
 use App\Strategy\Data\OpenLong;
+use App\Strategy\Data\OpenShort;
 use App\Support\Number\Decimal;
 use App\Support\Number\Price;
 use App\Support\Symbol;
 use Carbon\CarbonImmutable;
+use Tests\Support\Policies;
 
 mutates(RiskEngine::class, RiskPolicy::class, RiskState::class);
 
 function accountPolicy(): RiskPolicy
 {
-    return RiskPolicy::account([
-        'risk_per_trade' => '0.005',
-        'total_open_risk' => '0.03',
-        'notional_per_instrument' => '0.25',
-        'max_open_positions' => 6,
-        'daily_loss' => '0.02',
-        'weekly_loss' => '0.05',
-        'drawdown_halt' => '0.10',
-        'drawdown_flatten' => '0.15',
-        'cash_buffer' => '0.01',
-    ]);
+    return Policies::account();
 }
 
 function spotRules(): InstrumentRules
@@ -43,9 +36,9 @@ function spotRules(): InstrumentRules
     );
 }
 
-function account(string $equity = '10000', ?string $free = null, int $positions = 0, string $openRisk = '0', bool $holds = false): AccountView
+function account(string $equity = '10000', ?string $free = null, int $positions = 0, string $openRisk = '0', bool $holds = false, string $margin = '10000', string $gross = '0', string $net = '0'): AccountView
 {
-    return new AccountView(Decimal::of($equity), Decimal::of($free ?? $equity), $positions, Decimal::of($openRisk), $holds);
+    return new AccountView(Decimal::of($equity), Decimal::of($free ?? $equity), $positions, Decimal::of($openRisk), $holds, Decimal::of($margin), Decimal::of($gross), Decimal::of($net));
 }
 
 function entry(?string $stop = '57000', ?string $target = null): OpenLong
@@ -230,11 +223,7 @@ it('lets a stop move towards the price only', function (): void {
 });
 
 it('refuses an account policy above the ceilings of the risk policy', function (string $key, string|int $value): void {
-    RiskPolicy::account([...[
-        'risk_per_trade' => '0.005', 'total_open_risk' => '0.03', 'notional_per_instrument' => '0.25',
-        'max_open_positions' => 6, 'daily_loss' => '0.02', 'weekly_loss' => '0.05', 'drawdown_halt' => '0.10',
-        'drawdown_flatten' => '0.15', 'cash_buffer' => '0.01',
-    ], $key => $value]);
+    Policies::account([$key => $value]);
 })->with([
     ['risk_per_trade', '0.0101'],
     ['total_open_risk', '0.051'],
@@ -248,29 +237,100 @@ it('refuses an account policy above the ceilings of the risk policy', function (
     ['risk_per_trade', '0'],
     ['max_open_positions', 0],
     ['max_open_positions', '6'],
+    ['gross_exposure', '2.01'],
+    ['net_exposure', '1.01'],
+    ['perpetual_leverage', 4],
+    ['perpetual_leverage', 0],
+    ['carry_extra_margin', '0.49'],
 ])->throws(InvalidArgumentException::class);
 
 it('names the bounds of the number of positions', function (): void {
-    RiskPolicy::account([
-        'risk_per_trade' => '0.005', 'total_open_risk' => '0.03', 'notional_per_instrument' => '0.25',
-        'max_open_positions' => 11, 'daily_loss' => '0.02', 'weekly_loss' => '0.05', 'drawdown_halt' => '0.10',
-        'drawdown_flatten' => '0.15', 'cash_buffer' => '0.01',
-    ]);
+    Policies::account(['max_open_positions' => 11]);
 })->throws(InvalidArgumentException::class, 'Risk limit max_open_positions must be between 1 and 10.');
 
 it('accepts limits exactly at the ceilings', function (): void {
-    $policy = RiskPolicy::account([
+    $policy = Policies::account([
         'risk_per_trade' => '0.01', 'total_open_risk' => '0.05', 'notional_per_instrument' => '0.40',
         'max_open_positions' => 10, 'daily_loss' => '0.03', 'weekly_loss' => '0.07', 'drawdown_halt' => '0.15',
-        'drawdown_flatten' => '0.20', 'cash_buffer' => '0',
+        'drawdown_flatten' => '0.20', 'cash_buffer' => '0', 'gross_exposure' => '2.00', 'net_exposure' => '1.00',
+        'perpetual_leverage' => 3, 'carry_extra_margin' => '0.50',
     ]);
-    $single = RiskPolicy::account([
-        'risk_per_trade' => '0.005', 'total_open_risk' => '0.03', 'notional_per_instrument' => '0.25',
-        'max_open_positions' => 1, 'daily_loss' => '0.02', 'weekly_loss' => '0.05', 'drawdown_halt' => '0.10',
-        'drawdown_flatten' => '0.15', 'cash_buffer' => '0.01',
-    ]);
+    $single = Policies::account(['max_open_positions' => 1]);
 
     expect($policy->profile)->toBe(RiskProfile::Account)
         ->and($policy->maxOpenPositions)->toBe(10)
         ->and($single->maxOpenPositions)->toBe(1);
+});
+
+function perpRules(): InstrumentRules
+{
+    return new InstrumentRules(CarbonImmutable::parse('2026-01-01', 'UTC'), Decimal::of('0.1'), Decimal::of('0.001'), Decimal::of('0.001'), Decimal::of('1000'), Decimal::of('100'));
+}
+
+function short(?string $stop = '102', ?string $target = null, string $symbol = 'BTC/USDT:USDT'): OpenShort
+{
+    return new OpenShort(Symbol::parse($symbol), $stop === null ? null : Price::of($stop), $target === null ? null : Price::of($target), 'test');
+}
+
+it('sizes a short by its stop above the price, at the policy leverage', function (): void {
+    // 50 / (102 - 100) = 25, notional 2500 at the cap; margin 1250 at 2x
+    $verdict = engineFor(accountPolicy())->assessEntry(short(), account(), perpRules(), Price::of('100'), riskAt('2026-10-01'));
+
+    expect($verdict->approved)->toBeTrue()
+        ->and((string) $verdict->quantity)->toBe('25')
+        ->and($verdict->leverage)->toBe(2)
+        ->and((string) $verdict->plannedRisk)->toBe('50');
+});
+
+it('resizes a perpetual entry to the margin the USD-M wallet can give', function (): void {
+    // 500 / (100 / 2 * 1.01) = 9.90099..., 9.9 after the lot step
+    $verdict = engineFor(accountPolicy())->assessEntry(short(), account(margin: '500'), perpRules(), Price::of('100'), riskAt('2026-10-01'));
+
+    expect((string) $verdict->quantity)->toBe('9.9')
+        ->and($verdict->adjustments)->toBe(['cash']);
+});
+
+it('rejects perpetual entries the policy does not allow, with a reason', function (Verdict $verdict, RejectionReason $reason): void {
+    expect($verdict->approved)->toBeFalse()
+        ->and($verdict->rejection)->toBe($reason);
+})->with([
+    'a short on spot' => [fn () => engineFor(accountPolicy())->assessEntry(short(symbol: 'BTC/USDT'), account(), spotRules(), Price::of('100'), riskAt('2026-10-01')), RejectionReason::SpotShort],
+    'a short stop below the price' => [fn () => engineFor(accountPolicy())->assessEntry(short('99'), account(), perpRules(), Price::of('100'), riskAt('2026-10-01')), RejectionReason::InvalidStop],
+    'a short target above the price' => [fn () => engineFor(accountPolicy())->assessEntry(short('102', '101'), account(), perpRules(), Price::of('100'), riskAt('2026-10-01')), RejectionReason::InvalidTarget],
+    // liquidation at 3750 / 25.25 = 148.5..., 48.5 away; 3 x 20 = 60 is further
+    'liquidation closer than three stops' => [fn () => engineFor(accountPolicy())->assessEntry(short('120'), account(), perpRules(), Price::of('100'), riskAt('2026-10-01')), RejectionReason::LiquidationTooClose],
+    'gross exposure' => [fn () => engineFor(accountPolicy())->assessEntry(short(), account(gross: '13000'), perpRules(), Price::of('100'), riskAt('2026-10-01')), RejectionReason::GrossExposure],
+    'net exposure' => [fn () => engineFor(accountPolicy())->assessEntry(short(), account(net: '-9000'), perpRules(), Price::of('100'), riskAt('2026-10-01')), RejectionReason::NetExposure],
+]);
+
+it('lets an entry that reduces the net exposure through', function (): void {
+    $verdict = engineFor(accountPolicy())->assessEntry(new OpenLong(Symbol::parse('BTC/USDT:USDT'), Price::of('98'), null, 'test'), account(net: '-9000'), perpRules(), Price::of('100'), riskAt('2026-10-01'));
+
+    expect($verdict->approved)->toBeTrue()
+        ->and($verdict->leverage)->toBe(2);
+});
+
+it('sizes a benchmark perpetual at 99 % of the free wallet and 1x', function (): void {
+    $verdict = engineFor(RiskPolicy::benchmark())->assessEntry(short(null), account(margin: '10000'), perpRules(), Price::of('100'), riskAt('2026-10-01'));
+
+    expect((string) $verdict->quantity)->toBe('99')
+        ->and($verdict->leverage)->toBe(1);
+});
+
+it('sizes a carry pair from its template, the notional cap and the margin buffer', function (): void {
+    $carry = new OpenCarry(Symbol::parse('BTC/USDT'), Symbol::parse('BTC/USDT:USDT'), Decimal::of('0.30'), 2, Decimal::of('0.5'), 'carry');
+    // 25 % of 10000 at 100 = 25; leverage floor(2 / 1.5) = 1
+    $verdict = engineFor(accountPolicy())->assessCarry($carry, account(free: '5000', margin: '5000'), spotRules(), perpRules(), Price::of('100'), Price::of('100.2'), riskAt('2026-10-01'));
+    $poor = engineFor(accountPolicy())->assessCarry($carry, account(free: '1000', margin: '5000'), spotRules(), perpRules(), Price::of('100'), Price::of('100.2'), riskAt('2026-10-01'));
+    $crowded = engineFor(accountPolicy())->assessCarry($carry, account(gross: '11000'), spotRules(), perpRules(), Price::of('100'), Price::of('100.2'), riskAt('2026-10-01'));
+    $held = engineFor(accountPolicy())->assessCarry($carry, account(holds: true), spotRules(), perpRules(), Price::of('100'), Price::of('100.2'), riskAt('2026-10-01'));
+
+    expect((string) $verdict->quantity)->toBe('25')
+        ->and($verdict->leverage)->toBe(1)
+        ->and($verdict->plannedRisk)->toBeNull()
+        // 1000 / (100 * 1.01) = 9.90..., 9.9 after the perpetual's lot step
+        ->and((string) $poor->quantity)->toBe('9.9')
+        ->and($poor->adjustments)->toBe(['cash'])
+        ->and($crowded->rejection)->toBe(RejectionReason::GrossExposure)
+        ->and($held->rejection)->toBe(RejectionReason::PositionOpen);
 });

@@ -37,6 +37,7 @@ use App\Support\Symbol;
 use App\Support\Timeframe;
 use Carbon\CarbonImmutable;
 use Tests\Support\ForwardingVenue;
+use Tests\Support\Policies;
 use Tests\Support\ScriptedStrategy;
 
 mutates(Engine::class, OrderManager::class, OrderBook::class);
@@ -90,11 +91,7 @@ final class EngineHarness
 /** @param array<string, string|int> $overrides */
 function policyWith(array $overrides = []): RiskPolicy
 {
-    return RiskPolicy::account([...[
-        'risk_per_trade' => '0.005', 'total_open_risk' => '0.03', 'notional_per_instrument' => '0.25',
-        'max_open_positions' => 6, 'daily_loss' => '0.02', 'weekly_loss' => '0.05', 'drawdown_halt' => '0.10',
-        'drawdown_flatten' => '0.15', 'cash_buffer' => '0.01',
-    ], ...$overrides]);
+    return Policies::account($overrides);
 }
 
 /**

@@ -8,8 +8,9 @@ use App\Support\Number\Decimal;
 
 /**
  * The account as the risk engine needs it at a decision, built by the engine from the ledger: equity and free
- * quote, the number of open positions, the open risk (the loss if every stop is hit) and whether the deciding
- * strategy already holds the instrument.
+ * quote, the number of open positions, the open risk (the loss if every stop is hit), whether the deciding
+ * strategy already holds the instrument, the free USD-M wallet, and the gross and signed net notional of every
+ * position, in quote.
  */
 final readonly class AccountView
 {
@@ -19,5 +20,8 @@ final readonly class AccountView
         public int $openPositions,
         public Decimal $openRisk,
         public bool $holdsInstrument,
+        public ?Decimal $freeMargin = null,
+        public ?Decimal $grossExposure = null,
+        public ?Decimal $netExposure = null,
     ) {}
 }

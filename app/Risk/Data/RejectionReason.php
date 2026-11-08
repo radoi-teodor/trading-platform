@@ -20,4 +20,8 @@ enum RejectionReason: string
     case StopWidening = 'stop_widening';
     case Warmup = 'warmup';
     case VenueRejected = 'venue_rejected';
+    case SpotShort = 'spot_short';
+    case LiquidationTooClose = 'liquidation_too_close';
+    case GrossExposure = 'gross_exposure';
+    case NetExposure = 'net_exposure';
 }

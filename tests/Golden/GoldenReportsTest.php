@@ -28,7 +28,7 @@ mutates(ReportBuilder::class, PerformanceMetrics::class, TradeStatistics::class)
 const GOLDEN_HASHES = [
     'buy-and-hold-btc' => '8aad85b739a1896ed0cf32756be6e56c8275be1c1c2526c1c19a316fbc2891b0',
     'ma-trend-btc-1h' => '4e44533c9829ab538f4f5d4a11b3d93baea62ef2bdd292e5e1133c2bdce005d4',
-    'donchian-eth-1h' => '7779327717c9e9f2ccf91f271d8db3d13edd75db69634f97ecb1bf3908b27be7',
+    'donchian-eth-1h' => '08ce374cab3d139da8fed8bec4560f8b49879f275885d377d1100cb6d0283776',
 ];
 
 /** @return array<string, Closure(): Report> */

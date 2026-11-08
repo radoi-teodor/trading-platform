@@ -20,12 +20,13 @@ final readonly class Verdict
         public ?Decimal $plannedRisk,
         public array $adjustments,
         public ?RejectionReason $rejection,
+        public ?int $leverage = null,
     ) {}
 
     /** @param list<string> $adjustments */
-    public static function quantity(Decimal $quantity, ?Decimal $plannedRisk, array $adjustments): self
+    public static function quantity(Decimal $quantity, ?Decimal $plannedRisk, array $adjustments, ?int $leverage = null): self
     {
-        return new self(true, $quantity, null, $plannedRisk, $adjustments, null);
+        return new self(true, $quantity, null, $plannedRisk, $adjustments, null, $leverage);
     }
 
     public static function quoteAmount(Decimal $quoteQuantity): self

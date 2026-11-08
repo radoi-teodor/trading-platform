@@ -25,6 +25,7 @@ use App\Support\Symbol;
 use Carbon\CarbonImmutable;
 use Tests\Support\CandleFactory;
 use Tests\Support\InMemoryCandleFeed;
+use Tests\Support\Policies;
 use Tests\Support\ScriptedStrategy;
 
 mutates(Backtest::class, ReportBuilder::class);
@@ -37,11 +38,7 @@ function backtestSetup(): array
     $rules = ['BTC/USDT' => new RulesHistory($btc, [new InstrumentRules(
         CarbonImmutable::parse('2026-11-08', 'UTC'), Decimal::of('0.01'), Decimal::of('0.001'), Decimal::of('0.001'), null, Decimal::of('5'),
     )])];
-    $policy = RiskPolicy::account([
-        'risk_per_trade' => '0.005', 'total_open_risk' => '0.03', 'notional_per_instrument' => '0.25',
-        'max_open_positions' => 6, 'daily_loss' => '0.02', 'weekly_loss' => '0.05', 'drawdown_halt' => '0.10',
-        'drawdown_flatten' => '0.15', 'cash_buffer' => '0.01',
-    ]);
+    $policy = Policies::account();
     $main = new ScriptedStrategy([
         '00:30' => [new OpenLong($btc, Price::of('90'), null, 'during warmup')],
         '00:45' => [new OpenLong($btc, Price::of('90'), null, 'during warmup')],

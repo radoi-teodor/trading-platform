@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Portfolio\Data;
 
-use App\Portfolio\Perpetual;
 use App\Support\Number\Decimal;
 use App\Support\Number\Price;
+use App\Support\Perpetual;
 use App\Support\Side;
 use App\Support\Symbol;
 use Carbon\CarbonImmutable;

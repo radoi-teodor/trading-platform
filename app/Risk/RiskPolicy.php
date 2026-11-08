@@ -23,9 +23,17 @@ final readonly class RiskPolicy
         'weekly_loss' => '0.07',
         'drawdown_halt' => '0.15',
         'drawdown_flatten' => '0.20',
+        'gross_exposure' => '2.00',
+        'net_exposure' => '1.00',
     ];
 
     public const int MAX_OPEN_POSITIONS_CEILING = 10;
+
+    /** docs/risk-policy.md, section 2. */
+    public const int MAX_LEVERAGE_CEILING = 3;
+
+    /** The least extra margin a carry leg keeps: lowering it raises risk, so the documented default is a floor. */
+    public const string MIN_CARRY_EXTRA_MARGIN = '0.50';
 
     private function __construct(
         public RiskProfile $profile,
@@ -38,6 +46,10 @@ final readonly class RiskPolicy
         public Decimal $drawdownHalt,
         public Decimal $drawdownFlatten,
         public Decimal $cashBuffer,
+        public Decimal $grossExposure,
+        public Decimal $netExposure,
+        public int $perpetualLeverage,
+        public Decimal $carryExtraMargin,
     ) {}
 
     /** @param array<mixed> $limits the `account` section of config/risk.php */
@@ -65,6 +77,18 @@ final readonly class RiskPolicy
             throw new InvalidArgumentException('Risk limit max_open_positions must be between 1 and '.self::MAX_OPEN_POSITIONS_CEILING.'.');
         }
 
+        $leverage = $limits['perpetual_leverage'] ?? null;
+
+        if (! is_int($leverage) || $leverage < 1 || $leverage > self::MAX_LEVERAGE_CEILING) {
+            throw new InvalidArgumentException('Risk limit perpetual_leverage must be between 1 and '.self::MAX_LEVERAGE_CEILING.'.');
+        }
+
+        $carryMargin = $fraction('carry_extra_margin');
+
+        if ($carryMargin->isLessThan(Decimal::of(self::MIN_CARRY_EXTRA_MARGIN))) {
+            throw new InvalidArgumentException('Risk limit carry_extra_margin must be at least '.self::MIN_CARRY_EXTRA_MARGIN.'.');
+        }
+
         return new self(
             RiskProfile::Account,
             $fraction('risk_per_trade'),
@@ -76,6 +100,10 @@ final readonly class RiskPolicy
             $fraction('drawdown_halt'),
             $fraction('drawdown_flatten'),
             $fraction('cash_buffer'),
+            $fraction('gross_exposure'),
+            $fraction('net_exposure'),
+            $leverage,
+            $carryMargin,
         );
     }
 
@@ -97,6 +125,10 @@ final readonly class RiskPolicy
             'drawdown_halt' => (string) $this->drawdownHalt,
             'drawdown_flatten' => (string) $this->drawdownFlatten,
             'cash_buffer' => (string) $this->cashBuffer,
+            'gross_exposure' => (string) $this->grossExposure,
+            'net_exposure' => (string) $this->netExposure,
+            'perpetual_leverage' => $this->perpetualLeverage,
+            'carry_extra_margin' => (string) $this->carryExtraMargin,
         ];
     }
 
@@ -105,6 +137,7 @@ final readonly class RiskPolicy
         $one = Decimal::of(1);
         $zero = Decimal::zero();
 
-        return new self(RiskProfile::Benchmark, $one, $one, $one, 1, $one, $one, $one, $one, $zero);
+        // One position of all free quote (spot) or 99 % of the free USD-M wallet at 1x (perpetual), no limits (D-40, D-50).
+        return new self(RiskProfile::Benchmark, $one, $one, $one, 1, $one, $one, $one, $one, $zero, Decimal::of(2), $one, 1, Decimal::of('0.5'));
     }
 }

@@ -2,10 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Portfolio;
+namespace App\Support;
 
 use App\Support\Number\Decimal;
-use App\Support\Side;
 
 /**
  * The isolated-margin arithmetic of docs/engine.md, section 8, in one place: the ledger and the simulated venue use

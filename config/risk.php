@@ -16,6 +16,11 @@ return [
         'weekly_loss' => '0.05',
         'drawdown_halt' => '0.10',
         'drawdown_flatten' => '0.15',
+        'gross_exposure' => '1.50',
+        'net_exposure' => '1.00',
+        // Section 2, perpetual futures.
+        'perpetual_leverage' => 2,
+        'carry_extra_margin' => '0.50',
         // Not in the policy document: the share of cash kept free for slippage and gaps when sizing an entry.
         'cash_buffer' => '0.01',
     ],
