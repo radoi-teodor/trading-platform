@@ -1,11 +1,30 @@
+# Environment and secrets
 .env
-.env.backup
-.env.production
+.env.*
+!.env.example
+
+# Dependencies and builds
+/vendor
+/node_modules
+/public/build
+/public/hot
+/public/storage
+
+# Runtime data
+/storage/*.key
+/storage/pail
+*.sqlite
+*.sqlite-*
 *.log
-.DS_Store
-Thumbs.db
+
+# Tooling caches
+.phpunit.cache
+.phpunit.result.cache
+/.phpstan
+/coverage
+
+# Editors and OS
 .idea/
 .vscode/
-*.swp
-*.swo
-*~
+.DS_Store
+Thumbs.db

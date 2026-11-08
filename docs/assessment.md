@@ -2,7 +2,7 @@
 
 This is a read-only review of the code as it stood at commit `e0ec48b` ("Added loop", April 2026). It decides what
 survives the rebuild, what is rewritten and what is new. Every claim points at a file and line so a reviewer can
-check it.
+check it. The code itself was deleted in Phase 0 (D-25); `git show e0ec48b:<path>` shows any file cited here.
 
 ## 1. What the platform is today
 

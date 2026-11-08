@@ -8,7 +8,7 @@ Format: **D-n. Title** (date, status). Context, decision, consequences.
 
 ## Foundation
 
-**D-1. Rebuild instead of refactor** (2026-11-08, accepted)
+**D-1. Rebuild instead of refactor** (2026-11-08, accepted; the legacy-code clause superseded by D-25)
 The review in `assessment.md` found risk limits that nothing enforces, an edge that is negative after fees,
 client-side stops, plaintext credentials and no tests. Fixing that in place costs more than a clean design.
 The legacy code (`agents/`, `laravel/` at the repository root) stays read-only for reference until the new
@@ -134,6 +134,11 @@ Commits.
 **D-24. Visual identity** (2026-11-08, open)
 Three candidate identities in `docs/brand.md`: Graphite, Harbor, Voltage. Until one is chosen, UI work uses the
 shared rules and tokens only by name; the choice becomes binding for every screen.
+
+**D-25. Legacy code deleted in Phase 0** (2026-11-08, accepted)
+The operator chose to delete the old Python agents, the old Laravel app, the wiki and the old scripts at once
+instead of keeping them under `legacy/` until parity. They remain readable in git at commit `e0ec48b`, which
+`assessment.md` cites file by file. Indicator oracles and other references point at that commit.
 
 ## Open
 

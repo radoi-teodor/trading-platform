@@ -132,5 +132,4 @@ database/       migrations, factories, seeders (seeders never create a default p
 docs/           this documentation
 resources/      views, Livewire templates, css tokens, prompts/
 tests/          Pest: Unit, Feature, Arch, Golden (backtest snapshots)
-legacy/         the old Python agents and Laravel app, read-only, deleted after parity (D-1)
 ```

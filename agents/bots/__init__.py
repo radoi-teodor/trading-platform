@@ -1,1 +1,0 @@
-"""Trading bot sub-package."""

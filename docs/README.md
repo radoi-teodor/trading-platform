@@ -3,8 +3,8 @@
 An automated crypto trading platform for one operator. LLM agents research markets and write strategies;
 deterministic code tests, sizes, limits and executes them. Everything runs in one Laravel application.
 
-The platform is being rebuilt. `assessment.md` explains why; the old code under `agents/` and `laravel/` is
-read-only reference until it is removed (D-1).
+The platform is being rebuilt. `assessment.md` explains why; the old code was deleted in Phase 0 and is readable
+in git at commit `e0ec48b` (D-25).
 
 ## Reading order
 
@@ -33,7 +33,7 @@ Each phase ends with its tests green, its docs updated and its screens built in 
 
 | Phase | Scope | Done when | Status |
 |-------|-------|-----------|--------|
-| 0. Hygiene | Remove the committed database from the tip, move old code to `legacy/`, new Laravel skeleton, CI (Pint, PHPStan, Pest, arch tests), docs | CI green on an empty skeleton; this documentation merged | Docs written, rest planned |
+| 0. Hygiene | Delete the old code and the committed database (D-25), new Laravel skeleton, CI (Pint, PHPStan, Pest, arch tests), docs | CI green on an empty skeleton; this documentation merged | Docs written, rest planned |
 | 1. Foundations | Value objects, clock, ledger; Binance instruments and filters; candle backfill (REST) and live stream (WebSocket); data quality checks | A month of 1m candles for 5 pairs, gap-free, matches the exchange | Planned |
 | 2. Simulation | Simulated venue, engine loop, fill and cost model, metrics, reports; three baseline strategies coded by hand | Baselines reproduce known results; golden tests in place | Planned |
 | 3. Strategy DSL | Parser, type checker, indicator library, compiler, read-back, walk-forward, Monte Carlo, promotion gates | The baselines rewritten in the DSL give identical reports | Planned |

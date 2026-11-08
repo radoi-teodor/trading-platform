@@ -126,8 +126,8 @@ arg       = expr | identifier ":" expr ;
 | Time | `hour_utc`, `weekday` |
 | Exits only | `level(series)`, `chandelier(n, k)`, `atr_trail(n, k)` |
 
-Each function has a reference test against known values; the old pandas formulas in `legacy/` serve as oracles
-where they apply. New functions are added through `feature-work` with a D-number if they change semantics.
+Each function has a reference test against known values; the old pandas formulas at commit `e0ec48b`
+(`agents/indicators/technical.py`) serve as oracles where they apply. New functions are added through `feature-work` with a D-number if they change semantics.
 
 ## 3. Semantics
 

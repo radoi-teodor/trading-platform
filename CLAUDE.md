@@ -3,8 +3,8 @@
 An automated crypto trading platform for one operator, being rebuilt in Laravel. LLM agents research markets and
 write strategies; deterministic code tests, sizes, limits and executes them.
 
-The code under `agents/` and `laravel/` (moving to `legacy/`) is the old platform: read it for reference, never
-extend it. `docs/assessment.md` explains what is wrong with it.
+The old platform was deleted in Phase 0 (D-25). It is readable in git at commit `e0ec48b`; `docs/assessment.md`
+explains what was wrong with it.
 
 ## Read first
 
