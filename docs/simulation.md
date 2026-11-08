@@ -155,6 +155,16 @@ strategy without a D-number. The carry template counts at least 12 months out of
 instead of trades (D-60). `php artisan strategy:gates` writes the gate report; `strategy:promote` moves a version
 from Draft to Backtested only when every gate passes, and never to a live stage (D-16).
 
+How `strategy:gates` gets its numbers (D-66): the history is the stored candles of the version's instruments, less
+the warmup of its slowest set, and its last 20 % is the hold-out. On the rest, every set of the declared ranges runs
+once and walks forward; the set chosen in the last window is the one judged. Its neighbours (each parameter 20 % down,
+unchanged and 20 % up) run over the same in-sample history for robustness. It runs once on the hold-out, and that
+outcome is recorded: a later report reads it and never runs the hold-out again. It runs again with stressed costs
+from the first out-of-sample day to the end. The out-of-sample trades (walk-forward windows plus hold-out) feed the
+trade, edge, profit factor and outlier gates and the Monte Carlo; the drawdown gate reads the 95th percentile of the
+trade resamples. The report also splits those trades by regime and keeps the deflated Sharpe ratio and PBO of the
+grid. It is stored in `strategy_gate_reports`.
+
 ## 8. Paper trading
 
 - Default paper mode runs the strategy on the live feed against the simulated venue, with the same fill and cost

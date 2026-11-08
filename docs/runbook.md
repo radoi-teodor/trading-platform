@@ -113,14 +113,18 @@ only through Binance's public-data hosts and archives and should be confirmed on
 | Backtest a saved version | `php artisan backtest:run <id>@v<n> --from=YYYY-MM-DD --to=YYYY-MM-DD` (also `backtest:grid <id>@v<n>`) |
 | Backtest a strategy document | `php artisan backtest:run --file=catalog/strategies/<id>.strategy.yaml --from=YYYY-MM-DD --to=YYYY-MM-DD [--param=fast=12] [--no-benchmarks]` |
 | Search a document's parameters | `php artisan backtest:grid --file=catalog/strategies/<id>.strategy.yaml --from=YYYY-MM-DD --to=YYYY-MM-DD [--grid=fast=5..13:2] [--grid=slow=15,21,34]` |
-| Walk forward over a grid | `php artisan backtest:grid --file=... --from=... --to=... --walk-forward [--in=12m] [--out=3m] [--step=3m] [--min-trades=100]` |
+| Walk forward over a grid | `php artisan backtest:grid --file=... --from=... --to=... --walk-forward [--in=12m] [--out=3m] [--step=3m] [--min-trades=100] [--workers=4]` |
+| Judge a version against the gates | `php artisan strategy:gates <id>@v<n> [--in=12m] [--out=3m] [--step=3m] [--min-trades=100] [--seed=2026] [--workers=4]` |
+| Promote a version to Backtested | `php artisan strategy:promote <id>@v<n>` (only after a passing gate report; never to paper or live) |
+| Read a version in plain sentences | `php artisan strategy:compile <file>` prints the read-back |
 
 Strategies written in the DSL (`docs/strategy/configurator.md`) live in `catalog/strategies/` and run with `--file`;
 their instruments and timeframe come from the document and `--param` overrides a declared parameter. `backtest:grid` runs every
 parameter set in one pass (by default each declared parameter's range and step, at most 400 sets), lists them by
 Sharpe ratio, and gives the deflated Sharpe ratio of the best set against every trial of the document's family and
 the probability of backtest overfitting (D-58). Every backtest of a document is recorded in `strategy_trials`, so a
-search cannot hide how many tries it took. Errors are printed
+search cannot hide how many tries it took. `--workers` splits the sets over child processes that read the same
+database; the sets come back identical whatever their number. Errors are printed
 as `file:line:column: problem`. Hand-coded strategies and benchmarks are listed in `config/simulation.php`. A run refuses to start on history with gaps,
 warmup included, and says where they are; backfill first. A perpetual is named with its settle asset
 (`--symbol=BTC/USDT:USDT`) and also needs funding without gaps. The equity starts in the USD-M wallet for a

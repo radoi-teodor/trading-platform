@@ -1867,9 +1867,9 @@
     "semantic_hash": ""
   },
   "docs/decisions.md": {
-    "mtime": 1794175073.20152,
-    "seen": 1794175110.7078624,
-    "ast_hash": "308e5933921f6cb20a4ca9b9112415eb",
+    "mtime": 1794177307.4482558,
+    "seen": 1794177322.2719235,
+    "ast_hash": "b45b4b6d9bc211061526737cd74ecafe",
     "semantic_hash": ""
   },
   "docs/engine.md": {
@@ -1897,9 +1897,9 @@
     "semantic_hash": ""
   },
   "docs/runbook.md": {
-    "mtime": 1794175044.2038631,
-    "seen": 1794175110.7079034,
-    "ast_hash": "bf16a38e3ebeed2b0cf46931029f31ca",
+    "mtime": 1794177307.4480052,
+    "seen": 1794177322.271979,
+    "ast_hash": "15747b906bae5d9d6b4846a9bbaaa141",
     "semantic_hash": ""
   },
   "docs/security.md": {
@@ -1909,9 +1909,9 @@
     "semantic_hash": ""
   },
   "docs/simulation.md": {
-    "mtime": 1794175051.7295194,
-    "seen": 1794175110.707906,
-    "ast_hash": "b05fb2499e1d2e4ab44d0f4c4f553f5b",
+    "mtime": 1794177307.44474,
+    "seen": 1794177322.2719944,
+    "ast_hash": "a47b2ada8c1760bd61aa24f19c886caa",
     "semantic_hash": ""
   },
   "docs/strategy/agents.md": {
@@ -2341,15 +2341,15 @@
     "semantic_hash": ""
   },
   "app/Simulation/Console/GridBacktest.php": {
-    "mtime": 1794176676.7469482,
-    "seen": 1794176943.9516873,
-    "ast_hash": "f30b0813703e7ef490978c4ee03e0ffb",
+    "mtime": 1794176993.2235012,
+    "seen": 1794177322.2666824,
+    "ast_hash": "0c522ed62e07b108f9ed214da0c3d19b",
     "semantic_hash": ""
   },
   "app/Simulation/Console/PreparesBacktests.php": {
-    "mtime": 1794176772.786899,
-    "seen": 1794176943.9517095,
-    "ast_hash": "ba57c586c58955aeef31c49776b8d22e",
+    "mtime": 1794176991.6239395,
+    "seen": 1794177322.2667193,
+    "ast_hash": "fe6ebbd84e08541d5ba1494b2d70e858",
     "semantic_hash": ""
   },
   "app/Simulation/Models/StrategyTrial.php": {
@@ -2830,6 +2830,30 @@
     "mtime": 1794176287.7767036,
     "seen": 1794176943.9560356,
     "ast_hash": "34666a8e0ad79e34d897aaa00b645339",
+    "semantic_hash": ""
+  },
+  "app/Simulation/Console/PromoteStrategy.php": {
+    "mtime": 1794177068.2876456,
+    "seen": 1794177322.2667208,
+    "ast_hash": "1a7f3c49dc1b1ddbdec16220e905468d",
+    "semantic_hash": ""
+  },
+  "app/Simulation/Console/ReadsGridOptions.php": {
+    "mtime": 1794176991.6240587,
+    "seen": 1794177322.2667227,
+    "ast_hash": "b8e8909f2d9831beecea14674225b249",
+    "semantic_hash": ""
+  },
+  "app/Simulation/Console/StrategyGates.php": {
+    "mtime": 1794177089.5569532,
+    "seen": 1794177322.266741,
+    "ast_hash": "59343fca20a5de6cfdd6e41763776a43",
+    "semantic_hash": ""
+  },
+  "tests/Feature/Simulation/StrategyGatesTest.php": {
+    "mtime": 1794177240.1921818,
+    "seen": 1794177322.270425,
+    "ast_hash": "308f92be3755a95934e0675a839bc7e4",
     "semantic_hash": ""
   },
   "package-lock.json": {

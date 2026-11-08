@@ -27,8 +27,10 @@ use App\Strategy\Contracts\BuildableStrategy;
 use App\Strategy\Contracts\Strategy;
 use App\Strategy\Dsl\Compiler\CompiledStrategy;
 use App\Strategy\Dsl\Document\DocumentChecker;
+use App\Strategy\Dsl\Document\ParameterSpec;
 use App\Strategy\Dsl\Document\PolicyLimits;
 use App\Strategy\Dsl\Document\StrategySpec;
+use App\Strategy\Dsl\Types\Kind;
 use App\Strategy\Versions\StrategyRepository;
 use App\Support\Asset;
 use App\Support\Clock\Clock;
@@ -558,6 +560,18 @@ trait PreparesBacktests
     protected static function label(array $parameters): string
     {
         return implode(' ', array_map(fn (string $name, string $value): string => "{$name}={$value}", array_keys($parameters), $parameters)) ?: 'defaults';
+    }
+
+    /** A parameter value as documents and sets write it: a percent as 0.1%, any other number as itself. */
+    protected static function parameterText(ParameterSpec $param, Decimal $value): string
+    {
+        return $param->kind === Kind::Percent ? $value->times(Decimal::of(100))->roundedTo(6).'%' : (string) $value;
+    }
+
+    /** The value a set's text stands for: a fraction for a percent. */
+    protected static function parameterValue(ParameterSpec $param, string $text): Decimal
+    {
+        return str_ends_with($text, '%') ? Decimal::of(substr($text, 0, -1))->dividedBy(Decimal::of(100), 18) : Decimal::of($text);
     }
 
     /** The saved strategy versions, checked against the stored instruments and the account policy (D-61). */

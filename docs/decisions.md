@@ -398,6 +398,15 @@ Phase 5 stores what short-horizon perpetual strategies can use: aggregated trade
 interest and the mark price (which unlock `open_interest`, `oi_change`, `mark_price` and `basis`, D-52), and longer
 history for the other perpetuals. It gets its own plan when it starts.
 
+**D-66. How the gates are measured** (2026-11-08, decided with the Phase 3 close, D-29)
+`strategy:gates` judges the set the walk-forward chose in its last window. Robustness runs that set's neighbours
+over the in-sample history; the cost stress runs it from the first out-of-sample day to the end. The hold-out runs
+once per version and is recorded: a later report reads the recorded outcome instead of refusing outright (D-58 said
+a second request is refused), so a report can be rewritten without ever looking at the hold-out twice. The
+drawdown gate reads the 95th percentile of the trade resamples, at the account's sizing. `backtest:grid` and
+`strategy:gates` take `--workers`: the sets are split over child processes reading the parent's database, and the
+outcomes are identical whatever their number (D-57).
+
 | Id | Question | Blocks |
 |----|----------|--------|
 | O-6 | Pay Binance fees in BNB (25 % off spot)? Needs a small BNB balance whose price moves. | Live cost model (D-28 reads it from the account either way) |
