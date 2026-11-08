@@ -123,16 +123,16 @@ settings, scrapers) is a useful checklist for the new UI. The code and the look 
 | XTB broker and data | Drop | API shut down by XTB |
 | Paper broker | Rewrite | Becomes the simulator: fees, slippage, latency, partial fills, funding |
 | Market data sources (yfinance, Alpha Vantage, Finnhub, Twelve Data) | Replace | Exchange data through `ccxt` and WebSockets; equity providers only if equities are in scope |
-| Indicators | Replace | A tested library; the current pandas formulas can serve as test oracles |
+| Indicators | Rewrite | In PHP, with tests; the current pandas formulas serve as test oracles |
 | RSS scraper | Keep the idea | Becomes one connector type in the Sources registry |
 | HTML scraper | Drop | Fragile and often against site terms; replaced by APIs and feeds |
 | Sentiment (TextBlob) | Drop | Replaced by LLM event extraction with a fixed schema |
-| Shared DB with hand-written SQL on both sides | Replace | One service owns the schema; everything else goes through its API |
-| Redis pub/sub | Replace | Durable streams (Redis Streams or NATS); pub/sub loses messages when nobody listens |
+| Shared DB with hand-written SQL on both sides | Replace | One application owns the schema (D-2) |
+| Redis pub/sub | Replace | Laravel queues (Horizon), a Redis stream for ticks, Reverb for the browser; pub/sub loses messages when nobody listens |
 | Prompt and response logging | Keep the idea | Becomes the decision journal: every agent input, tool call, output, cost and outcome |
 | Notifications (Telegram, Discord, email) | Keep the idea | Re-implemented behind the new event bus |
 | Setup scripts, `start*.sh`, `wiki/` | Replace | `docker compose`, one task runner, and `docs/` |
-| Laravel app (auth, controllers, Blade views) | Replace | Security fixes (S1-S5) and dead plumbing (3.2) cost more than a new UI on the new API; the screen inventory is kept as a checklist |
+| Laravel app (auth, controllers, Blade views) | Rebuild | A new Laravel application (D-2, D-3); fixing S1-S5 and the dead plumbing in 3.2 costs more than starting clean; the screen inventory is kept as a checklist |
 | Laravel schema | Replace | One owner for the schema; decimals instead of cents; one timestamp format (UTC, with zone) |
 | Committed `database.sqlite` and `bootstrap/cache` | Remove from the repository | User data in a public repository |
 
@@ -147,16 +147,8 @@ settings, scrapers) is a useful checklist for the new UI. The code and the look 
 6. **Costs first.** Fees, spread, slippage and funding are part of every simulation from day one.
 7. **No edge, no trade.** Staying flat is a valid output of every agent.
 
-## 6. Open decisions
+## 6. Decisions taken
 
-These change the target design and are waiting on the owner. Each one gets a D-number in `docs/decisions.md`
-once answered.
-
-1. Markets in the first version (crypto spot only, crypto spot and perpetuals, or crypto and equities).
-2. Execution and simulation core: build on an existing event-driven engine (NautilusTrader, freqtrade) or write
-   our own.
-3. Web stack: a new TypeScript frontend on a Python API, or Laravel kept as the web layer.
-4. Who uses it: one operator with several accounts, or many users (multi-tenant, which in the EU also raises
-   MiFID II and MiCA questions).
-5. LLM backend: the Claude API with tool use, the `claude` CLI as today, or any OpenAI-compatible endpoint.
-6. Visual identity: one of the three in `docs/brand.md`.
+The owner answered the open questions on 2026-11-08. They are recorded in `docs/decisions.md`: all PHP on Laravel
+(D-2), Livewire UI (D-3), crypto on Binance with spot first and perpetuals behind a flag (D-4), one operator
+(D-5), the Claude API (D-6), our own engine (D-9). The visual identity is still open (D-24).
