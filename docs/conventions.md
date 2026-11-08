@@ -25,6 +25,15 @@ composer test:llm        # TRADING_LLM=1, real Claude calls, opt-in, costs money
 composer mutate          # Pest mutation testing on the domain modules (D-34); long, ask first
 ```
 
+**Code graph for assistants.** [graphify](https://github.com/Graphify-Labs/graphify) keeps a knowledge graph of the
+code in `graphify-out/` so that Claude Code queries it (`graphify query`, `path`, `explain`) instead of reading
+whole files, which saves tokens. It is installed per repository: the skill in `.claude/skills/graphify/`, the hooks
+in `.claude/settings.json` (advisory, they never block a read) and its rules in `CLAUDE.md`. The graph is built
+from code only, locally, with tree-sitter and no LLM (`GRAPHIFY_BACKEND=none`), so nothing leaves the machine.
+Install the CLI once with `uv tool install graphifyy` (Python 3.10 or newer) and refresh the graph after code
+changes with `graphify update .`; `graphify hook install` adds local git hooks that do it on every commit. The
+committed `graph.json` changes whole on every rebuild; that diff is expected.
+
 ## 2. Code style
 
 - Classes are `final` unless built for extension. Value objects and DTOs are `readonly`.
