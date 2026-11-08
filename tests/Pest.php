@@ -5,6 +5,8 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
+require_once __DIR__.'/Support/backtest-fixtures.php';
+
 pest()->extend(TestCase::class)
     ->beforeEach(fn () => Http::preventStrayRequests())
     ->in('Feature', 'Golden');

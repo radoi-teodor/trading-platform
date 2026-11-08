@@ -30,7 +30,7 @@ database between two codebases.
 | market-data | `php artisan market:stream spot` and `market:stream perp` | One combined WebSocket stream per market | Blocking client, one process per market; stores closed candles, repairs gaps on reconnect (`docs/market-data.md`); later publishes ticks to a Redis stream |
 | engine | `php artisan engine:run {account} --mode=paper\|live` | Orders, positions, ledger of one account | The only writer of trading state for that account |
 | horizon | `php artisan horizon` | Queued jobs | Queues: `sources`, `agents`, `simulation` (CPU-heavy), `notifications`, `default` |
-| simulation worker | `php artisan queue:work database --queue=simulation --timeout=3600 --tries=1` | Background backtests, grids, walk-forwards (D-62) | Until Redis and Horizon are installed |
+| simulation worker | `php artisan queue:work simulation --queue=simulation --timeout=3600 --tries=1` | Background backtests, grids, walk-forwards (D-62) | Until Redis and Horizon are installed |
 | scheduler | `php artisan schedule:work` | Timed jobs | Source polling, agent runs, reconciliation sweep, daily reports |
 
 Long-running PHP processes are supervised (Supervisor or systemd), restart on failure, and restart themselves

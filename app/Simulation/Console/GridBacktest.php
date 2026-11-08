@@ -62,7 +62,8 @@ final class GridBacktest extends Command
         {--in=12m : In-sample length, months (12m) or days (20d)}
         {--out=3m : Out-of-sample length}
         {--step=3m : Step between windows}
-        {--min-trades=100 : Trades a set needs in-sample to be chosen}';
+        {--min-trades=100 : Trades a set needs in-sample to be chosen}
+        {--json : End with a one-line JSON summary, for background runs (D-62)}';
 
     protected $description = 'Backtest every parameter set of a strategy document in one pass, with DSR and PBO';
 
@@ -160,6 +161,15 @@ final class GridBacktest extends Command
             CanonicalJson::encode(['definition' => $definition->toArray(), 'data' => ['fingerprint' => $run->fingerprint], 'sets' => $rows, 'validation' => $validation]),
         );
         $this->line("Stored in {$artifact}, {$run->candles} candles read in ".number_format((int) $started->diffInMilliseconds($clock->now()) / 1000, 1).' s.');
+
+        if ($this->option('json') === true) {
+            $this->line(CanonicalJson::encode([
+                'artifact' => $artifact,
+                'strategy' => $strategies[0]->identity()->label(),
+                'sets' => array_map(fn (array $row): array => array_diff_key($row, ['daily' => true]), $rows),
+                'validation' => $validation,
+            ]));
+        }
 
         return self::SUCCESS;
     }

@@ -30,6 +30,10 @@ return [
         'spot_share_when_both' => '0.5',
     ],
 
+    // The queue connection background runs go to (D-62): `simulation`, worked by
+    // `php artisan queue:work simulation --queue=simulation --timeout=3600 --tries=1`.
+    'queue_connection' => env('SIMULATION_QUEUE', 'simulation'),
+
     // Compressed reports, named by their SHA-256 (D-42).
     'artifacts' => storage_path('app/simulations'),
 

@@ -10,8 +10,10 @@ use App\Market\Binance\Sleeper;
 use App\Market\Binance\SystemSleeper;
 use App\Market\Stream\PhrityTransport;
 use App\Market\Stream\StreamTransport;
+use App\Simulation\SimulationQueue;
 use App\Support\Clock\Clock;
 use App\Support\Clock\WallClock;
+use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\ServiceProvider;
@@ -24,6 +26,11 @@ final class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(Clock::class, WallClock::class);
+        $this->app->bind(SimulationQueue::class, fn (): SimulationQueue => new SimulationQueue(
+            $this->app->make(Dispatcher::class),
+            $this->app->make(Clock::class),
+            Config::string('simulation.queue_connection'),
+        ));
         $this->app->singleton(Sleeper::class, SystemSleeper::class);
         $this->app->bind(StreamTransport::class, PhrityTransport::class);
         $this->app->singleton(BinanceEndpoints::class, fn (): BinanceEndpoints => new BinanceEndpoints(

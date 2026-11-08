@@ -143,7 +143,7 @@ strategies, and run backtests, grids and walk-forwards. It cannot trade, change 
 | Turn it on | `MCP_ENABLED=true` in `.env`, then restart the web process |
 | Create a token | `php artisan mcp:token <name>`: copy it now, it is shown once and stored only as a hash |
 | Revoke a token | `php artisan mcp:revoke <name>` |
-| Run queued simulations | `php artisan queue:work database --queue=simulation --timeout=3600 --tries=1` |
+| Run queued simulations | `php artisan queue:work simulation --queue=simulation --timeout=3600 --tries=1` |
 
 Connect a client to `http://<host>:8000/mcp` with the header `Authorization: Bearer <token>`. For Claude Code:
 `claude mcp add --transport http trading-x http://127.0.0.1:8000/mcp --header "Authorization: Bearer <token>"`.

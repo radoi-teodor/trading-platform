@@ -46,6 +46,17 @@ return [
             'after_commit' => false,
         ],
 
+        // Background backtests and grids (D-62): one try, and a retry window longer than the longest run, so that a
+        // grid still running is never started a second time.
+        'simulation' => [
+            'driver' => 'database',
+            'connection' => env('DB_QUEUE_CONNECTION'),
+            'table' => env('DB_QUEUE_TABLE', 'jobs'),
+            'queue' => 'simulation',
+            'retry_after' => 7200,
+            'after_commit' => false,
+        ],
+
         'beanstalkd' => [
             'driver' => 'beanstalkd',
             'host' => env('BEANSTALKD_QUEUE_HOST', 'localhost'),

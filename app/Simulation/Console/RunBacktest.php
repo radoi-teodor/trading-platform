@@ -46,7 +46,8 @@ final class RunBacktest extends Command
         {--to= : Day after the last one, YYYY-MM-DD}
         {--param=* : Strategy parameters as key=value}
         {--equity= : Initial quote balance (default from config/simulation.php)}
-        {--no-benchmarks : Skip the comparisons}';
+        {--no-benchmarks : Skip the comparisons}
+        {--json : End with a one-line JSON summary, for background runs (D-62)}';
 
     protected $description = 'Backtest a strategy on stored 1-minute candles and store its report';
 
@@ -177,6 +178,29 @@ final class RunBacktest extends Command
         $this->summary($report);
         $this->line("Report {$hash}");
         $this->line("Stored in {$artifact}, {$result->candles} candles read in ".number_format((int) $started->diffInMilliseconds($finished) / 1000, 1).' s.');
+
+        if ($this->option('json') === true) {
+            $benchmarks = [];
+
+            foreach (is_array($report->content['benchmarks'] ?? null) ? $report->content['benchmarks'] : [] as $label => $benchmark) {
+                $benchmarks[(string) $label] = is_array($benchmark) ? ($benchmark['missing'] ?? $benchmark['return'] ?? null) : null;
+            }
+
+            $this->line(CanonicalJson::encode([
+                'report' => $hash,
+                'artifact' => $artifact,
+                'strategy' => $strategy->identity()->label(),
+                'parameters' => $strategy->identity()->parameters,
+                'metrics' => [
+                    'return' => $metrics->return, 'cagr' => $metrics->cagr, 'max_drawdown' => $metrics->maxDrawdown,
+                    'sharpe' => $metrics->sharpe, 'sortino' => $metrics->sortino, 'time_in_market' => $metrics->timeInMarket,
+                    'trades' => $metrics->trades->count, 'win_rate' => $metrics->trades->winRate,
+                    'profit_factor' => $metrics->trades->profitFactor, 'expectancy' => $metrics->trades->expectancy,
+                    'fees' => $metrics->trades->fees, 'funding' => $metrics->trades->funding,
+                ],
+                'benchmarks' => $benchmarks,
+            ]));
+        }
 
         return self::SUCCESS;
     }
