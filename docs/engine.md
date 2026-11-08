@@ -67,7 +67,7 @@ candle with the fill rules of `simulation.md`, section 3 (D-36, D-37). It never 
 |--------|--------|
 | Open long | A market buy. Phase 2 enters at market only; limit entries come with the DSL (Phase 3) |
 | Close | Cancel the position's protective orders, then a market sell of the position, rounded down to the lot step |
-| Adjust stop | Cancel and replace the protective order with the new stop. A stop may only move towards the price |
+| Adjust stop | Cancel the protective orders and place them again at once with the new stop. A stop may only move towards the price |
 
 - **Protective orders live on the venue (D-10).** When an entry fills, the next event places an OCO for the
   position: a stop-loss sell at the stop and, when the strategy gave one, a take-profit limit sell. On Binance spot
@@ -108,7 +108,9 @@ price is rejected with `stop_widening`.
 **Loss limits.** Daily loss is measured from equity at 00:00 UTC and halts entries until the next 00:00 UTC.
 Weekly loss from Monday 00:00 UTC halts entries until the operator resumes; in a backtest that is the rest of the
 run, and the report says when it happened. A drawdown of 10 % from the peak halts all strategies; 15 % flattens the
-account, then halts. A halt cancels working entry orders and keeps protective orders.
+account, then halts. A halt keeps protective orders. It would also cancel working entry orders, but Phase 2 enters
+at market only and a market order fills or expires in the minute after its decision, so none is working when a
+limit is reached; cancelling them comes with limit entries.
 
 **Benchmark profile (D-40).** Buy and hold and the 50/200 trend rule are comparisons, not strategies. They run
 with a profile that puts all free quote into one position by quote amount, needs no stop and has no loss halts.
