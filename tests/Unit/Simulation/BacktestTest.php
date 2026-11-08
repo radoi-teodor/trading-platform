@@ -173,3 +173,37 @@ it('runs a perpetual strategy from the futures wallet, with funding, next to a s
         ->and($report->content)->toHaveKey('trades.0.side', Side::Sell)
         ->and($report->content)->toHaveKey('result.trades.funding', $trip->funding);
 });
+
+it('reports a perpetual position still open at the end with its side, margin, leverage and funding', function (): void {
+    $perp = Symbol::parse('BTC/USDT:USDT');
+    $rules = ['BTC/USDT:USDT' => new RulesHistory($perp, [new InstrumentRules(
+        CarbonImmutable::parse('2026-01-01', 'UTC'), Decimal::of('0.1'), Decimal::of('0.001'), Decimal::of('0.001'), null, Decimal::of('100'),
+    )])];
+    $candles = CandleFactory::walk('2026-10-01 00:00:00', 180, seed: 3);
+    $main = new ScriptedStrategy(['01:30' => [new OpenShort($perp, Price::of('110'), null, 'entry')]], name: 'short', symbols: [$perp]);
+    $from = CarbonImmutable::parse('2026-10-01 01:00', 'UTC');
+    $definition = new RunDefinition(
+        $main->identity(), MarketType::Perp, [$perp], $from, CarbonImmutable::parse('2026-10-01 03:00', 'UTC'), $from,
+        Money::of('0', Asset::of('USDT')),
+        new FeeSchedule(Decimal::of('0.001'), Decimal::of('0.001')),
+        new CostModel(1, Decimal::of('0.0002'), Decimal::of('0.1'), Decimal::of('0.1')),
+        Policies::account(),
+        futuresBalance: Decimal::of('10000'),
+        perpetualFees: new FeeSchedule(Decimal::of('0.0002'), Decimal::of('0.0005')),
+        maintenanceRate: Decimal::of('0.01'),
+    );
+    $feed = new InMemoryCandleFeed(['BTC/USDT:USDT' => $candles], ['BTC/USDT:USDT' => [
+        new FundingRate(CarbonImmutable::parse('2026-10-01 02:00', 'UTC'), Decimal::of('0.0001'), 8, null),
+    ]]);
+    $result = (new Backtest($feed))->run($definition, new Participant('strategy', $main, Policies::account(), $from), $rules);
+    $position = $result->main->ledger->perpPositions()[0];
+    $open = ReportBuilder::build($definition, $result, $rules)->content['open_positions'] ?? null;
+
+    expect($open)->toBe([[
+        'symbol' => $perp, 'opened_at' => $position->openedAt, 'side' => Side::Sell, 'quantity' => $position->quantity,
+        'entry_price' => $position->entryPrice, 'margin' => $position->margin, 'leverage' => $position->leverage,
+        'fees' => $position->fees, 'funding' => $position->funding,
+    ]])
+        ->and($position->funding->isPositive())->toBeTrue()
+        ->and($result->main->equity->timeInMarket()?->isPositive())->toBeTrue();
+});

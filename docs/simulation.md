@@ -188,5 +188,9 @@ A strategy that does not beat cash after costs and risk is not promoted, however
   2025-10-01 to 2026-10-01, 531,360 candles with its warmup, 49 s. Met; no D-number needed.
 - With both benchmarks in the same pass, three accounts over 1,033,920 candles (2024-11 to 2026-10, the 50/200 rule's
   warmup included) take 156 s.
+- Perpetuals, measured on 2026-11-08 in the same container: a run on the BTC perpetual from 2025-06-01 to
+  2026-10-01 with its two spot benchmarks reads 1,978,560 candles in 206 to 219 s (short 50/200 rule, short Donchian);
+  the funding carry, which follows spot and perpetual, takes 219 to 236 s. About 36 µs per candle and account, below
+  the spot runs' 50 µs.
 - A 3-year walk-forward with a 50-point parameter neighbourhood: under 30 minutes, spread over the `simulation`
   queue workers. To be measured in Phase 3, where walk-forward is built.
