@@ -20,6 +20,15 @@ return [
     // share of a minute's volume.
     'cost_model' => ['version' => 1, 'half_spread' => '0.0002', 'impact' => '0.1', 'limit_volume_share' => '0.1'],
 
+    // USD-M perpetuals (D-43 to D-49): fees in USDT on the notional (D-47); an assumed maintenance margin rate for the
+    // liquidation price until the account's brackets are read (D-45); the share of equity that starts in the spot
+    // wallet when a strategy trades both markets (D-49).
+    'perpetual' => [
+        'fees' => ['maker' => '0.0002', 'taker' => '0.0005'],
+        'maintenance_margin_rate' => '0.01',
+        'spot_share_when_both' => '0.5',
+    ],
+
     // Compressed reports, named by their SHA-256 (D-42).
     'artifacts' => storage_path('app/simulations'),
 

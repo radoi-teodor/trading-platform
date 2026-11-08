@@ -55,7 +55,7 @@ final readonly class Backtest
         $candles = 0;
         $symbols = [];
 
-        foreach ($this->feed->minutes($definition->market, $definition->symbols, $feedFrom, $definition->to) as $minute) {
+        foreach ($this->feed->minutes($definition->symbols, $feedFrom, $definition->to) as $minute) {
             $clock->advanceTo($minute->closedAt);
 
             foreach ($minute->candles as $symbol => $candle) {

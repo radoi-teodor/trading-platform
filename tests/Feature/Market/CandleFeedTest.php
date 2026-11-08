@@ -5,10 +5,12 @@ declare(strict_types=1);
 use App\Market\CandleRepository;
 use App\Market\Data\Candle;
 use App\Market\Data\CandleSource;
+use App\Market\Data\FundingRate;
 use App\Market\Data\MarketType;
 use App\Market\Data\MinuteCandles;
 use App\Market\Feed\CandleAggregator;
 use App\Market\Feed\DatabaseCandleFeed;
+use App\Market\FundingRateRepository;
 use App\Market\Models\Instrument;
 use App\Market\Models\InstrumentFilter;
 use App\Market\Persistence\Rows;
@@ -47,7 +49,6 @@ function readFeed(array $symbols, string $from, string $to, int $chunkMinutes = 
     $feed = new DatabaseCandleFeed(DB::connection(), 'binance', $chunkMinutes);
 
     return array_values([...$feed->minutes(
-        MarketType::Spot,
         array_map(fn (string $symbol): Symbol => Symbol::parse($symbol), $symbols),
         CarbonImmutable::parse($from, 'UTC'),
         CarbonImmutable::parse($to, 'UTC'),
@@ -165,4 +166,25 @@ it('gives an instrument the history of its filters', function (): void {
         ->and((string) $history->at(CarbonImmutable::parse('2026-12-02', 'UTC'))->stepSize)->toBe('0.0001')
         ->and((string) $history->at(CarbonImmutable::parse('2026-11-09', 'UTC'))->minNotional)->toBe('5')
         ->and($history->isAssumedAt(CarbonImmutable::parse('2026-10-01', 'UTC')))->toBeTrue();
+});
+
+it('mixes spot and perpetual instruments and hands out funding with the minute that ends at its time', function (): void {
+    $spot = feedInstrument('BTC/USDT');
+    $perp = feedInstrument('BTC/USDT:USDT', MarketType::Perp);
+    storeCandles($spot, CandleFactory::walk('2026-10-01 07:55:00', 10, seed: 1));
+    storeCandles($perp, CandleFactory::walk('2026-10-01 07:55:00', 10, seed: 2));
+    app(FundingRateRepository::class)->upsert($perp, CandleSource::Archive, [
+        new FundingRate(CarbonImmutable::parse('2026-10-01 08:00:00', 'UTC'), Decimal::of('0.0001'), 8, null),
+        new FundingRate(CarbonImmutable::parse('2026-10-01 16:00:00', 'UTC'), Decimal::of('0.0002'), 8, null),
+    ]);
+
+    $minutes = readFeed(['BTC/USDT:USDT', 'BTC/USDT'], '2026-10-01 07:55:00', '2026-10-01 08:05:00', chunkMinutes: 3);
+    $withFunding = array_values(array_filter($minutes, fn (MinuteCandles $m): bool => $m->funding !== []));
+
+    expect($minutes)->toHaveCount(10)
+        ->and(array_keys($minutes[0]->candles))->toBe(['BTC/USDT', 'BTC/USDT:USDT'])
+        ->and($withFunding)->toHaveCount(1)
+        ->and($withFunding[0]->closedAt->format('H:i'))->toBe('08:00')
+        ->and(array_keys($withFunding[0]->funding))->toBe(['BTC/USDT:USDT'])
+        ->and((string) $withFunding[0]->funding['BTC/USDT:USDT']->rate)->toBe('0.0001');
 });
