@@ -631,10 +631,10 @@
     "semantic_hash": "1532fd9ce5d308e65f8531379e399fd9"
   },
   "app/Providers/AppServiceProvider.php": {
-    "mtime": 1794150443.4000556,
-    "seen": 1794165296.7205672,
-    "ast_hash": "d8b9b7fa76441412ef769fdecc5a81d2",
-    "semantic_hash": "d8b9b7fa76441412ef769fdecc5a81d2"
+    "mtime": 1794172725.0948,
+    "seen": 1794172862.2371485,
+    "ast_hash": "7981915de3446335302a12c3eaf839ca",
+    "semantic_hash": ""
   },
   "app/Risk/Data/AccountView.php": {
     "mtime": 1794170272.1196606,
@@ -697,9 +697,9 @@
     "semantic_hash": "e478d6aa1ae593d61941b5a34c341837"
   },
   "app/Simulation/Console/RunBacktest.php": {
-    "mtime": 1794172489.1386611,
-    "seen": 1794172572.595097,
-    "ast_hash": "e270c3070edb6b2327a07446062b3707",
+    "mtime": 1794172725.0951502,
+    "seen": 1794172862.2374465,
+    "ast_hash": "0158c2664501ae129d917701f42ed734",
     "semantic_hash": ""
   },
   "app/Simulation/Data/BacktestResult.php": {
@@ -1231,10 +1231,10 @@
     "semantic_hash": "df8a1bdc95eb916496bd934f06648dc2"
   },
   "config/queue.php": {
-    "mtime": 1794145120.2779827,
-    "seen": 1794165296.7231874,
-    "ast_hash": "e56c65197fcdbc1d3e35559df23546e6",
-    "semantic_hash": "e56c65197fcdbc1d3e35559df23546e6"
+    "mtime": 1794172705.7348816,
+    "seen": 1794172862.2400463,
+    "ast_hash": "b9b85b15c500bedb59171ad9f9fea39e",
+    "semantic_hash": ""
   },
   "config/risk.php": {
     "mtime": 1794160514.8739114,
@@ -1255,10 +1255,10 @@
     "semantic_hash": "fe59396b264c6bd4161f45859d5ea228"
   },
   "config/simulation.php": {
-    "mtime": 1794161453.1595495,
-    "seen": 1794165296.7232418,
-    "ast_hash": "f80680d8e241b3ae19310add9383f285",
-    "semantic_hash": "f80680d8e241b3ae19310add9383f285"
+    "mtime": 1794172705.7350945,
+    "seen": 1794172862.2400866,
+    "ast_hash": "86cc33500413819e292c652c3eeff1e4",
+    "semantic_hash": ""
   },
   "database/factories/UserFactory.php": {
     "mtime": 1794145120.0999484,
@@ -1448,9 +1448,9 @@
     "semantic_hash": "27836203d1bf0c6ea54c3c7de5d1c4e8"
   },
   "tests/Feature/Simulation/RunBacktestCommandTest.php": {
-    "mtime": 1794172489.138986,
-    "seen": 1794172572.5988033,
-    "ast_hash": "a59780b9d444fcbfff322d9cf56bcf8c",
+    "mtime": 1794172634.2080986,
+    "seen": 1794172862.2406273,
+    "ast_hash": "9ba24e7ce85b2f5a865879c9aeeb3071",
     "semantic_hash": ""
   },
   "tests/Feature/Support/ClockBindingTest.php": {
@@ -1555,10 +1555,10 @@
     "ast_empty": true
   },
   "tests/Pest.php": {
-    "mtime": 1794156506.2743928,
-    "seen": 1794165296.7238753,
-    "ast_hash": "78f0fb81763c4a43b3dbbdf8447f2876",
-    "semantic_hash": "78f0fb81763c4a43b3dbbdf8447f2876"
+    "mtime": 1794172633.1189654,
+    "seen": 1794172862.2409446,
+    "ast_hash": "77d67a8604ac10d3f065bf15d12f5176",
+    "semantic_hash": ""
   },
   "tests/Support/ArchiveFactory.php": {
     "mtime": 1794149877.301273,
@@ -1855,9 +1855,9 @@
     "semantic_hash": ""
   },
   "docs/architecture.md": {
-    "mtime": 1794172281.8506365,
-    "seen": 1794172572.600143,
-    "ast_hash": "f3d7a9b63731073314896a088390e066",
+    "mtime": 1794172754.1183956,
+    "seen": 1794172862.2419114,
+    "ast_hash": "2c2ce430de4584d97674e7c75367c2b4",
     "semantic_hash": ""
   },
   "docs/assessment.md": {
@@ -1909,9 +1909,9 @@
     "semantic_hash": ""
   },
   "docs/runbook.md": {
-    "mtime": 1794172568.6298504,
-    "seen": 1794172572.6002963,
-    "ast_hash": "adff140aa8dea5f17a7a4b1c6f274cbf",
+    "mtime": 1794172754.117803,
+    "seen": 1794172862.2420192,
+    "ast_hash": "376fb1bf15094ef91e8601fe67e315ff",
     "semantic_hash": ""
   },
   "docs/security.md": {
@@ -2359,9 +2359,9 @@
     "semantic_hash": ""
   },
   "app/Simulation/Console/GridBacktest.php": {
-    "mtime": 1794172489.1384714,
-    "seen": 1794172572.595093,
-    "ast_hash": "56efaf3dc7ab073726064903bdb7b813",
+    "mtime": 1794172725.095392,
+    "seen": 1794172862.2374098,
+    "ast_hash": "a5e75942ae351e6857f949f52fa27e30",
     "semantic_hash": ""
   },
   "app/Simulation/Console/PreparesBacktests.php": {
@@ -2512,6 +2512,42 @@
     "mtime": 1794172330.5218463,
     "seen": 1794172572.5988047,
     "ast_hash": "0b14a2802ef42cd0c9b10ed404e2330e",
+    "semantic_hash": ""
+  },
+  "app/Simulation/Jobs/RunSimulation.php": {
+    "mtime": 1794172705.7436643,
+    "seen": 1794172862.237512,
+    "ast_hash": "1f71d455ad0ba4206fdadbfabee5ebad",
+    "semantic_hash": ""
+  },
+  "app/Simulation/Models/SimulationJob.php": {
+    "mtime": 1794172705.740483,
+    "seen": 1794172862.2376096,
+    "ast_hash": "3a60d904af2238f6f37515d358686d58",
+    "semantic_hash": ""
+  },
+  "app/Simulation/SimulationQueue.php": {
+    "mtime": 1794172711.0931528,
+    "seen": 1794172862.237673,
+    "ast_hash": "06c3d84f910cc79e24a9ed6a3beccf05",
+    "semantic_hash": ""
+  },
+  "database/migrations/2026_11_08_000005_create_simulation_jobs_table.php": {
+    "mtime": 1794172705.7387393,
+    "seen": 1794172862.2402127,
+    "ast_hash": "5a1f0892a6ebc6a0787b653d96347629",
+    "semantic_hash": ""
+  },
+  "tests/Feature/Simulation/SimulationJobsTest.php": {
+    "mtime": 1794172764.3787527,
+    "seen": 1794172862.2406287,
+    "ast_hash": "d59381e8e7dc44d6f43096b6031c41df",
+    "semantic_hash": ""
+  },
+  "tests/Support/backtest-fixtures.php": {
+    "mtime": 1794172633.9818268,
+    "seen": 1794172862.2411225,
+    "ast_hash": "9cef184d2df71822a22f0929affab106",
     "semantic_hash": ""
   },
   "package-lock.json": {
