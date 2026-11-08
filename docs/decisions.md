@@ -198,6 +198,52 @@ every code path. Kept in `config/market.php`.
 Pest 5 ships mutation testing (`pest --mutate`), so Infection is not added. `composer mutate` runs it on the
 domain modules.
 
+**D-35. Phase 2 simulates spot, long only** (2026-11-08, accepted)
+The engine, ledger and simulated venue are built and proven on spot first. Perpetuals need short positions,
+isolated margin, funding at every funding time, liquidation and reduce-only exits; they come in Phase 2b, before
+the DSL, so that Phase 3 can express strategies on both markets.
+
+**D-36. The simulated venue works on 1-minute candles** (2026-11-08, accepted)
+Strategies decide on closed candles of their own timeframe, built from 1-minute candles. The venue matches orders
+against each 1-minute candle, so stops, targets and limits inside a long candle are replayed minute by minute
+instead of guessed. An order decided at `t` is live from the minute that opens at `t`. When one minute reaches
+both a stop and a target, the stop fills first.
+
+**D-37. Cost model version 1** (2026-11-08, accepted)
+Market and stop fills slip by `price × (0.0002 + 0.1 × participation)`, participation being the order quantity
+over the minute's volume: half of an estimated spread plus a linear impact term. Limits and targets fill only when
+the price trades through by one tick, at most 10 % of the minute's volume. These are conservative guesses kept in
+`config/simulation.php` until paper and live fills calibrate them (Phase 4), which makes cost model version 2.
+
+**D-38. Spot fees in the asset received** (2026-11-08, accepted)
+Without BNB payment (O-6 still open) Binance charges spot fees in the asset the order receives: base on a buy,
+quote on a sell. Taker for market and stop orders and for limits that fill on arrival, maker for limits that
+rested. Selling rounds down to the lot step, so a remainder smaller than the step can stay as dust; the ledger
+keeps it as unattributed holdings, valued in equity.
+
+**D-39. Statistics in decimals** (2026-11-08, accepted)
+Metrics use `BcMath` decimals at 18 digits: square roots from `BcMath`, logarithm and exponential from series in
+`App\Support\Number\DecimalMath`. Float results depend on the C library and would make the golden hashes differ
+between machines; decimals do not.
+
+**D-40. Benchmark risk profile, backtests only** (2026-11-08, accepted)
+Buy and hold and the 50/200 trend rule are comparisons. They run through the same engine with a profile that puts
+all free quote into one position, needs no stop and has no loss halts. The engine refuses this profile outside
+backtest mode. Strategies run with the account policy from `config/risk.php`, whose defaults equal
+`docs/risk-policy.md` and are pinned by a test, so no code change raises a limit unnoticed (D-19).
+
+**D-41. The simulated venue keeps its own books** (2026-11-08, accepted)
+Like an exchange, the simulated venue holds balances and orders, locks funds for working orders and rejects what
+the balance cannot cover. The engine reconciles its ledger against it at every event, with the same code it will
+use against Binance (D-10). In a backtest a mismatch stops the run, because it can only be a bug.
+
+**D-42. Backtest reports are canonical and hashed** (2026-11-08, accepted)
+A report is canonical JSON (sorted keys, numbers as strings, no wall-clock time) identified by its SHA-256. It
+holds the run definition, a fingerprint of the data read, metrics, trades, equity, decision counts and
+comparisons. Reports are stored compressed under `storage/app/simulations` with a summary row in `backtest_runs`.
+`Engine::VERSION` is raised by hand with every behaviour change; golden tests catch the changes that were not
+meant.
+
 ## Open
 
 | Id | Question | Blocks |

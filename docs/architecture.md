@@ -83,7 +83,8 @@ arrives) and handles each one to the end before the next. Order inside one event
    orders.
 10. **Publish** state changes for the UI (Reverb) and notifications.
 
-A backtest runs exactly this loop with `SimClock` and the simulated venue (D-8).
+A backtest runs exactly this loop with `SimClock` and the simulated venue (D-8). The rules of each step, the
+venue contract and the ledger are in `docs/engine.md`.
 
 ## 5. Agents
 

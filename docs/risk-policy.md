@@ -23,6 +23,11 @@ takes effect at the next event; raising one needs re-authentication and waits 24
 A halt stops new entries and cancels working entry orders. Protective orders stay on the exchange. Positions are
 closed only by their own exits or by a flatten.
 
+Every entry under this policy carries a stop: risk per trade is the loss if the stop is hit, so an entry without
+one is rejected. A stop may be moved towards the price, never away from it. How the engine applies these limits,
+in order, is in `docs/engine.md`, section 5. Backtests of benchmarks (buy and hold, the 50/200 trend rule) use a
+separate benchmark profile that this policy does not govern and that paper and live refuse (D-40).
+
 ## 2. Perpetual futures (when enabled, D-4)
 
 | Limit | Default | Ceiling |

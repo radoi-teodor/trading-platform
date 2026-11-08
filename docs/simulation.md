@@ -30,30 +30,47 @@ rejects, reconciliation), never profitability.
 
 ## 3. Fill and cost model
 
-Decisions happen when a candle closes. What happens next:
+Decisions happen when a strategy's candle closes. The simulated venue then works on 1-minute candles (D-36), so
+what happens inside a 4-hour candle is replayed minute by minute instead of guessed. An order decided at `t` is
+live from the minute that opens at `t`.
 
 | Order | Fill rule |
 |-------|-----------|
-| Market | At the next candle's open, plus latency, plus slippage |
-| Limit | Filled only if the price trades through the limit by at least one tick (a touch is not a fill). At most 10 % of the candle's volume per candle; the rest waits or expires |
-| Stop (protective) | Triggered when the candle's range crosses the stop; filled at the stop plus slippage, or at the open if the candle opened beyond the stop (gap) |
+| Market | At the open of the next minute, plus slippage. Taker fee |
+| Limit | Filled only if the price trades through the limit by at least one tick (a touch is not a fill), at the limit price. At most 10 % of the minute's volume per minute; the rest stays working. Maker fee. A limit that is already marketable when it arrives fills like a market order, never worse than its limit, taker fee |
+| Stop (protective) | Triggered when the minute's range reaches the stop; filled at the stop minus slippage, or at the open minus slippage if the minute opened beyond the stop (gap). Taker fee |
 | Take profit | As a limit order |
 
-- **Slippage**: half the estimated spread plus an impact term that grows with order size relative to recent
-  volume. Calibrated from paper and live fills once they exist; conservative defaults before.
-- **Same candle ambiguity**: when one candle contains both the stop and the take profit, the simulator replays
-  that candle on 1-minute data if available. Without it, the stop is assumed to fill first. Optimistic
+- **Same minute.** When one minute reaches both the stop and the take profit, the stop fills first. Optimistic
   assumptions are never the default.
-- **Fees**: maker or taker by order type, at the account's tier, charged in the asset the exchange would charge.
-- **Funding**: applied at each funding timestamp with the historical rate.
-- **Filters**: lot step, tick size and minimum notional applied by the same code the live order manager uses.
+- **Slippage (cost model v1, D-37).** Market and stop fills move against the order by half an estimated spread
+  plus an impact term: `price × (0.0002 + 0.1 × participation)`, where participation is the order quantity divided
+  by the minute's volume. The values are conservative defaults in `config/simulation.php`, calibrated from paper
+  and live fills in Phase 4 under a new cost model version. Every fill records its slippage, so the report shows
+  what the assumption cost.
+- **Fees (D-28, D-38).** Maker or taker by order type, at the rates read from the account; before an account
+  exists, Regular (VIP 0) without the BNB discount: 0.100 % maker and taker on spot. On spot the fee is charged in
+  the asset received.
+- **Funding.** Applied at each funding timestamp with the historical rate. Perpetuals come in Phase 2b (D-35).
+- **Filters.** Lot step, tick size and minimum notional applied by the same order manager live trading uses, with
+  the filters valid at the time (`docs/engine.md`, section 4).
 
 ## 4. Determinism
 
-A run is defined by: strategy version hash, data window, universe, cost model version, seed, engine version. The
-same definition gives the same report, byte for byte. Ties in event order are broken by a fixed rule (time,
-then instrument, then event type). Every report stores its definition and hash; golden tests pin a few of them
-(`docs/conventions.md`).
+A run is defined by: strategy name, version and parameters, data window, universe, initial balances, fee rates,
+cost model version, risk profile, seed and engine version. The same definition on the same data gives the same
+report, byte for byte, on any machine (D-39, D-42):
+
+- every number is a decimal (`BcMath`), statistics included; no float enters a report;
+- the report is canonical JSON: keys sorted, numbers as strings, no wall-clock time; its identity is the SHA-256
+  of that text;
+- the data is identified by a fingerprint, the SHA-256 of every candle the run read, so the same definition on
+  corrected data gives a different report, visibly;
+- ties in event order are broken by a fixed rule (time, then instrument, then event type);
+- `Engine::VERSION` is raised with every change of behaviour.
+
+Golden tests pin the hashes of a few runs on committed data (`docs/conventions.md`). Reports are stored as
+compressed JSON under `storage/app/simulations`, with a summary row in `backtest_runs`.
 
 ## 5. Validation methods
 
@@ -80,6 +97,23 @@ confidence interval; profit factor; number of trades; win rate and average win a
 maximum drawdown and its duration; Sharpe, Sortino and Calmar ratios; time in market; turnover; costs as a share
 of gross profit; monthly returns table and the share of positive months; maximum adverse and favorable excursion
 per trade; comparison with the baselines in section 11.
+
+How they are computed (D-39: decimals, 18 digits, the same result on every machine):
+
+| Metric | Definition |
+|--------|------------|
+| Return | Final equity divided by initial equity, minus 1. Final equity marks open positions at the last close |
+| CAGR | `(final / initial) ^ (365 / days) - 1` |
+| Maximum drawdown | Largest fall from a running peak, on equity marked every minute; its duration runs from the peak to the recovery, or to the end |
+| Daily returns | From equity at 00:00 UTC of consecutive days |
+| Sharpe | Mean daily return divided by its sample standard deviation, times `sqrt(365)` (crypto trades every day); no risk-free rate |
+| Sortino | Mean daily return divided by the downside deviation `sqrt(sum(min(r, 0)^2) / n)`, times `sqrt(365)` |
+| Calmar | CAGR divided by maximum drawdown |
+| Expectancy | Mean net profit per closed trade, in quote and in R; 95 % interval `mean ± t × sd / sqrt(n)`, Student t below 30 trades, 1.96 from 30 |
+| Profit factor | Sum of winning net profits divided by the absolute sum of losing ones; absent when nothing lost |
+| Time in market | Share of minutes with an open position |
+| Turnover | Traded notional divided by initial equity |
+| Costs | Fees plus slippage, valued in quote at fill time, and their share of gross profit |
 
 ## 7. Gates for the Backtested stage
 
@@ -132,6 +166,11 @@ Every report compares the strategy with:
 - buy and hold of the same instrument (or BTC for a basket);
 - a daily 50/200 moving-average trend rule on the same instrument;
 - cash (zero return), because staying flat is always an option.
+
+Buy and hold and the trend rule run through the same engine, with the benchmark risk profile: all free quote in
+one position, no stop, no loss halts, backtests only (D-40). They read the same candles in the same pass as the
+strategy. The trend rule needs 200 days before the window; when the data does not reach that far, the report says
+the comparison is missing and why.
 
 A strategy that does not beat cash after costs and risk is not promoted, however busy it looks.
 
