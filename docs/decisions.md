@@ -287,6 +287,76 @@ Benchmarks run on the spot instrument of the same base, in their own accounts.
 (`docs/strategy/configurator.md`). `funding-carry` implements the configurator's carry template. The benchmark profile
 on a perpetual sizes the position at 99 % of the free USD-M wallet at 1x, leaving room for slippage and fees.
 
+**D-51. DSL grammar, parameters and numbers** (2026-11-08, accepted with the Phase 3 plan)
+The expression grammar is the one in `docs/strategy/configurator.md`, section 2, plus `true` and `false` and named
+parameters written `$name`. A document declares its parameters under `params:` with a default and, optionally, a
+range and a step; walk-forward and the robustness check move only these. Documents are read with `symfony/yaml`;
+line and column of every key come from an index built over the text, so errors point where the operator typed.
+Every number is a `Decimal` with 18 digits (D-11, D-39).
+
+**D-52. Function library, first version** (2026-11-08, accepted with the Phase 3 plan)
+Every function of the configurator's table whose data the platform stores. `open_interest`, `oi_change`, `basis`
+and `mark_price` are refused at compile time until their data is ingested. The agent functions compile and return
+their neutral values (`regime()` is `"unknown"`, `risk_flag` and `event` are false, `brief_confidence()` is 0)
+until the journal exists (D-17), and the compiler warns when a strategy uses them. Conventions: SMA-seeded EMA,
+Wilder smoothing for RSI, ATR, ADX and the directional indicators, population standard deviation, Bollinger on
+the population standard deviation. Each function has a reference test against values computed independently with
+Python's `decimal` module (`tests/Fixtures/indicators/`).
+
+**D-53. Timeframes and history in the DSL** (2026-11-08, accepted with the Phase 3 plan)
+`x on 1d` subscribes the strategy to the higher timeframe, before its own, and reads the last closed candle of it,
+including one that closes in the same event: never one still forming. `x[n]` reads n closed candles back. The
+compiler computes the warmup from the expression graph, as the longest history any expression needs, and a
+backtest window shorter than it is refused. Stops and targets are fixed at the decision, from the decision price
+(the close), so the risk engine sizes and the venue protects with the same numbers.
+
+**D-54. Strategy limits in the risk engine** (2026-11-08, accepted with the Phase 3 plan)
+`sizing` and `limits` of a document become per-strategy limits checked by the risk engine after the account's:
+risk per trade and maximum position resize down, maximum open positions, trades per day (UTC) and the cooldown
+after a losing trade reject with `strategy_positions`, `trades_per_day` and `cooldown`. They can only be tighter
+than the account's policy; the compiler refuses a looser one. The strategy context carries the strategy's last
+closed trade (net result and time), which the time and loss rules need.
+
+**D-55. Limit entries** (2026-11-08, accepted with the Phase 3 plan)
+`order: limit(offset: -0.1%, expiry: 2 bars)` places a limit entry at the decision price moved by the offset,
+working until it fills or expires; fills follow `docs/simulation.md`, section 3. Expiry and halts cancel a working
+entry. Spot and perpetuals; the simulated USD-M book gains limit orders with the same rules.
+
+**D-56. Benchmark documents and templates** (2026-11-08, accepted with the Phase 3 plan)
+A document with `profile: benchmark` may write `stop_loss: none` and is sized by the benchmark profile (D-40,
+D-50). It runs in backtests only; paper and live refuse it, as they refuse the profile. This lets the comparisons
+themselves be written in the DSL. `template: funding_carry` builds the coded carry (D-48, D-50) from the document's
+parameters.
+
+**D-57. Walk-forward on continuous runs** (2026-11-08, accepted with the Phase 3 plan)
+Every parameter set of the grid runs once over the whole history, all of them in one pass over the candles as
+participants of one backtest. Each in-sample window picks a set on its slice of these runs; the following
+out-of-sample window is judged on the slice of that set's run. A trade counts in the window where it closes, so a
+slice may start with a position open; the report says how many did. The grid is split over child processes
+(`--workers`), and the result does not depend on their number. Independent runs per window would cost hours for a
+3-year search and were declined by the operator.
+
+**D-58. Validation statistics** (2026-11-08, accepted with the Phase 3 plan)
+- Monte Carlo: 2,000 resamples with a seeded `Xoshiro256StarStar`, the same on every machine: trades with
+  replacement, daily returns in blocks of 5 days, and runs that skip 10 % of the trades.
+- Deflated Sharpe ratio after Bailey and López de Prado, from the trials of the strategy family, their Sharpe
+  ratios' variance, and the skewness and kurtosis of the returns.
+- Probability of backtest overfitting by combinatorially symmetric cross-validation over 16 partitions.
+- Regime labels before the journal: ADX(14) on daily candles at 25 or more is `trend`, under 20 `range`, between
+  them `unknown`; 30-day realized volatility above its 80th percentile over the history read is `high_volatility`.
+- The hold-out is the last 20 % of the history, used once per strategy version; the use is recorded and a second
+  request refused.
+- Every backtest of a family, by anyone, is recorded as a trial.
+
+**D-59. No screens in Phase 3** (2026-11-08, accepted with the Phase 3 plan)
+Phase 3 is reached through commands: compile, read-back, versions, backtests, walk-forward and gates. The
+strategy editor is built with the first screens in Phase 4, where Livewire is installed, so that the shell, the
+mode badge and the Halt button come first. This is the exception to "each phase ends with its screens".
+
+**D-60. Duration-based gates for the carry template** (2026-11-08, accepted by the operator with the Phase 3 plan)
+A carry trades rarely and holds long. Its trade-count gate is at least 12 months out of sample and 10 closed
+cycles instead of 100 trades; every other gate of `docs/simulation.md`, section 7, applies unchanged.
+
 ## Open
 
 | Id | Question | Blocks |

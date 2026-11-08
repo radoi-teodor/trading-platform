@@ -85,17 +85,27 @@ compressed JSON under `storage/app/simulations`, with a summary row in `backtest
   for the final check. Looking at it to tune anything makes it in-sample.
 - **Walk-forward**: rolling windows, by default 12 months in-sample and 3 months out-of-sample, stepped by 3
   months. Parameters are chosen in each in-sample window and judged only on the following out-of-sample window.
-- **Parameter robustness**: every numeric parameter is moved 20 % up and down. A good strategy sits on a plateau,
-  not on a peak.
+  Each parameter set of the grid runs once over the whole history, all in one pass, and the windows are slices of
+  these runs (D-57). A trade counts in the window where it closes. The in-sample choice is the set with the
+  highest net expectancy per trade among those with at least the gate's trade count in the window (ties: the
+  set listed first). `--workers` splits the grid over processes; the result does not depend on it.
+- **Parameter robustness**: every declared parameter (`$name`, D-51) is moved 20 % up and down, alone and in
+  every combination, rounded to its step and kept in its range. A good strategy sits on a plateau, not on a peak.
 - **Cost stress**: the same run with fees times 1.5 and slippage times 2.
 - **Monte Carlo**: 2,000 resamples of the trade sequence (bootstrap with replacement) and of daily returns (block
-  bootstrap), plus runs that skip a random 10 % of trades. Output: distributions of final return, maximum
-  drawdown and longest losing streak.
+  bootstrap, blocks of 5 days), plus runs that skip a random 10 % of trades, from a seeded `Xoshiro256StarStar`
+  (D-58). Output: distributions of final return, maximum drawdown and longest losing streak, as percentiles 5,
+  50 and 95.
 - **Regime breakdown**: results split by the regime labels in force at entry (deterministic labels before the
-  journal starts, recorded analyst labels after).
-- **Multiple testing**: every backtest of a strategy family, by the operator or an agent, is counted. The count
-  feeds the deflated Sharpe ratio. For parameter searches, the probability of backtest overfitting is estimated
-  with combinatorially symmetric cross-validation.
+  journal starts, recorded analyst labels after). The deterministic labels (D-58): daily ADX(14) at 25 or more is
+  `trend`, under 20 `range`, otherwise `unknown`; 30-day realized volatility above its 80th percentile over the
+  history read is `high_volatility`, which takes precedence.
+- **Multiple testing**: every backtest of a strategy family, by the operator or an agent, is counted in
+  `strategy_trials`. The count and the variance of the trials' Sharpe ratios feed the deflated Sharpe ratio of
+  Bailey and López de Prado (2014). For parameter searches, the probability of backtest overfitting is estimated
+  with combinatorially symmetric cross-validation over 16 partitions of the daily returns (Bailey, Borwein, López
+  de Prado and Zhu, 2017).
+- **Hold-out once**: a version's use of the hold-out is recorded; a second request for it is refused.
 
 ## 6. Metrics in every report
 
@@ -139,7 +149,9 @@ All must hold, on out-of-sample data (walk-forward windows plus the hold-out):
 | Drawdown | Monte Carlo 95th percentile drawdown, at the planned size, below the account drawdown limit |
 
 A failed gate is reported with its numbers and what would have to change. Gates are never relaxed for one
-strategy without a D-number.
+strategy without a D-number. The carry template counts at least 12 months out of sample and 10 closed cycles
+instead of trades (D-60). `php artisan strategy:gates` writes the gate report; `strategy:promote` moves a version
+from Draft to Backtested only when every gate passes, and never to a live stage (D-16).
 
 ## 8. Paper trading
 

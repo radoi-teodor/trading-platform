@@ -35,7 +35,7 @@ filters:                              # all must be true for a new entry
 entries:
   long:
     when: ema(20) crosses_above ema(50) and close > ema(200) on 1d
-    order: market                     # market | limit(offset: -0.1%) with expiry
+    order: market                     # market | limit(offset: -0.1%, expiry: 2 bars) (D-55)
   # short: only allowed when market.type is perp
 
 exits:
@@ -58,9 +58,28 @@ agents:
   max_brief_age: 8h                   # older briefs count as missing: regime() returns unknown
 ```
 
+Numbers a search may move are declared as parameters and written `$name` (D-51):
+
+```yaml
+params:
+  fast: { default: 20, range: [10, 30], step: 5 }
+  slow: { default: 50, range: [40, 80], step: 10 }
+entries:
+  long:
+    when: ema($fast) crosses_above ema($slow)
+```
+
+The read-back shows a parameter by its value in the version being read. Walk-forward and the robustness check
+(`docs/simulation.md`, section 5) move only declared parameters.
+
+A comparison such as buy and hold is written with `profile: benchmark` at the top level. It may say
+`stop_loss: none`, is sized by the benchmark profile (all free quote, or 99 % of the free USD-M wallet at 1x) and
+runs in backtests only (D-40, D-56). A template document (section 3) has `template:` and `params:` instead of
+`entries` and `exits`.
+
 Rules that the compiler enforces:
 
-- Every strategy has a `stop_loss`. No stop, no compile.
+- Every strategy has a `stop_loss`. No stop, no compile, except `stop_loss: none` under `profile: benchmark`.
 - `short` entries only on `perp`. Spot has no shorting (legacy lesson R5).
 - `limits` and `sizing` may be tighter than the policy, never looser.
 - Every function used must have enough history: the compiler computes the warm-up and refuses a backtest window
@@ -81,6 +100,10 @@ Rules that the compiler enforces:
 | `Timeframe` | `1m`, `5m`, `15m`, `1h`, `4h`, `1d`, `1w` | After `on` |
 | `RMultiple` | `2R`, `3R` | Only in `take_profit` |
 | `String` | `"high_volatility"` | Enum values, checked |
+| `Bool` | `true`, `false` | Constant conditions, such as a benchmark's entry |
+
+A parameter `$name` has the type of its default (a number or a percent) and is replaced by its value when a
+version is compiled with a parameter set.
 
 Type errors are compile errors with a position and a suggestion.
 
@@ -98,7 +121,8 @@ mul_expr  = unary { ( "*" | "/" ) unary } ;
 unary     = [ "-" ] postfix ;
 postfix   = primary [ "[" integer "]" ] [ "on" timeframe ] ;
 primary   = number | percent | duration | r_multiple | string
-          | call | identifier | "(" expr ")" ;
+          | call | identifier | param | "(" expr ")" ;
+param     = "$" identifier ;
 call      = identifier "(" [ arg { "," arg } ] ")" [ "." identifier ] ;
 arg       = expr | identifier ":" expr ;
 ```
@@ -126,6 +150,11 @@ arg       = expr | identifier ":" expr ;
 | Time | `hour_utc`, `weekday` |
 | Exits only | `level(series)`, `chandelier(n, k)`, `atr_trail(n, k)` |
 
+Not in the first version (D-52): `open_interest`, `oi_change`, `basis` and `mark_price` are refused at compile
+time until their data is stored. The agent functions compile and return their neutral values (`regime()` is
+`"unknown"`, `risk_flag` and `event` are false, `brief_confidence()` is 0) until the journal exists; the compiler
+warns when a strategy uses them. `src` defaults to `close` everywhere.
+
 Each function has a reference test against known values; the old pandas formulas at commit `e0ec48b`
 (`agents/indicators/technical.py`) serve as oracles where they apply. New functions are added through `feature-work` with a D-number if they change semantics.
 
@@ -141,7 +170,10 @@ Each function has a reference test against known values; the old pandas formulas
 - **Stops**: placed on the exchange as soon as the entry fills (D-10). Trailing stops move the exchange order and
   never loosen it.
 - **R**: the initial risk of the trade in price (entry minus stop for a long). `3R` take profit is three times
-  that distance from the entry.
+  that distance from the entry. Stop and target are fixed at the decision from the decision price, the close, so
+  sizing and protection use the same numbers (D-53).
+- **Limits**: `sizing` and `limits` are checked by the risk engine as per-strategy limits, after the account's
+  (D-54).
 - **Exits** fire in this order on a candle: stop (on the exchange, intrabar), take profit (on the exchange),
   `time_stop`, `when`.
 

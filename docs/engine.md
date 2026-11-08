@@ -65,7 +65,7 @@ candle with the fill rules of `simulation.md`, section 3 (D-36, D-37). It never 
 
 | Intent | Orders |
 |--------|--------|
-| Open long | A market buy. Phase 2 enters at market only; limit entries come with the DSL (Phase 3) |
+| Open long or short | A market order, or a limit order at the decision price moved by the strategy's offset, working until it fills or its expiry (D-55) |
 | Close | Cancel the position's protective orders, then a market sell of the position, rounded down to the lot step |
 | Adjust stop | Cancel the protective orders and place them again at once with the new stop. A stop may only move towards the price |
 
@@ -91,13 +91,14 @@ checks of section 4 that concern spot.
 | Check, in order | Result |
 |-----------------|--------|
 | Account or strategy halted | Reject `halted` |
+| Strategy limits (D-54): open positions, trades today (UTC), cooldown after a losing trade | Reject `strategy_positions`, `trades_per_day`, `cooldown` |
 | Strategy already holds the instrument (no pyramiding in Phase 2) | Reject `position_open` |
 | Second entry intent for the same strategy, instrument and candle | Reject `duplicate_intent` |
 | No stop under the account policy | Reject `no_stop` |
 | Stop at or above the decision price | Reject `invalid_stop` |
 | Open positions at the limit | Reject `max_positions` |
-| Size from risk per trade: equity times 0.5 % divided by (decision price minus stop) | Sized |
-| Notional above 25 % of equity | Resized down |
+| Size from risk per trade: equity times 0.5 % (or the strategy's lower value) divided by (decision price minus stop) | Sized |
+| Notional above 25 % of equity (or the strategy's lower maximum position) | Resized down |
 | Open risk after this entry above 3 % of equity | Reject `open_risk` |
 | Cost above free cash, with a 1 % buffer for slippage and gaps | Resized down |
 | Below the exchange minimum after rounding | Reject `below_minimum` |
@@ -108,9 +109,7 @@ price is rejected with `stop_widening`.
 **Loss limits.** Daily loss is measured from equity at 00:00 UTC and halts entries until the next 00:00 UTC.
 Weekly loss from Monday 00:00 UTC halts entries until the operator resumes; in a backtest that is the rest of the
 run, and the report says when it happened. A drawdown of 10 % from the peak halts all strategies; 15 % flattens the
-account, then halts. A halt keeps protective orders. It would also cancel working entry orders, but Phase 2 enters
-at market only and a market order fills or expires in the minute after its decision, so none is working when a
-limit is reached; cancelling them comes with limit entries.
+account, then halts. A halt keeps protective orders and cancels working entry orders, as does their expiry (D-55).
 
 **Benchmark profile (D-40).** Buy and hold and the 50/200 trend rule are comparisons, not strategies. They run
 with a profile that puts all free quote into one position by quote amount, needs no stop and has no loss halts.
