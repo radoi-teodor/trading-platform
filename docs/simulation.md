@@ -106,6 +106,9 @@ compressed JSON under `storage/app/simulations`, with a summary row in `backtest
   with combinatorially symmetric cross-validation over 16 partitions of the daily returns (Bailey, Borwein, López
   de Prado and Zhu, 2017).
 - **Hold-out once**: a version's use of the hold-out is recorded; a second request for it is refused.
+- **Grid search**: `php artisan backtest:grid` runs a document's parameter sets in one pass and reports, for the best
+  set by Sharpe ratio, its deflated Sharpe ratio against the family's trials, and the PBO of the whole grid. A grid
+  is a search: its best set is in-sample until walk-forward and the hold-out say otherwise.
 
 ## 6. Metrics in every report
 

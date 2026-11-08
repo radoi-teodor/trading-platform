@@ -10,6 +10,7 @@ use App\Market\FundingRateRepository;
 use App\Market\Models\Instrument;
 use App\Market\Models\InstrumentFilter;
 use App\Simulation\Models\BacktestRun;
+use App\Simulation\Models\StrategyTrial;
 use App\Simulation\Report\CanonicalJson;
 use App\Strategy\Baselines\FundingCarry;
 use App\Support\Clock\Clock;
@@ -269,4 +270,46 @@ it('compiles a document and says what it found', function (): void {
         ->and($output)->toContain('fast = 9, slow = 21');
     expect(Artisan::call('strategy:compile', ['file' => strategyFile(str_replace('ema($fast)', 'emma($fast)', EMA_CROSS_DOCUMENT))]))->toBe(1)
         ->and(Artisan::output())->toContain(':13:11: emma is not a function of the DSL. Did you mean ema?');
+});
+
+it('runs a grid of parameters in one pass, with the deflated Sharpe ratio and the probability of overfitting', function (): void {
+    backtestFixture(days: 36);
+
+    $exit = Artisan::call('backtest:grid', [
+        '--file' => strategyFile(EMA_CROSS_DOCUMENT), '--from' => '2026-10-02', '--to' => '2026-11-05',
+        '--grid' => ['fast=5,9', 'slow=15..21:6'],
+    ]);
+    $output = Artisan::output();
+    $trials = StrategyTrial::query()->orderBy('id')->get();
+
+    expect($exit)->toBe(0)
+        ->and($output)->toContain('4 parameter sets')
+        ->and($output)->toContain('fast=5 slow=15')
+        ->and($output)->toContain('fast=9 slow=21')
+        ->and($output)->toContain('Deflated Sharpe ratio of the best set')
+        ->and($output)->toContain('Probability of backtest overfitting')
+        ->and($trials)->toHaveCount(4)
+        ->and($trials->first()?->family)->toBe('ema-cross-test')
+        ->and($trials->first()?->observations)->toBe(34);
+    expect(glob(config()->string('simulation.artifacts').'/grid-*.json.gz'))->toHaveCount(1);
+});
+
+it('refuses a grid it cannot run', function (array $grid, string $message): void {
+    backtestFixture();
+
+    expect(Artisan::call('backtest:grid', ['--file' => strategyFile(EMA_CROSS_DOCUMENT), '--from' => '2026-10-02', '--to' => '2026-10-03', '--grid' => $grid]))->toBe(1)
+        ->and(Artisan::output())->toContain($message);
+})->with([
+    'unknown parameter' => [['speed=1,2'], 'ema-cross-test has no parameter speed.'],
+    'bad values' => [['fast=a..b'], 'fast=a..b: write values as 5,7,9 or 5..13:2.'],
+    'too many sets' => [['fast=1..100:1', 'slow=1..100:1'], '10000 parameter sets; at most 400 run in one pass.'],
+]);
+
+it('records every backtest of a document as a trial of its family', function (): void {
+    backtestFixture();
+
+    Artisan::call('backtest:run', ['--file' => strategyFile(EMA_CROSS_DOCUMENT), '--from' => '2026-10-02', '--to' => '2026-10-03']);
+
+    expect(StrategyTrial::query()->sole()->family)->toBe('ema-cross-test')
+        ->and(StrategyTrial::query()->sole()->parameters)->toBe(['fast' => '9', 'slow' => '21']);
 });
