@@ -697,10 +697,10 @@
     "semantic_hash": "e478d6aa1ae593d61941b5a34c341837"
   },
   "app/Simulation/Console/RunBacktest.php": {
-    "mtime": 1794162106.5710406,
-    "seen": 1794165296.720746,
-    "ast_hash": "0a3f459507205e13d860506861b60d57",
-    "semantic_hash": "0a3f459507205e13d860506861b60d57"
+    "mtime": 1794167005.676245,
+    "seen": 1794167168.5570438,
+    "ast_hash": "54813c0f254e590c2dcca81a31c725a4",
+    "semantic_hash": ""
   },
   "app/Simulation/Data/BacktestResult.php": {
     "mtime": 1794155729.5037315,
@@ -1448,10 +1448,10 @@
     "semantic_hash": "27836203d1bf0c6ea54c3c7de5d1c4e8"
   },
   "tests/Feature/Simulation/RunBacktestCommandTest.php": {
-    "mtime": 1794162100.0767264,
-    "seen": 1794165296.7237763,
-    "ast_hash": "b6e6d9b0085966138f387863d1f10d50",
-    "semantic_hash": "b6e6d9b0085966138f387863d1f10d50"
+    "mtime": 1794167034.002692,
+    "seen": 1794167168.5612662,
+    "ast_hash": "ae42dfce73b4d47ac0f197acc0476235",
+    "semantic_hash": ""
   },
   "tests/Feature/Support/ClockBindingTest.php": {
     "mtime": 1794149003.1899943,
@@ -1909,9 +1909,9 @@
     "semantic_hash": ""
   },
   "docs/runbook.md": {
-    "mtime": 1794161269.3527396,
-    "seen": 1794165432.519299,
-    "ast_hash": "b0938fdd15c5f8624535fb38a77ff337",
+    "mtime": 1794167133.8840075,
+    "seen": 1794167168.5632288,
+    "ast_hash": "34c7de005719b235b2923dd63d8af0e0",
     "semantic_hash": ""
   },
   "docs/security.md": {
@@ -2338,6 +2338,24 @@
     "mtime": 1794166890.6366267,
     "seen": 1794166935.1892521,
     "ast_hash": "5e708d2407cd8b75cd35597967365d35",
+    "semantic_hash": ""
+  },
+  "app/Simulation/Console/CompileStrategy.php": {
+    "mtime": 1794167005.679848,
+    "seen": 1794167168.5570395,
+    "ast_hash": "950f5717b42498706ec8ea6732de12f1",
+    "semantic_hash": ""
+  },
+  "catalog/strategies/ema-cross-scalp-long.strategy.yaml": {
+    "mtime": 1794167063.8035557,
+    "seen": 1794167168.5601895,
+    "ast_hash": "0d71fd9efb4529ccc4dab281f0e19fc0",
+    "semantic_hash": ""
+  },
+  "catalog/strategies/ema-cross-scalp-short.strategy.yaml": {
+    "mtime": 1794167070.00618,
+    "seen": 1794167168.5601923,
+    "ast_hash": "1aa79fb74ef054f8fa617831bb8f453d",
     "semantic_hash": ""
   },
   "package-lock.json": {
