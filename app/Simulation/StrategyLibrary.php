@@ -10,6 +10,7 @@ use App\Strategy\Dsl\Compiler\CompiledStrategy;
 use App\Strategy\Dsl\Document\CheckResult;
 use App\Strategy\Dsl\Document\DocumentChecker;
 use App\Strategy\Dsl\Document\PolicyLimits;
+use App\Strategy\Dsl\ReadBack;
 use App\Strategy\Versions\StrategyRepository;
 use App\Support\Clock\Clock;
 
@@ -39,7 +40,7 @@ final readonly class StrategyLibrary
     /**
      * What a checked document compiles to, for a reader.
      *
-     * @return array{strategy: string, title: string, instruments: list<string>, timeframe: string, warmup_candles: int, parameters: array<string, string>, benchmark: bool}|null
+     * @return array{strategy: string, title: string, instruments: list<string>, timeframe: string, warmup_candles: int, parameters: array<string, string>, benchmark: bool, read_back: string}|null
      */
     public function describe(CheckResult $result): ?array
     {
@@ -59,6 +60,7 @@ final readonly class StrategyLibrary
             'warmup_candles' => $strategy->warmupBars(),
             'parameters' => $strategy->identity()->parameters,
             'benchmark' => $spec->benchmark,
+            'read_back' => ReadBack::render($spec),
         ];
     }
 }

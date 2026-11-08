@@ -173,7 +173,7 @@ it('lists and reads saved versions, runs a backtest on one and lists its trials'
     TradingServer::tool(SaveStrategy::class, ['document' => 'strategy: ['])->assertHasErrors(['does not compile; nothing was saved.']);
     TradingServer::tool(SaveStrategy::class, ['document' => EMA_CROSS_DOCUMENT])->assertOk();
     TradingServer::tool(ListStrategies::class)->assertOk()->assertSee(['ema-cross-test@v1', 'agent:desk', 'draft']);
-    TradingServer::tool(GetStrategy::class, ['version' => 'ema-cross-test@v1'])->assertOk()->assertSee(['strategy: ema-cross-test', 'agent:desk']);
+    TradingServer::tool(GetStrategy::class, ['version' => 'ema-cross-test@v1'])->assertOk()->assertSee(['strategy: ema-cross-test', 'agent:desk', 'On BTC/USDT spot, every time a 5-minute candle closes: buy at market when the 9-period EMA crosses above the 21-period EMA.']);
     TradingServer::tool(GetStrategy::class, ['version' => 'ema-cross-test@v2'])->assertHasErrors(['ema-cross-test@v2 is not saved']);
     TradingServer::tool(RunBacktest::class, ['version' => 'ema-cross-test@v1', 'from' => '2026-10-02', 'to' => '2026-10-04', 'params' => ['fast' => 5]])->assertOk();
     TradingServer::tool(RunBacktest::class, ['version' => 'ema-cross-test', 'from' => '2026-10-01', 'to' => '2026-10-04'])

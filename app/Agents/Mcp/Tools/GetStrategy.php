@@ -15,7 +15,7 @@ use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[Name('get_strategy')]
-#[Description('One saved version: its YAML document, author, stage and parent.')]
+#[Description('One saved version: its YAML document, its read-back in plain sentences, author and stage.')]
 #[IsReadOnly]
 final class GetStrategy extends TradingTool
 {
@@ -45,6 +45,7 @@ final class GetStrategy extends TradingTool
             'created_at' => $version->created_at->toIso8601ZuluString(),
             'sha256' => $version->sha256,
             'document' => $version->document,
+            'read_back' => $library->describe($library->check($version->document))['read_back'] ?? null,
         ]);
     }
 }

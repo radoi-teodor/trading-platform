@@ -1921,9 +1921,9 @@
     "semantic_hash": ""
   },
   "docs/strategy/configurator.md": {
-    "mtime": 1794174996.1939821,
-    "seen": 1794175110.7079086,
-    "ast_hash": "d59076493c90b1f7b017114da89d6369",
+    "mtime": 1794175850.8776,
+    "seen": 1794175983.1392863,
+    "ast_hash": "9601516f84da2108c8c8a7539e927581",
     "semantic_hash": ""
   },
   "public/robots.txt": {
@@ -2323,9 +2323,9 @@
     "semantic_hash": ""
   },
   "app/Simulation/Console/CompileStrategy.php": {
-    "mtime": 1794167005.679848,
-    "seen": 1794167168.5570395,
-    "ast_hash": "950f5717b42498706ec8ea6732de12f1",
+    "mtime": 1794175870.925151,
+    "seen": 1794175983.1340792,
+    "ast_hash": "78490e8bc71725991bf144053f1d30f7",
     "semantic_hash": ""
   },
   "catalog/strategies/ema-cross-scalp-long.strategy.yaml": {
@@ -2557,9 +2557,9 @@
     "semantic_hash": ""
   },
   "app/Agents/Mcp/Tools/CompileStrategy.php": {
-    "mtime": 1794173272.5308657,
-    "seen": 1794173560.6645887,
-    "ast_hash": "36666e2ea37c17eed9649832e26391e9",
+    "mtime": 1794175870.9254916,
+    "seen": 1794175983.131779,
+    "ast_hash": "d380cf90595ee33ce2275afb2e06c296",
     "semantic_hash": ""
   },
   "app/Agents/Mcp/Tools/DslReference.php": {
@@ -2593,9 +2593,9 @@
     "semantic_hash": ""
   },
   "app/Agents/Mcp/Tools/GetStrategy.php": {
-    "mtime": 1794173272.5340583,
-    "seen": 1794173560.664599,
-    "ast_hash": "7354e75e7555d98ef05bde2848952304",
+    "mtime": 1794175870.9253232,
+    "seen": 1794175983.1318848,
+    "ast_hash": "9c485b80d97a034ead06c7df06ea3798",
     "semantic_hash": ""
   },
   "app/Agents/Mcp/Tools/ListInstruments.php": {
@@ -2671,9 +2671,9 @@
     "semantic_hash": ""
   },
   "app/Simulation/StrategyLibrary.php": {
-    "mtime": 1794173026.4447315,
-    "seen": 1794173560.6677213,
-    "ast_hash": "0337cd5657aebc10d5820df8431bbbc6",
+    "mtime": 1794175870.9249856,
+    "seen": 1794175983.1344533,
+    "ast_hash": "7f9a5deed9382da2d1604cd286b0ffeb",
     "semantic_hash": ""
   },
   "config/mcp.php": {
@@ -2695,15 +2695,27 @@
     "semantic_hash": ""
   },
   "tests/Feature/Agents/McpServerTest.php": {
-    "mtime": 1794173419.6790657,
-    "seen": 1794173560.6704297,
-    "ast_hash": "63ba061206a8a50b36ecb94d295c5bf2",
+    "mtime": 1794175877.6210296,
+    "seen": 1794175983.137434,
+    "ast_hash": "1d7652a97c2bc854d215c436f30ca7f8",
     "semantic_hash": ""
   },
   "tests/Unit/Simulation/ChartSeriesTest.php": {
     "mtime": 1794173426.2975068,
     "seen": 1794173560.6714642,
     "ast_hash": "50f06981e22fea125a37d56b224ffe05",
+    "semantic_hash": ""
+  },
+  "app/Strategy/Dsl/ReadBack.php": {
+    "mtime": 1794175977.1287162,
+    "seen": 1794175983.1357152,
+    "ast_hash": "e78d6e99152ea2e1cca73e14810672fd",
+    "semantic_hash": ""
+  },
+  "tests/Unit/Strategy/Dsl/ReadBackTest.php": {
+    "mtime": 1794175861.6716895,
+    "seen": 1794175983.1387599,
+    "ast_hash": "124f8b3df02c755acecc3269ebabdeb2",
     "semantic_hash": ""
   },
   "package-lock.json": {

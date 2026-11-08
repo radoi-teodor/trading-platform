@@ -30,6 +30,7 @@ timeframe: 4h                         # strategies are evaluated when a candle o
 filters:                              # all must be true for a new entry
   - adx(14) > 20
   - natr(14) < 3                      # skip the most volatile days
+  - volume > sma(20, src: volume)     # only on busier candles
 
 entries:
   long:
@@ -202,12 +203,15 @@ few trades and long holds).
 After compiling, a renderer in code turns the AST into sentences. The operator approves the read-back, not the
 model's description. For the example in section 1:
 
-> On BTC/USDT spot, every time a 4-hour candle closes: if ADX(14) is above 20 and the normalized ATR(14) is under
-> 3; then buy at market when the 20-period
-> EMA crosses above the 50-period EMA and the close is above the daily 200-period EMA. Risk 0.5 % of equity per
-> trade, at most 20 % of equity in the position. Stop 2 ATR(14) below the entry, on the exchange. Take profit at 3
-> times the initial risk. Trail with a chandelier stop (22, 3). Leave after 60 candles, or when the 20 EMA crosses
-> below the 50 EMA. At most 1 open position and 2 trades a day; wait 8 hours after a loss.
+> On BTC/USDT spot, every time a 4-hour candle closes: if ADX(14) is above 20, NATR(14) is below 3 and the volume is
+> above the 20-period SMA of volume, buy at market when the 20-period EMA crosses above the 50-period EMA and the
+> close is above the daily 200-period EMA. Risk 0.5 % of equity per trade, at most 20 % of equity in the position.
+> Stop 2 times ATR(14) below the entry, on the exchange. Take profit at 3 times the initial risk. Trail with a
+> chandelier stop (22, 3). Leave after 60 candles, or when the 20-period EMA crosses below the 50-period EMA. At most
+> 1 open position and 2 trades a day; wait 8 hours after a loss.
+
+`app/Strategy/Dsl/ReadBack.php` writes it; `strategy:compile` prints it and the MCP tools `compile_strategy` and
+`get_strategy` return it. Parameters read as the values of the version being read and are listed at the end.
 
 ## 5. The natural-language path
 

@@ -12,6 +12,7 @@ use App\Strategy\Dsl\Document\DocumentChecker;
 use App\Strategy\Dsl\Document\PolicyLimits;
 use App\Strategy\Dsl\DslError;
 use App\Strategy\Dsl\Position;
+use App\Strategy\Dsl\ReadBack;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Config\Repository;
 use InvalidArgumentException;
@@ -50,6 +51,8 @@ final class CompileStrategy extends Command
         $this->line(implode(', ', array_map('strval', $spec->instruments))." on {$spec->timeframe->value}".($spec->benchmark ? ', benchmark profile' : ''));
         $this->line("Warmup: {$strategy->warmupBars()} candles of the longest timeframe it reads.");
         $this->line('Parameters: '.($parameters === [] ? 'none' : implode(', ', $parameters)));
+        $this->newLine();
+        $this->line(wordwrap(ReadBack::render($spec), 110));
 
         return self::SUCCESS;
     }

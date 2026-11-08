@@ -16,7 +16,7 @@ use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[Name('compile_strategy')]
-#[Description('Checks a strategy document against the DSL, the stored instruments and the account policy. Gives every error with its line and column, the warnings, and what it compiles to: instruments, timeframe, warmup and parameters. Saves nothing.')]
+#[Description('Checks a strategy document against the DSL, the stored instruments and the account policy. Gives every error with its line and column, the warnings, and what it compiles to: instruments, timeframe, warmup, parameters and the read-back, the strategy in plain sentences written by code. Saves nothing.')]
 #[IsReadOnly]
 final class CompileStrategy extends TradingTool
 {
