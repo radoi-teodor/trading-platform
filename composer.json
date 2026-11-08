@@ -19,7 +19,6 @@
         "larastan/larastan": "^3.14",
         "laravel/pail": "^1.2.5",
         "laravel/pao": "^1.0.6",
-        "laravel/pint": "^1.27",
         "mockery/mockery": "^1.6",
         "nunomaduro/collision": "^8.6",
         "pestphp/pest": "^5.3",
@@ -40,6 +39,7 @@
     "scripts": {
         "setup": [
             "composer install",
+            "@tools:install",
             "@php -r \"file_exists('.env') || copy('.env.example', '.env');\"",
             "@php artisan key:generate",
             "@php artisan migrate --force",
@@ -50,7 +50,8 @@
             "Composer\\Config::disableProcessTimeout",
             "@php artisan dev"
         ],
-        "format": "pint",
+        "tools:install": "@composer install --no-interaction --working-dir=tools/pint",
+        "format": "tools/pint/vendor/bin/pint",
         "analyse": "phpstan analyse --memory-limit=1G",
         "test": [
             "@php artisan config:clear --ansi @no_additional_args",
@@ -94,6 +95,7 @@
     "minimum-stability": "stable",
     "prefer-stable": true,
     "scripts-descriptions": {
+        "tools:install": "Install the isolated tools (Pint) under tools/.",
         "format": "Format the code with Pint (add -- --test to check only).",
         "analyse": "Run PHPStan through Larastan at the project level.",
         "test": "Run the default suite: no network, no exchange, no LLM.",

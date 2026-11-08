@@ -38,3 +38,6 @@ Thumbs.db
 /auth.json
 _ide_helper.php
 /public/fonts-manifest.dev.json
+
+# Isolated tools (docs/conventions.md, section 1)
+/tools/*/vendor

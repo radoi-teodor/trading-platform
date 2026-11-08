@@ -6,7 +6,9 @@ named so nobody "simplifies" the rule away.
 ## 1. Language and tooling
 
 - PHP 8.4 or newer, current Laravel. `declare(strict_types=1);` in every PHP file.
-- Formatting: Laravel Pint, project preset. Formatting is not discussed in review; Pint decides.
+- Formatting: Laravel Pint, project preset (`pint.json`). Formatting is not discussed in review; Pint decides.
+  Pint is installed apart from the application, in `tools/pint` (`composer tools:install`), because its package
+  declares its own `App\` namespace, which would otherwise mix with ours in the autoloader.
 - Static analysis: PHPStan through Larastan at level `max`, with no baseline. `config/` is not analysed because
   `env()` is untyped by design; code reads configuration through typed accessors (`Config::string()`,
   `Config::integer()`), which are checked where they are used.
