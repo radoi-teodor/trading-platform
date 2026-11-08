@@ -70,7 +70,7 @@ jobs:
           coverage: none
       - run: composer install --no-interaction --prefer-dist
       # The default suite only: no network, no exchange, no LLM (docs/conventions.md, section 6).
-      - run: vendor/bin/pest --exclude-group=testnet,llm,network
+      - run: vendor/bin/pest --exclude-group=testnet,network
 
   frontend:
     name: Vite build

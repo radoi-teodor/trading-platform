@@ -1,7 +1,7 @@
 # Security
 
-The platform holds exchange keys that can move real money, runs agents that read untrusted text, and lives in a
-public repository. This document lists what is protected, from whom, and how.
+The platform holds exchange keys that can move real money, takes calls from research agents over MCP, and lives
+in a public repository. This document lists what is protected, from whom, and how.
 
 ## 1. What must not happen
 
@@ -9,8 +9,7 @@ public repository. This document lists what is protected, from whom, and how.
 |--------|---------------|---------------|
 | Exchange key leaked | Account drained or traded against the operator | Trade-only keys with no withdrawal right, IP allowlist on the exchange, encrypted at rest, never logged |
 | Web UI taken over | Strategies changed, risk raised, account flattened | One account, strong password and TOTP, no registration, re-authentication for sensitive actions, delayed risk increases (D-19) |
-| Prompt injection through a source | An agent writes a harmful draft or brief | Agents have no order or limit tools (D-7); drafts must pass gates and operator approval; content labeled untrusted |
-| Server-side request forgery | Platform used to reach internal services | Catalog-only hosts, public addresses only, no cross-host redirects |
+| MCP token stolen or agent misled | Strategies read, CPU spent on backtests, harmful drafts | Endpoint off by default, hashed and revocable tokens, rate limit, no order, limit or promotion tool (D-7, D-63); drafts must pass gates and operator approval |
 | Bug places wrong orders | Loss | Risk engine and pre-trade checks, kill switch, exchange-side stops, testnet and paper before live |
 | Secret committed to the public repository | Key exposed forever in history | Secrets only in encrypted settings or `.env`, secret scanning in CI, `.gitignore` for data files |
 
@@ -40,16 +39,14 @@ public repository. This document lists what is protected, from whom, and how.
 
 ## 4. Agents
 
-- Tools are an allowlist per role (`docs/strategy/agents.md`). There is no tool that places, changes or cancels
-  orders, changes limits or reads secrets.
-- Source text and raw items are wrapped as untrusted data in prompts.
-- Outputs are validated against schemas; anything else is rejected.
-- Prompts and journal entries never contain secrets, keys, signatures or personal data beyond what a decision
-  needs.
+- The platform runs no language model and holds no model API key (D-64). Agents reach it only through the MCP
+  endpoint, whose tools are a fixed list (`docs/strategy/agents.md`). There is no tool that places, changes or
+  cancels orders, changes limits, moves a stage or reads secrets.
+- Journal entries and the MCP call log never contain secrets, keys, tokens or signatures.
 
 ## 5. Outbound requests
 
-- Connectors call only hosts declared in `catalog/sources.yaml`, after resolving them to public addresses.
+- The platform calls only Binance (REST, WebSocket and the public archives) and the notification hosts.
 - Notification webhooks are restricted to known hosts (Telegram API, the configured mail server). The response
   body of an outbound call is never shown back to the user verbatim.
 

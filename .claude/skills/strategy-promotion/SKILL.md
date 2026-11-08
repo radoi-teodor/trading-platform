@@ -1,6 +1,6 @@
 ---
 name: strategy-promotion
-description: Use whenever the operator asks whether a strategy is good, asks to test, validate, promote, deploy, go live with, scale up, resume or demote a strategy, asks why a strategy was demoted or halted, or asks to compare strategies. Runs the evidence-first promotion review against the gates in docs/simulation.md and docs/risk-policy.md and produces a promotion report. Never moves a strategy into any live stage without the operator's explicit approval. Not for writing a new strategy (that is the Strategy Author agent or feature-work for new DSL features) or for fixing a bug in the engine (bug-fix).
+description: Use whenever the operator asks whether a strategy is good, asks to test, validate, promote, deploy, go live with, scale up, resume or demote a strategy, asks why a strategy was demoted or halted, or asks to compare strategies. Runs the evidence-first promotion review against the gates in docs/simulation.md and docs/risk-policy.md and produces a promotion report. Never moves a strategy into any live stage without the operator's explicit approval. Not for writing a new strategy (that is the research agent over MCP, or feature-work for new DSL features) or for fixing a bug in the engine (bug-fix).
 ---
 
 # Strategy promotion protocol
@@ -38,8 +38,8 @@ them (D-17); before that date those features are neutral defaults.
 
 Re-run, do not trust a stored report: the backtest with its stored definition (must give the same hash), then
 the walk-forward, the robustness neighbourhood, the cost stress, the Monte Carlo and the hold-out
-(`docs/simulation.md`, section 5). Record how many backtests have been run on this strategy family (agents and
-operator together): that count goes into the deflated Sharpe ratio.
+(`docs/simulation.md`, section 5). Record how many backtests have been run on this strategy family (the research agent and
+the operator together): that count goes into the deflated Sharpe ratio.
 
 ### 5. Apply the gates
 

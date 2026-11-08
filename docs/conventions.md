@@ -18,10 +18,9 @@ named so nobody "simplifies" the rule away.
 ```sh
 composer format          # pint
 composer analyse         # phpstan
-composer test            # pest, no network, fakes for the exchange and the LLM
+composer test            # pest, no network, fakes for the exchange
 composer test:network    # TRADING_NETWORK=1, real public market data endpoints, opt-in, no keys
 composer test:testnet    # TRADING_TESTNET=1, Binance testnet, opt-in
-composer test:llm        # TRADING_LLM=1, real Claude calls, opt-in, costs money: ask first
 composer mutate          # Pest mutation testing on the domain modules (D-34); long, ask first
 ```
 
@@ -82,7 +81,7 @@ committed `graph.json` changes whole on every rebuild; that diff is expected.
 ## 6. Tests
 
 - Tests are written first for domain logic and for every bug fix (the failing test proves the bug).
-- No network in the default suite: `Http::preventStrayRequests()`, a fake venue, a fake LLM client.
+- No network in the default suite: `Http::preventStrayRequests()`, a fake venue.
 - Golden tests: a fixed dataset, strategy version and seed produce a backtest report whose hash is committed. A
   change in the hash must be explained in the commit message. They live in `tests/Golden`, read Binance's daily
   archives committed under `tests/Fixtures/binance/golden`, and keep each report as indented JSON next to its hash,
@@ -90,8 +89,6 @@ committed `graph.json` changes whole on every rebuild; that diff is expected.
   review the diff, update the hashes.
 - Architecture tests guard the module rules in `docs/architecture.md` section 3, the float ban, the clock ban,
   and "no facade in the domain".
-- LLM tests assert on the platform's handling of a response (schema validation, journaling, limits), never on
-  the exact text a model writes.
 - Tests and UI checks never touch a live account or the operator's production database.
 
 ## 7. UI
@@ -99,19 +96,16 @@ committed `graph.json` changes whole on every rebuild; that diff is expected.
 - Livewire components in `app/Livewire`, Blade components in `resources/views/components`.
 - Colors, type, spacing, radii only through tokens (`docs/brand.md`). A hex value in a Blade file, a component
   class or a script is a review failure.
-- The UI never waits on the engine, the exchange or the LLM: it reads the database or cache and listens to
+- The UI never waits on the engine or the exchange: it reads the database or cache and listens to
   Reverb. Long work is a queued job with visible progress.
 - Every number from the market is shown in tabular monospace with the instrument's precision.
 - The current mode (backtest, paper, testnet, live) is visible on every screen.
 
-## 8. Agents and prompts
+## 8. Agents
 
-- Prompts live in `resources/prompts/<role>.md`, versioned with the code. A prompt change is a code change with a
-  test of the output schema.
-- Every agent output is structured (JSON schema) and validated before use. Invalid output is rejected and
-  journaled, never repaired by guessing.
-- Source content inside a prompt is wrapped and labeled as untrusted data.
-- Every call records tokens and cost against the role and the decision it served.
+- The platform runs no language model (D-64). Agents reach it only through the MCP endpoint (D-63); a new tool is
+  a change to `app/Agents/Mcp/Tools` with a test, and never one that places orders, changes limits or moves a
+  stage (D-7).
 
 ## 9. Git
 

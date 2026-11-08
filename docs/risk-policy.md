@@ -54,9 +54,6 @@ trigger long before the exchange liquidates.
 | Reconciliation | A mismatch not resolved within 2 events | Halt the account and alert |
 | Clock skew | Local clock more than 1 s away from the exchange server time | Halt the account and alert |
 
-LLM failures never trip a breaker and never block safety: they only make agent features "missing", which
-strategies treat as their neutral default.
-
 ## 4. Pre-trade checks on every order
 
 - Quantity rounded down to the lot step; notional at least the exchange minimum.
@@ -70,7 +67,7 @@ strategies treat as their neutral default.
 
 | Level | Effect | Who |
 |-------|--------|-----|
-| Pause strategy | The strategy emits no new intents; its positions keep their exits | Operator, Reviewer agent, automatic demotion |
+| Pause strategy | The strategy emits no new intents; its positions keep their exits | Operator, automatic demotion |
 | Halt account | No new entries for the account; working entry orders cancelled; protective orders kept | Operator, breakers, loss limits |
 | Flatten account | Cancel every order, close every position at market (carry pairs leg by leg, hedge last), then halt | Operator, hard drawdown limit |
 

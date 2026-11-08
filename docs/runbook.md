@@ -5,10 +5,9 @@ created in the phase that needs it and this file is updated with it.
 
 ## 1. Daily routine
 
-1. Open the dashboard. Check the mode banner, the health strip (market data, engines, workers, sources, LLM
-   budget) and the overnight journal.
-2. Read the Reviewer's daily note. Approve or reject pending proposals; nothing changes until you do.
-3. Check demotions and halts from the last 24 hours and their reasons.
+1. Open the dashboard. Check the mode banner, the health strip (market data, engines, workers) and the overnight
+   journal.
+2. Check demotions and halts from the last 24 hours and their reasons.
 
 ## 2. Processes
 
@@ -55,11 +54,8 @@ immediately and rotate it.
 **Suspected key leak.** Disable the key on the exchange first, then rotate (section 5), then review exchange
 order and login history.
 
-**Drawdown limit hit.** The policy has already halted or flattened. Read the Reviewer's incident note and the
-per-strategy breakdown. Resume only with a written reason in the journal.
-
-**LLM unavailable or over budget.** Nothing to do for safety: agent features fall back to neutral defaults.
-Check the budget screen; raise a budget only on purpose.
+**Drawdown limit hit.** The policy has already halted or flattened. Read the per-strategy breakdown and the
+journal of the halt. Resume only with a written reason in the journal.
 
 ## 5. Key rotation
 
@@ -72,12 +68,12 @@ Check the budget screen; raise a budget only on purpose.
 
 - Daily encrypted database backup, 30 days kept.
 - Monthly restore test into a scratch database: `php artisan platform:health` against it must pass.
-- The catalog and strategy exports are in git; the journal is in the database backups only.
+- Strategy exports are in git; the journal is in the database backups only.
 
 ## 7. Deploy
 
 1. CI green on the pull request; merge to `main`.
-2. Halt live engines (`engine:halt`), deploy, run migrations, `sources:sync`.
+2. Halt live engines (`engine:halt`), deploy, run migrations.
 3. Start processes; check `platform:health`; resume engines (operator action).
 
 ## 8. Market data

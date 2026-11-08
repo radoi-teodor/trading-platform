@@ -1,6 +1,6 @@
 # Documentation
 
-An automated crypto trading platform for one operator. LLM agents research markets and write strategies;
+An automated crypto trading platform for one operator. A research agent, working over MCP, writes strategies;
 deterministic code tests, sizes, limits and executes them. Everything runs in one Laravel application.
 
 The platform is being rebuilt. `assessment.md` explains why; the old code was deleted in Phase 0 and is readable
@@ -14,13 +14,12 @@ in git at commit `e0ec48b` (D-25).
 | `decisions.md` | Every design decision (D-numbers) and the open questions |
 | `architecture.md` | Processes, modules, the engine loop, data, modes |
 | `conventions.md` | How code, tests, commits and docs are written |
-| `strategy/agents.md` | Agent roles, their authority, and how the system stays profitable |
+| `strategy/agents.md` | Who researches strategies, their authority, and how the system stays profitable |
 | `strategy/configurator.md` | The strategy DSL and the natural-language configurator |
 | `risk-policy.md` | Hard limits, sizing, circuit breakers, the promotion ladder |
 | `market-data.md` | Exchange data: sources, storage, history, live stream, quality checks |
 | `simulation.md` | Backtests, walk-forward, Monte Carlo, paper trading, replay, promotion gates |
 | `engine.md` | The engine loop, the venue contract, orders, risk checks, the ledger and reconciliation |
-| `sources.md` | Where agents get information and how a source is added |
 | `security.md` | Secrets, keys, access, threat model |
 | `runbook.md` | Running the platform, the kill switch, incidents |
 | `brand.md` | Visual identity: shared rules and three candidate identities |
@@ -41,7 +40,7 @@ Each phase ends with its tests green, its docs updated and its screens built in 
 | 2b. Perpetuals | Short positions, isolated margin, funding, liquidation, reduce-only exits in the simulation (D-35) | A funding carry and a short baseline reproduce known results | Done 2026-11-08 (`engine.md`, section 8; D-43 to D-50): on Binance's real USD-M archives the funding carry equals its closed form (both legs, funding, fees) and the short 12/48 hourly trend rule gives the same trades, funding and equity as an independent reference; three perpetual golden reports pinned. On BTC from 2025-06 to 2026-10 the funding booked by the carry and both short baselines equals a PostgreSQL computation from `funding_rates` and the candles, to the last digit, over 64 positions. The perpetual filters there are the hand-written fixture's, and the reports say so |
 | 3. Strategy DSL | Parser, type checker, indicator library, compiler, read-back, walk-forward, Monte Carlo, promotion gates | The baselines rewritten in the DSL give identical reports | In progress (`strategy/configurator.md`, `simulation.md` sections 5 and 7; D-51 to D-60). Strategies defined at runtime (D-61 to D-63): versions in the database, background runs, and an MCP endpoint through which an agent reads the chart, writes and saves drafts and runs grids and walk-forwards; the UI for it comes with phase 4 |
 | 4. Paper and execution | First screen: the chart, with candles and indicators picked from the DSL's function library and laid over it as layers, each with its own parameters and as many as wanted (EMA 9 and EMA 21 together), drawn with the backtest's formulas (moving averages, VWAP, Bollinger, Keltner, Donchian and volume profile on price; MACD, RSI, Stochastic, ADX, ATR and OBV in panels), OBV and volume profile (POC, value area) joining the library then. Live feed into the simulated venue, Binance testnet venue, risk engine, order manager, reconciliation, kill switch, notifications | 30 days of paper trading without a reconciliation mismatch | Planned |
-| 5. Sources and agents | Source catalog and connectors, event extraction, MCP tools, Analyst, Strategy Author (natural-language configurator), Reviewer, decision journal, cost tracking | A strategy described in plain words reaches paper through the gates | Planned |
+| 5. Data for scalping | Aggregated trades from Binance's archives, open interest and mark price for perpetuals (unlocking `open_interest`, `oi_change`, `mark_price`, `basis`), longer history for the other perpetuals (D-65). No language model runs inside the platform: research is done by an agent over MCP (D-64) | A strategy using open interest or the mark price runs in backtest and paper on stored data | Planned |
 | 6. Live | Live venue, capital ladder from micro size | First strategy live at micro size with the operator's approval | Planned |
 
 ## How to run

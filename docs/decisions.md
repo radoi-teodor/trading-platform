@@ -38,7 +38,7 @@ One human operator, several exchange accounts or sub-accounts. No public registr
 manage money or send signals for other people: that would be an investment service under MiFID II, and for
 crypto a service under MiCA.
 
-**D-6. LLM backend: the Claude API** (2026-11-08, accepted)
+**D-6. LLM backend: the Claude API** (2026-11-08, superseded by D-64)
 Agents call the Claude API through the official PHP SDK, with tool use and structured output. The model is set
 per agent role in `config/agents.php`; the default is `claude-opus-5-5`. A provider interface keeps a second
 backend possible. The `claude` CLI is not used: no tool use, no cost accounting, prompt in argv.
@@ -81,8 +81,8 @@ difference. Redis for queues, cache, locks and the tick stream.
 **D-14. Strategy DSL** (2026-11-08, accepted)
 A strategy is a YAML document with expressions in our own small typed language (`docs/strategy/configurator.md`).
 Our own parser, not Symfony ExpressionLanguage, because the trader syntax needs infix `crosses_above`, timeframe
-qualifiers (`on 4h`) and static types. Natural language goes through the Strategy Author agent, which must
-produce valid DSL; a deterministic read-back renders the compiled strategy into plain sentences so the operator
+qualifiers (`on 4h`) and static types. Natural language goes through a research agent over MCP (D-64), which
+must produce valid DSL; a deterministic read-back renders the compiled strategy into plain sentences so the operator
 checks meaning without trusting the model's paraphrase.
 
 **D-15. What "95 %" means** (2026-11-08, accepted)
@@ -96,13 +96,13 @@ expressed as risk limits (`docs/risk-policy.md`), not as promised returns.
 Draft, backtested, paper, live-micro, live. Moving up needs the gates in `docs/risk-policy.md` and, for any live
 stage, the operator's explicit approval. Moving down is automatic.
 
-**D-17. LLM outputs are point-in-time features** (2026-11-08, accepted)
+**D-17. LLM outputs are point-in-time features** (2026-11-08, superseded by D-64)
 A model has seen market history in training, so a backtest where it "decides" on past data is contaminated.
 Every agent output is journaled with the time it was produced. Backtests may use only outputs that were really
 produced at that time; before the journal starts, LLM-derived features take their neutral default. LLM agents
 are evaluated forward only (paper and live).
 
-**D-18. Sources: catalog in git, state in the database** (2026-11-08, accepted)
+**D-18. Sources: catalog in git, state in the database** (2026-11-08, superseded by D-64)
 Source definitions live in `catalog/sources.yaml`, reviewed like code. Runtime state (enabled, weight, health,
 last fetch) lives in the database and is edited from the UI. Operator-added sources are stored with
 `origin = operator` and exported to the catalog by command. Source content is untrusted data, never
@@ -298,9 +298,8 @@ Every number is a `Decimal` with 18 digits (D-11, D-39).
 
 **D-52. Function library, first version** (2026-11-08, accepted with the Phase 3 plan)
 Every function of the configurator's table whose data the platform stores. `open_interest`, `oi_change`, `basis`
-and `mark_price` are refused at compile time until their data is ingested. The agent functions compile and return
-their neutral values (`regime()` is `"unknown"`, `risk_flag` and `event` are false, `brief_confidence()` is 0)
-until the journal exists (D-17), and the compiler warns when a strategy uses them. Conventions: SMA-seeded EMA,
+and `mark_price` are refused at compile time until their data is ingested. The agent functions (`regime()`, `risk_flag`,
+`event`, `brief_confidence()`) were removed with D-64. Conventions: SMA-seeded EMA,
 Wilder smoothing for RSI, ATR, ADX and the directional indicators, population standard deviation, Bollinger on
 the population standard deviation. Each function has a reference test against values computed independently with
 Python's `decimal` module (`tests/Fixtures/indicators/`).
@@ -382,6 +381,22 @@ hash of the arguments, duration, outcome), never the token. Each token gets 60 c
 simulation runs. The tools read market data, indicators, strategies and results, and write only draft versions and
 simulation runs (D-7): none places an order, changes a limit or moves a stage. The endpoint is meant for the
 operator's own network; beyond it, TLS in front is required (docs/security.md).
+
+**D-64. No language model inside the platform** (2026-11-08, decided by the operator before phase 4)
+The platform runs no LLM and holds no model API key. Strategy research is done by an external agent (Claude Code
+or Claude Desktop on the operator's machine) through the MCP endpoint (D-63), which writes only draft versions and
+simulation runs. The planned internal roles (Event Extractor, Market Analyst, Reviewer, Allocator), the source
+pipeline (news, sentiment, macro, on-chain; `catalog/sources.yaml`, `docs/sources.md`) and the DSL functions fed
+by them (`regime()`, `risk_flag()`, `event()`, `brief_confidence()`, and with them text values in the language)
+are dropped: their value could only be measured after months of paper trading (D-17), they cost a paid API, and
+nothing the operator trades needs them. The strategy families are trend, mean reversion and carry. Demotion
+stays automatic in code (`docs/risk-policy.md`, section 7). Supersedes D-6, D-17 and D-18; the `Sources` module
+leaves the architecture.
+
+**D-65. Phase 5 is market data for scalping** (2026-11-08, decided by the operator with D-64)
+Phase 5 stores what short-horizon perpetual strategies can use: aggregated trades from Binance's archives, open
+interest and the mark price (which unlock `open_interest`, `oi_change`, `mark_price` and `basis`, D-52), and longer
+history for the other perpetuals. It gets its own plan when it starts.
 
 | Id | Question | Blocks |
 |----|----------|--------|

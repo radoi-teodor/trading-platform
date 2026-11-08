@@ -131,8 +131,8 @@ for 300ms; numbers never animate or count up. `prefers-reduced-motion` turns tin
 - Never: "guaranteed", "risk-free", "sure profit", "can't lose", "to the moon", or any promise of returns.
 - Costs next to returns, risk before return: "Max drawdown 6.1%. Net return +14.2% over 12 months after fees and
   slippage."
-- Agent output is labeled with the role, the time, the confidence and the sources: "Analyst, 12:00 UTC,
-  confidence 0.71, 3 sources."
+- Work done by a research agent is labeled with its author and time: "Draft ema-vwap-reclaim-long@v1 by
+  agent:desk, 12:00 UTC."
 - Errors say what happened, why, and what to do next, without blaming the user.
 
 ### A11. Accessibility

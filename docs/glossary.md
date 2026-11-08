@@ -1,7 +1,7 @@
 # Glossary
 
-Trading terms in plain words. The Strategy Author agent reads this file when it turns a description into DSL, so
-the "Plain words" column includes the Romanian phrases an operator is likely to use. Add a row whenever a
+Trading terms in plain words. A research agent reads this file when it turns a description into DSL, so the
+"Plain words" column includes the Romanian phrases an operator is likely to use. Add a row whenever a
 description had to be clarified twice.
 
 | Term | Meaning | DSL | Plain words (EN / RO) |
@@ -22,8 +22,8 @@ description had to be clarified twice.
 | Position size | How much to buy; computed from risk and stop distance | computed | how much to buy / cât cumpăr |
 | Moving average | Average of the last n closes; EMA weighs recent ones more | `sma(n)`, `ema(n)` | average / medie mobilă |
 | Cross above | One line moving from below to above another | `crosses_above` | crosses over / trece peste |
-| Trend | Persistent direction of price | `ema(20) > ema(50)`, `adx(14) > 20`, `regime() == "trend_up"` | trend, it keeps rising / trend, crește constant |
-| Range | Price moving sideways between levels | `regime() == "range"`, `adx(14) < 20` | sideways, calm / lateral, liniștit |
+| Trend | Persistent direction of price | `ema(20) > ema(50)`, `adx(14) > 20` | trend, it keeps rising / trend, crește constant |
+| Range | Price moving sideways between levels | `adx(14) < 20` | sideways, calm / lateral, liniștit |
 | Volatility | How much the price moves | `atr(14)`, `realized_vol(n)`, `bb(20, 2).width` | how wild it is / cât de agitat e |
 | ATR | Average true range: typical candle size | `atr(14)` | normal move size / mărimea obișnuită a unei mișcări |
 | RSI | Momentum oscillator 0 to 100; under 30 often called oversold | `rsi(14)` | oversold, overbought / supravândut, supracumpărat |
@@ -35,7 +35,7 @@ description had to be clarified twice.
 | Profit factor | Gross profit divided by gross loss | reports | profit vs loss ratio / raportul câștig-pierdere |
 | Slippage | Difference between expected and actual fill price | cost model | worse price than planned / preț mai prost decât planificat |
 | Maker, taker | Adding a resting order vs taking liquidity; different fees | `order: limit` / `market` | limit vs market order / ordin limită vs la piață |
-| Regime | The market's current character, labeled by the analyst or by rules | `regime()` | market mood / starea pieței |
+| Regime | The market's current character, labeled by rules in backtest reports (D-58) | `adx(14)`, `natr(14)` | market mood / starea pieței |
 | Carry | Earning a periodic payment (funding) while hedged against price | `template: funding_carry` | collect funding hedged / încasez funding acoperit |
 | Paper trading | Trading on live prices with simulated money | stage `paper` | demo / pe hârtie, demo |
 | Walk-forward | Tune on one period, test on the next, repeat | simulation | test on unseen data / test pe date nevăzute |

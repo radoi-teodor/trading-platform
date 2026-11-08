@@ -5,17 +5,16 @@ The target design. Status of each part is in `docs/README.md`; the reasons are D
 ## 1. In one picture
 
 ```
-                 catalog/sources.yaml          Operator (browser, Livewire)
-                          |                            |  commands
-                          v                            v
+                                   Operator (browser)   research agent (MCP, D-63)
+                                               |  commands        |
+                                               v                  v
   Binance (public) -> [market-data daemons] -> PostgreSQL <-- [web: Livewire, MCP server]
         ^   WebSocket + REST     |               ^   ^                |
         |                        | ticks (Redis) |   |                | jobs
         |                        v               |   |                v
-        |                  [engine daemon] ------+   +------- [Horizon workers]
-        |   orders, protective   |  one per account          sources, event extraction,
-        +------------------------+  single writer             agents (Claude API), backtests,
-                                                              notifications
+        |                  [engine daemon] ------+   +------- [workers]
+        |   orders, protective   |  one per account          backtests, grids, walk-forwards,
+        +------------------------+  single writer             notifications
 ```
 
 Everything is one Laravel application started as several processes. There is no second language and no shared
@@ -29,9 +28,9 @@ database between two codebases.
 | reverb | `php artisan reverb:start` | WebSockets to the browser | Throttled broadcasts (prices at most 4 per second per instrument) |
 | market-data | `php artisan market:stream spot` and `market:stream perp` | One combined WebSocket stream per market | Blocking client, one process per market; stores closed candles, repairs gaps on reconnect (`docs/market-data.md`); later publishes ticks to a Redis stream |
 | engine | `php artisan engine:run {account} --mode=paper\|live` | Orders, positions, ledger of one account | The only writer of trading state for that account |
-| horizon | `php artisan horizon` | Queued jobs | Queues: `sources`, `agents`, `simulation` (CPU-heavy), `notifications`, `default` |
+| horizon | `php artisan horizon` | Queued jobs | Queues: `simulation` (CPU-heavy), `notifications`, `default` |
 | simulation worker | `php artisan queue:work simulation --queue=simulation --timeout=3600 --tries=1` | Background backtests, grids, walk-forwards (D-62) | Until Redis and Horizon are installed |
-| scheduler | `php artisan schedule:work` | Timed jobs | Source polling, agent runs, reconciliation sweep, daily reports |
+| scheduler | `php artisan schedule:work` | Timed jobs | Reconciliation sweep, daily reports |
 
 Long-running PHP processes are supervised (Supervisor or systemd), restart on failure, and restart themselves
 after a memory or uptime limit. Each one reconnects to the database on failure instead of reusing a dead
@@ -46,20 +45,19 @@ A modular monolith under `app/`. Each module has `Contracts/`, `Data/` (immutabl
 |--------|----------------|---------------|
 | `Support` | Value objects (`Price`, `Quantity`, `Money`, `Percent`, `Timeframe`, `Symbol`), `Clock`, seeded random | nothing |
 | `Market` | Instruments and their exchange filters, candles, trades, funding, open interest, data quality | Support |
-| `Sources` | Source catalog, connectors, raw items, structured events | Support, Market |
 | `Strategy` | DSL parser, type checker, indicators, compiler, read-back, strategy versions | Support, Market |
 | `Risk` | Policy, limits, sizing, circuit breakers, kill switch, promotion gates | Support, Market, Strategy |
 | `Portfolio` | Ledger (fills, fees, funding), positions, equity, P&L | Support, Market |
 | `Execution` | Engine loop, `Venue` (simulated, Binance), order manager, reconciliation | Support, Market, Strategy, Risk, Portfolio |
 | `Simulation` | Backtest runner, walk-forward, Monte Carlo, metrics, reports | Support, Market, Strategy, Risk, Portfolio, Execution (simulated venue only) |
-| `Agents` | Agent roles, tools, prompts, structured outputs, cost accounting | Support, Market, Sources, Strategy, Simulation, Portfolio (read), Journal |
-| `Journal` | Decision records, agent records, command log | Support |
+| `Agents` | The MCP server for external research agents: tools, tokens, call log (D-63, D-64) | Support, Market, Strategy, Simulation, Portfolio (read), Journal |
+| `Journal` | Engine decision records, command log | Support |
 | `Notifications` | Telegram, email | Support, Journal |
 | `Web` | Livewire components, controllers, MCP server | everything above, read-only except through commands |
 
 The rule that matters most: **`Agents` never depends on `Execution`**, and nothing in `Agents` can produce an
-order (D-7). Agents influence trading only through artifacts the deterministic code reads: briefs, events,
-draft strategy versions, and pause requests.
+order (D-7). An agent influences trading only through draft strategy versions, which reach money only through the
+gates and the operator.
 
 ## 4. The engine loop
 
@@ -80,8 +78,7 @@ arrives) and handles each one to the end before the next. Order inside one event
    limits. Rejections carry a reason code.
 8. **Order manager** turns approved intents into orders with idempotent client order ids, rounded to the
    exchange filters, and attaches protective orders on the exchange.
-9. **Journal** one decision record: input hashes (candles, features, briefs used), intents, risk verdicts,
-   orders.
+9. **Journal** one decision record: input hashes (candles, features used), intents, risk verdicts, orders.
 10. **Publish** state changes for the UI (Reverb) and notifications.
 
 A backtest runs exactly this loop with `SimClock` and the simulated venue (D-8). The rules of each step, the
@@ -89,15 +86,11 @@ venue contract and the ledger are in `docs/engine.md`.
 
 ## 5. Agents
 
-Agents run as queued jobs, off the engine's path. Each role (`docs/strategy/agents.md`) has a system prompt in
-`resources/prompts/`, a set of tools, a structured output schema and a model in `config/agents.php`.
-
-Tools are PHP classes in `app/Agents/Tools`. The same classes serve two clients:
-- the platform's own agents, as Claude API tools;
-- external agents (Claude Code, Claude Desktop) through the MCP server built with `laravel/mcp`, read-only.
-
-Every tool result names the sources it came from. Every agent run is journaled: inputs, tool calls, output,
-tokens, cost, duration.
+The platform runs no language model (D-64). An external agent, such as Claude Code or Claude Desktop, reaches it
+through the MCP server built with `laravel/mcp` (D-63): tools in `app/Agents/Mcp/Tools` read candles, indicators,
+funding, strategies and results, and write only draft strategy versions and simulation runs, which the
+`simulation` workers execute. Every call is recorded in `mcp_calls` without the token. The roles and their limits
+are in `docs/strategy/agents.md`.
 
 ## 6. Data
 
@@ -106,8 +99,7 @@ tokens, cost, duration.
 - **Disk**: backtest artifacts (equity curves, trade lists) as compressed JSON under `storage/app/simulations`,
   referenced from the database.
 
-Point-in-time rule: every market record and every source item stores the time the exchange or publisher stamped
-it and the time we received it. Backtests read by received time, so they never see data before it existed.
+Point-in-time rule: every market record stores the time the exchange stamped it and the time we received it. Backtests read by received time, so they never see data before it existed.
 
 Migrations are additive. Old rows stay readable: a column change ships with a migration of existing data in the
 same release, and the journal format carries a version.
@@ -116,7 +108,7 @@ same release, and the journal format carries a version.
 
 | Mode | Clock | Venue | Money | Who can start it |
 |------|-------|-------|-------|------------------|
-| Backtest | `SimClock` over history | Simulated, history | none | Operator, agents (Strategy Author, Reviewer) |
+| Backtest | `SimClock` over history | Simulated, history | none | Operator, research agent over MCP |
 | Paper | `WallClock` | Simulated on the live feed | none | Operator, automatic after backtest gates |
 | Testnet | `WallClock` | Binance testnet | test funds | Operator, for exchange mechanics only |
 | Live | `WallClock` | Binance | real | Operator only, after gates (D-16) |
@@ -128,10 +120,10 @@ another: a live engine that cannot reach the exchange halts and alerts (lesson R
 
 ```
 app/            Laravel application, modules as in section 3
-catalog/        sources.yaml, strategy exports (*.strategy.yaml)
-config/         Laravel config, including risk.php, agents.php, exchanges.php
+catalog/        strategy documents and exports (*.strategy.yaml)
+config/         Laravel config, including risk.php, mcp.php, exchanges.php
 database/       migrations, factories, seeders (seeders never create a default password)
 docs/           this documentation
-resources/      views, Livewire templates, css tokens, prompts/
+resources/      views, Livewire templates, css tokens
 tests/          Pest: Unit, Feature, Arch, Golden (backtest snapshots)
 ```

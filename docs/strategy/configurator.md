@@ -3,8 +3,8 @@
 A strategy can be written two ways, and both end in the same typed object (D-14):
 
 - **Trader language**: the operator writes the DSL directly, in the editor in the UI or as a file.
-- **Natural language**: the operator describes the idea in plain words (Romanian or English); the Strategy Author
-  agent writes the DSL, runs a backtest and shows its assumptions; the operator approves.
+- **Natural language**: the operator describes the idea in plain words (Romanian or English) to a research agent
+  working over MCP (D-63, D-64); it writes the DSL, runs backtests and shows its assumptions; the operator approves.
 
 Whatever the path, the platform compiles the DSL, checks it, renders it back into plain sentences by code (not by
 the model), and stores it as an immutable version. Only compiled versions can be backtested, paper traded or
@@ -15,7 +15,7 @@ promoted.
 ```yaml
 strategy: btc-trend-4h                # id: lowercase, digits, hyphens
 title: BTC trend follower on 4h
-family: trend                         # trend | mean_reversion | carry | volatility | event
+family: trend                         # trend | mean_reversion | carry
 hypothesis: >
   Crypto trends persist after a moving-average cross on 4h when the daily trend agrees.
   Paid by late trend followers and by shorts forced to cover.
@@ -29,8 +29,7 @@ timeframe: 4h                         # strategies are evaluated when a candle o
 
 filters:                              # all must be true for a new entry
   - adx(14) > 20
-  - regime() != "high_volatility"
-  - not event("delisting", within: 7d)
+  - natr(14) < 3                      # skip the most volatile days
 
 entries:
   long:
@@ -53,9 +52,6 @@ limits:                               # can only be tighter than docs/risk-polic
   max_open_positions: 1
   max_trades_per_day: 2
   cooldown_after_loss: 8h
-
-agents:
-  max_brief_age: 8h                   # older briefs count as missing: regime() returns unknown
 ```
 
 Numbers a search may move are declared as parameters and written `$name` (D-51):
@@ -145,15 +141,13 @@ arg       = expr | identifier ":" expr ;
 | Trend | `adx(n: 14)`, `plus_di(n)`, `minus_di(n)`, `supertrend(n, k).line / .direction` |
 | Windows | `highest(src, n)`, `lowest(src, n)`, `change(src, n)` |
 | Perpetuals | `funding_rate`, `funding_rate_avg(n)`, `open_interest`, `oi_change(n)`, `basis`, `mark_price` |
-| Agents | `regime()`, `risk_flag(name)`, `event(type, within)`, `brief_confidence()` |
 | Position | `in_position`, `bars_in_trade`, `trade_r` (current open result in R) |
 | Time | `hour_utc`, `weekday` |
 | Exits only | `level(series)`, `chandelier(n, k)`, `atr_trail(n, k)` |
 
 Not in the first version (D-52): `open_interest`, `oi_change`, `basis` and `mark_price` are refused at compile
-time until their data is stored. The agent functions compile and return their neutral values (`regime()` is
-`"unknown"`, `risk_flag` and `event` are false, `brief_confidence()` is 0) until the journal exists; the compiler
-warns when a strategy uses them. `src` defaults to `close` everywhere.
+time until their data is stored; phase 5 stores it (D-65). The language has no text values and no functions fed by
+language models (D-64). `src` defaults to `close` everywhere.
 
 Each function has a reference test against known values; the old pandas formulas at commit `e0ec48b`
 (`agents/indicators/technical.py`) serve as oracles where they apply. New functions are added through `feature-work` with a D-number if they change semantics.
@@ -208,8 +202,8 @@ few trades and long holds).
 After compiling, a renderer in code turns the AST into sentences. The operator approves the read-back, not the
 model's description. For the example in section 1:
 
-> On BTC/USDT spot, every time a 4-hour candle closes: if ADX(14) is above 20, the market analyst's regime is not
-> "high volatility", and no delisting event was recorded in the last 7 days; then buy at market when the 20-period
+> On BTC/USDT spot, every time a 4-hour candle closes: if ADX(14) is above 20 and the normalized ATR(14) is under
+> 3; then buy at market when the 20-period
 > EMA crosses above the 50-period EMA and the close is above the daily 200-period EMA. Risk 0.5 % of equity per
 > trade, at most 20 % of equity in the position. Stop 2 ATR(14) below the entry, on the exchange. Take profit at 3
 > times the initial risk. Trail with a chandelier stop (22, 3). Leave after 60 candles, or when the 20 EMA crosses
@@ -220,23 +214,22 @@ model's description. For the example in section 1:
 1. The operator writes the idea, for example:
    *"Vreau să cumpăr ETH când scade mult într-o zi liniștită și să ies repede. Nu risca mai mult de jumătate de
    procent pe tranzacție."*
-2. The Strategy Author agent, with the DSL reference and `docs/glossary.md` in context, writes a draft and calls
-   the `compile_strategy` tool until it compiles. Every interpretation it makes is listed as an assumption:
+2. The research agent reads the chart with `get_indicators`, reads `dsl_reference`, writes a draft and calls
+   `compile_strategy` until it compiles. Every interpretation it makes is listed as an assumption:
    - "scade mult": close at least 2 standard deviations under the 20-period mean on 15m (`bb(20, 2).lower`).
-   - "zi liniștită": analyst regime is `range` and ADX(14) under 20.
+   - "zi liniștită": ADX(14) under 20 and the normalized ATR(14) under its usual level.
    - "ies repede": exit at the 20-period mean, or after 12 candles (3 hours).
    - Stop: 1.5 ATR(14), because the request gave none and every strategy needs one.
-3. It runs `run_backtest` on the default window and returns the DSL, the read-back from code, the assumptions,
-   and the backtest summary with costs.
-4. The operator approves, edits the DSL or the wording, or rejects. Approval stores a draft version; promotion
-   follows `docs/risk-policy.md`.
+3. It saves the draft with `save_strategy`, runs `run_grid` with a walk-forward, reads the result with `get_job`,
+   and returns the DSL, the read-back from code, the assumptions, and the results with costs.
+4. The operator keeps, edits or drops the draft. Promotion follows `docs/risk-policy.md`.
 
 The agent cannot skip compilation, cannot hide an assumption (the read-back would show it), and cannot promote.
 
 ## 6. Versions
 
 - A version is immutable: id, version number, canonical YAML, its SHA-256, author (`operator` or
-  `agent:<role>`), parent version, created time, stage history.
+  `agent:<token name>`), parent version, created time, stage history.
 - Editing creates a new version. Backtest reports, paper and live results always point at the exact version.
 - `php artisan strategy:export` writes versions to `catalog/strategies/<id>.v<n>.strategy.yaml` for review in
   git; `strategy:import` loads them back.

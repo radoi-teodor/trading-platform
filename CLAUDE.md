@@ -1,7 +1,7 @@
 # Trading platform
 
-An automated crypto trading platform for one operator, being rebuilt in Laravel. LLM agents research markets and
-write strategies; deterministic code tests, sizes, limits and executes them.
+An automated crypto trading platform for one operator, being rebuilt in Laravel. A research agent, working over MCP,
+writes strategies; deterministic code tests, sizes, limits and executes them.
 
 The old platform was deleted in Phase 0 (D-25). It is readable in git at commit `e0ec48b`; `docs/assessment.md`
 explains what was wrong with it.
@@ -12,8 +12,7 @@ explains what was wrong with it.
 2. `docs/decisions.md`: the D-numbers of the area you touch, and the Open list
 3. `docs/architecture.md`: processes, modules, the engine loop
 4. `docs/conventions.md`: code, tests, commits, writing
-5. The domain doc of the area: `docs/strategy/*`, `docs/risk-policy.md`, `docs/simulation.md`, `docs/sources.md`,
-   `docs/security.md`
+5. The domain doc of the area: `docs/strategy/*`, `docs/risk-policy.md`, `docs/simulation.md`, `docs/security.md`
 6. `docs/brand.md` before any UI work
 
 ## Skills

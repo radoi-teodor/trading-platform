@@ -1,6 +1,6 @@
 ---
 name: feature-work
-description: Use whenever the operator asks to build a new feature in the trading platform, change or extend an existing one, or add a module, a market data feed, an exchange, a source or connector, an agent role or tool, a DSL function or strategy template, a risk limit or breaker, a simulation method or metric, a ledger rule, a Livewire screen, a chart, a notification, a setting or a command, or says "implement", "add", "make X do Y", "change how X works", "next phase". Runs the mandatory analyse, ask, plan, approval protocol before any code is written. Not for a bug fix with a known cause or a one-line copy change.
+description: Use whenever the operator asks to build a new feature in the trading platform, change or extend an existing one, or add a module, a market data feed, an exchange, an MCP tool, a DSL function or strategy template, a risk limit or breaker, a simulation method or metric, a ledger rule, a Livewire screen, a chart, a notification, a setting or a command, or says "implement", "add", "make X do Y", "change how X works", "next phase". Runs the mandatory analyse, ask, plan, approval protocol before any code is written. Not for a bug fix with a known cause or a one-line copy change.
 ---
 
 # Feature work protocol
@@ -25,7 +25,7 @@ Read, in this order, before anything else:
    the design is written there before the code
 3. `docs/architecture.md`: processes, modules and their allowed dependencies, the engine loop order, modes
 4. The domain doc of the area: `docs/strategy/agents.md`, `docs/strategy/configurator.md`, `docs/risk-policy.md`,
-   `docs/simulation.md`, `docs/sources.md`, `docs/security.md`
+   `docs/simulation.md`, `docs/security.md`
 5. `docs/brand.md` if any UI, chart, notification or report text is involved
 6. `docs/conventions.md`: code style, numbers and time, errors, tests, git
 7. The "Known traps" list in `.claude/skills/bug-fix/SKILL.md`: design around them
@@ -45,7 +45,7 @@ switch to `strategy-promotion`.
 Walk the checklist below against the code, not from memory. Produce an **impact map**:
 `file or component -> why it is affected -> invariant it carries`, with the tests that already cover each area.
 
-- **Modules**: which of `Support`, `Market`, `Sources`, `Strategy`, `Risk`, `Portfolio`, `Execution`,
+- **Modules**: which of `Support`, `Market`, `Strategy`, `Risk`, `Portfolio`, `Execution`,
   `Simulation`, `Agents`, `Journal`, `Notifications`, `Web` change, and whether any new dependency breaks the
   allowed direction (`docs/architecture.md`, section 3). `Agents` never depends on `Execution`.
 - **Engine loop**: at which step it runs (`docs/architecture.md`, section 4), on which event (candle close, fill,
@@ -59,8 +59,8 @@ Walk the checklist below against the code, not from memory. Produce an **impact 
   (D-11, D-12).
 - **Determinism and replay**: seeded randomness, ordered events, golden tests that may move, old journals that
   must still replay.
-- **Agents and the LLM boundary**: role, tools, output schema, budget, model setting, cost recording,
-  untrusted-content wrapping, and D-17 (no LLM calls in backtests; agent features read the journal).
+- **Agents and MCP**: which MCP tools change, what they read and write, the token, rate limit and call log
+  (D-63); the platform runs no language model (D-64), and no tool places orders, changes limits or moves a stage.
 - **Exchange**: ccxt capabilities for Binance, exchange filters, rate limits, testnet behaviour, what happens on
   error (fail loud, halt; never fall back to paper).
 - **Data**: migrations (additive), existing rows, the journal format version, catalog changes, retention.
@@ -73,7 +73,7 @@ When the surface is wide, delegate read-only exploration to subagents. Give each
 the area's D-numbers in its prompt: a subagent starts with no context.
 
 Deliverable: the impact map, written into the plan draft. If you cannot explain how the change travels from where
-it starts (a candle, a source item, an agent run, an operator command) through the engine to the ledger, the
+it starts (a candle, an MCP call, an operator command) through the engine to the ledger, the
 journal and what the operator sees, you are not done analysing.
 
 ### 3. Ask everything, once
@@ -109,12 +109,10 @@ composer analyse                     # phpstan at the project level, no new base
 composer test                        # the full default suite: unit, feature, arch, golden
 ```
 
-and, when the step touches the exchange or the agents, the opt-in suites (ask before the LLM one, it costs
-money):
+and, when the step touches the exchange, the opt-in suite:
 
 ```sh
 composer test:testnet                # TRADING_TESTNET=1, Binance testnet only
-composer test:llm                    # TRADING_LLM=1, real Claude calls
 ```
 
 then a commit and a push to the working branch (D-23). For a step in `Support`, `Strategy`, `Risk`, `Simulation`
@@ -144,8 +142,8 @@ or `Portfolio`, run the mutation pass on what changed when the operator agrees (
   - The exchange is the source of truth; protective orders live on the exchange (D-10).
   - No `float` money, no `now()` in the domain, no swallowed exception, no silent fallback.
   - Risk is raised only by the operator, with re-authentication and the 24 hour delay (D-19).
-  - Backtests never call an LLM; agent features are point in time (D-17).
+  - The platform runs no language model; agents work only through MCP (D-64).
   - Old journals still replay and old rows still load.
-  - The UI never waits on the engine, the exchange or the LLM.
+  - The UI never waits on the engine or the exchange.
   - The repository is public: no secret in code, config, docs, logs, prompts, commits or journal entries.
   - Tests and UI checks never touch a live account or production data.

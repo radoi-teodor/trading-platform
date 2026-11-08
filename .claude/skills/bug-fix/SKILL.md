@@ -1,6 +1,6 @@
 ---
 name: bug-fix
-description: Use whenever the operator reports something broken in the trading platform: "bug", "does not work", "error", "crashes", "hangs", "wrong number", "why did it buy/sell", an unexpected order or position, a reconciliation mismatch, a halt or demotion that looks wrong, a backtest that does not match paper or live, a golden test going red, P&L or fees that look wrong, stale prices, a source or agent failing, a Livewire screen showing stale or wrong values, a failing build or deploy. Runs the reproduce, evidence, root cause, class-wide search, graded approval, minimal fix plus regression test protocol. If the fix turns out to need new behaviour, switch to the feature-work skill.
+description: Use whenever the operator reports something broken in the trading platform: "bug", "does not work", "error", "crashes", "hangs", "wrong number", "why did it buy/sell", an unexpected order or position, a reconciliation mismatch, a halt or demotion that looks wrong, a backtest that does not match paper or live, a golden test going red, P&L or fees that look wrong, stale prices, an MCP tool failing, a Livewire screen showing stale or wrong values, a failing build or deploy. Runs the reproduce, evidence, root cause, class-wide search, graded approval, minimal fix plus regression test protocol. If the fix turns out to need new behaviour, switch to the feature-work skill.
 ---
 
 # Bug-fix protocol
@@ -22,7 +22,7 @@ Read before anything else:
 1. The "Known traps" list below: match the symptom against what has already been paid for, FIRST
 2. The D-numbers of the area in `docs/decisions.md`, and `docs/architecture.md` (the loop order, modes,
    processes). A behaviour a D-number chose on purpose is not a bug: say so
-3. The domain doc of the area (`docs/risk-policy.md`, `docs/simulation.md`, `docs/strategy/*`, `docs/sources.md`)
+3. The domain doc of the area (`docs/risk-policy.md`, `docs/simulation.md`, `docs/strategy/*`)
 4. `git log --oneline -- <path>` for the area
 
 ## Steps
@@ -59,8 +59,8 @@ not optional and is the one most often skipped.
 
 - **Trivial**: one obvious cause, one file, no change to a model, a limit, a config value, the data format, a
   golden report or behaviour -> fix it, add the regression test, report briefly.
-- **Standard**: everything else, including any change to sizing, risk, fills, costs, a DSL function, an agent
-  prompt or schema, or a golden report -> write the diagnosis (below) with the cause, the fix options and their
+- **Standard**: everything else, including any change to sizing, risk, fills, costs, a DSL function, an MCP
+  tool, or a golden report -> write the diagnosis (below) with the cause, the fix options and their
   blast radius (which golden reports and which live strategies could move), and **wait for the operator's
   confirmation before editing**.
 - **Incident**: live money, an exchange key, the production database, a released version, or several areas -> a
@@ -140,13 +140,11 @@ Add to the list when a fix reveals a new one.
   logic using the signal candle, `on <tf>` evaluation, queries on `exchange_time` in the simulation path.
 - **Same-candle stop and target.** Assuming the target filled first makes backtests optimistic. The rule is
   1-minute replay, else stop first.
-- **The model knows history.** An LLM judging past data is contaminated. Backtests never call an LLM; agent
-  features read the journal (D-17).
 - **Testnet is not the market.** Testnet prices and liquidity differ; use it for mechanics only.
 - **Long-running PHP processes.** Daemons accumulate memory and keep dead database connections; static caches
   leak state between events. Search: `static $` caches in services used by daemons, missing reconnect handling.
-- **Prompt injection through sources.** Text from a feed can contain instructions. It must be wrapped as
-  untrusted data, and no agent tool may act on the exchange or limits.
+- **An agent's tools.** An MCP tool must never act on the exchange, a limit or a stage (D-7, D-63); search
+  `app/Agents` for any new write.
 - **Signed number formats.** A format like `+0.00;-0.00` turns a tiny negative into `-+0.00`; every signed format
   needs a zero form (`docs/brand.md`, A2).
 - **Shell strings.** The legacy watchlist built a shell command from user input (command injection). Pass

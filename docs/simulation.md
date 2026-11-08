@@ -96,8 +96,7 @@ compressed JSON under `storage/app/simulations`, with a summary row in `backtest
   bootstrap, blocks of 5 days), plus runs that skip a random 10 % of trades, from a seeded `Xoshiro256StarStar`
   (D-58). Output: distributions of final return, maximum drawdown and longest losing streak, as percentiles 5,
   50 and 95.
-- **Regime breakdown**: results split by the regime labels in force at entry (deterministic labels before the
-  journal starts, recorded analyst labels after). The deterministic labels (D-58): daily ADX(14) at 25 or more is
+- **Regime breakdown**: results split by the regime label in force at entry, computed by rules (D-58, D-64): daily ADX(14) at 25 or more is
   `trend`, under 20 `range`, otherwise `unknown`; 30-day realized volatility above its 80th percentile over the
   history read is `high_volatility`, which takes precedence.
 - **Multiple testing**: every backtest of a strategy family, by the operator or an agent, is counted in
@@ -116,7 +115,7 @@ Net profit and return after all costs; net expectancy per trade in quote currenc
 confidence interval; profit factor; number of trades; win rate and average win and loss (shown, never gated on);
 maximum drawdown and its duration; Sharpe, Sortino and Calmar ratios; time in market; turnover; costs as a share
 of gross profit; monthly returns table and the share of positive months; maximum adverse and favorable excursion
-per trade; comparison with the baselines in section 11.
+per trade; comparison with the baselines in section 10.
 
 How they are computed (D-39: decimals, 18 digits, the same result on every machine):
 
@@ -166,22 +165,11 @@ from Draft to Backtested only when every gate passes, and never to a live stage 
 
 ## 9. Replay
 
-The engine records what it received during live and paper trading: candles, trades, ticks used, commands,
-agent outputs read, venue responses. Replay feeds those records into the engine with `SimClock` and checks that
-it makes the same decisions. A replay that diverges is a bug by definition. Replay never calls the exchange or
-an LLM.
+The engine records what it received during live and paper trading: candles, trades, ticks used, commands and
+venue responses. Replay feeds those records into the engine with `SimClock` and checks that
+it makes the same decisions. A replay that diverges is a bug by definition. Replay never calls the exchange.
 
-## 10. LLM outputs in simulation
-
-A model has seen market history, so it cannot be backtested on it (D-17).
-
-- Backtests never call an LLM.
-- Agent-derived features (`regime()`, `risk_flag()`, `event()`) read the journal: only outputs that were really
-  produced before the simulated time count.
-- Before the journal covers a period, those features return their neutral defaults. A strategy that needs them
-  to be profitable cannot pass the gates on old data, and must prove itself forward in paper.
-
-## 11. Baselines
+## 10. Baselines
 
 Every report compares the strategy with:
 
@@ -196,7 +184,7 @@ the comparison is missing and why.
 
 A strategy that does not beat cash after costs and risk is not promoted, however busy it looks.
 
-## 12. Performance targets
+## 11. Performance targets
 
 - One year of 1-minute candles, one instrument, one strategy: under 60 seconds. Measured on 2026-11-08 in the
   development container (PHP 8.4, one core, PostgreSQL on the same machine): `donchian-breakout` on BTC/USDT from
