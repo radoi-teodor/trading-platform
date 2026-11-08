@@ -151,6 +151,14 @@ Add to the list when a fix reveals a new one.
   needs a zero form (`docs/brand.md`, A2).
 - **Shell strings.** The legacy watchlist built a shell command from user input (command injection). Pass
   arguments as arrays to `Process`, never a concatenated string. Search: `Process::run('`, `shell_exec`, `exec(`.
+- **Pest negated arch expectations with an array subject pass silently.** `expect(['now', 'time'])->not->
+  toBeUsedIn('App\Risk')` and `expect(['App\A', 'App\B'])->not->toUse(...)` passed while `App\Risk` called
+  `now()`. Give every negated arch expectation one subject and put the list in the target:
+  `expect('App\Risk')->not->toUse(['now', 'time'])`. Prove a new arch rule with a temporary violating class
+  before trusting it. Search: `expect\(\[` followed by `->not->` in `tests/Arch`.
+- **Packages that bring their own `App\` namespace.** `laravel/pint` maps `App\` to its own internal app, which
+  merged into ours. Such tools live in `tools/<name>` with their own composer project. Search:
+  `grep "'App\\\\\\\\'" vendor/composer/autoload_psr4.php` must list only `app/`.
 
 ## Hard rules
 
