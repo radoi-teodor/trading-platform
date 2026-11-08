@@ -697,9 +697,9 @@
     "semantic_hash": "e478d6aa1ae593d61941b5a34c341837"
   },
   "app/Simulation/Console/RunBacktest.php": {
-    "mtime": 1794170402.9351187,
-    "seen": 1794170488.8312702,
-    "ast_hash": "1bde18a25fe98e9e969107763a82548e",
+    "mtime": 1794172489.1386611,
+    "seen": 1794172572.595097,
+    "ast_hash": "e270c3070edb6b2327a07446062b3707",
     "semantic_hash": ""
   },
   "app/Simulation/Data/BacktestResult.php": {
@@ -1448,9 +1448,9 @@
     "semantic_hash": "27836203d1bf0c6ea54c3c7de5d1c4e8"
   },
   "tests/Feature/Simulation/RunBacktestCommandTest.php": {
-    "mtime": 1794170617.01308,
-    "seen": 1794170769.1762798,
-    "ast_hash": "93d429a2885201c71fd687bf922dffd1",
+    "mtime": 1794172489.138986,
+    "seen": 1794172572.5988033,
+    "ast_hash": "a59780b9d444fcbfff322d9cf56bcf8c",
     "semantic_hash": ""
   },
   "tests/Feature/Support/ClockBindingTest.php": {
@@ -1855,9 +1855,9 @@
     "semantic_hash": ""
   },
   "docs/architecture.md": {
-    "mtime": 1794153014.4779623,
-    "seen": 1794165432.519292,
-    "ast_hash": "d09a6f0d0c22d956ce15c7673aada07c",
+    "mtime": 1794172281.8506365,
+    "seen": 1794172572.600143,
+    "ast_hash": "f3d7a9b63731073314896a088390e066",
     "semantic_hash": ""
   },
   "docs/assessment.md": {
@@ -1879,9 +1879,9 @@
     "semantic_hash": ""
   },
   "docs/decisions.md": {
-    "mtime": 1794166223.6552894,
-    "seen": 1794166528.6327155,
-    "ast_hash": "c5a65dd905182b8c48b77f3d7cd092ea",
+    "mtime": 1794172281.849747,
+    "seen": 1794172572.6002417,
+    "ast_hash": "67f56b3cc725b77945406f18426d9d73",
     "semantic_hash": ""
   },
   "docs/engine.md": {
@@ -1909,15 +1909,15 @@
     "semantic_hash": ""
   },
   "docs/runbook.md": {
-    "mtime": 1794170692.8334334,
-    "seen": 1794170769.1778698,
-    "ast_hash": "041f267c2128d7a38cdac6bf334dd9be",
+    "mtime": 1794172568.6298504,
+    "seen": 1794172572.6002963,
+    "ast_hash": "adff140aa8dea5f17a7a4b1c6f274cbf",
     "semantic_hash": ""
   },
   "docs/security.md": {
-    "mtime": 1794143263.4135935,
-    "seen": 1794165432.5192997,
-    "ast_hash": "f66794e0a1b82056a41a0df271cb7778",
+    "mtime": 1794172281.8499823,
+    "seen": 1794172572.600297,
+    "ast_hash": "76c47a600016eb82b3a62bea5e1348f6",
     "semantic_hash": ""
   },
   "docs/simulation.md": {
@@ -1933,14 +1933,14 @@
     "semantic_hash": ""
   },
   "docs/strategy/agents.md": {
-    "mtime": 1794142974.2855833,
-    "seen": 1794165432.5193024,
-    "ast_hash": "327aa94a7fcba78cb3c16c25808a6a8a",
+    "mtime": 1794172281.8512414,
+    "seen": 1794172572.600325,
+    "ast_hash": "ba802afe9ad997d1b5889ede1a69a7e9",
     "semantic_hash": ""
   },
   "docs/strategy/configurator.md": {
-    "mtime": 1794164977.0229023,
-    "seen": 1794165432.5193028,
+    "mtime": 1794172568.6310105,
+    "seen": 1794172572.600326,
     "ast_hash": "9fee64f0dcf2292746beccc94d649811",
     "semantic_hash": ""
   },
@@ -2359,15 +2359,15 @@
     "semantic_hash": ""
   },
   "app/Simulation/Console/GridBacktest.php": {
-    "mtime": 1794170658.5922623,
-    "seen": 1794170769.1728172,
-    "ast_hash": "30739018d1ce15576e497d64b2cdf6d9",
+    "mtime": 1794172489.1384714,
+    "seen": 1794172572.595093,
+    "ast_hash": "56efaf3dc7ab073726064903bdb7b813",
     "semantic_hash": ""
   },
   "app/Simulation/Console/PreparesBacktests.php": {
-    "mtime": 1794167599.8556986,
-    "seen": 1794167704.8161244,
-    "ast_hash": "b90ff59bc391da2e9efe0caf14d9afc9",
+    "mtime": 1794172490.1768012,
+    "seen": 1794172572.595096,
+    "ast_hash": "98d81ad6afbcc9ec33c94765c62efc69",
     "semantic_hash": ""
   },
   "app/Simulation/Models/StrategyTrial.php": {
@@ -2464,6 +2464,54 @@
     "mtime": 1794170636.684599,
     "seen": 1794170769.1773522,
     "ast_hash": "69de66740400da5709623be8513360cf",
+    "semantic_hash": ""
+  },
+  "app/Simulation/Console/ExportStrategies.php": {
+    "mtime": 1794172430.06285,
+    "seen": 1794172572.5950904,
+    "ast_hash": "f94927e0eebd973e70ce68651b1bcd37",
+    "semantic_hash": ""
+  },
+  "app/Simulation/Console/ImportStrategies.php": {
+    "mtime": 1794172430.0617173,
+    "seen": 1794172572.5950947,
+    "ast_hash": "bb958effaaeedb1d2de497b07a31dbc5",
+    "semantic_hash": ""
+  },
+  "app/Strategy/Versions/SaveResult.php": {
+    "mtime": 1794172361.589113,
+    "seen": 1794172572.5976322,
+    "ast_hash": "3b822e76f13346a73e7937271db8e609",
+    "semantic_hash": ""
+  },
+  "app/Strategy/Versions/StrategyRepository.php": {
+    "mtime": 1794172361.5903118,
+    "seen": 1794172572.5976338,
+    "ast_hash": "b4e55c8f3c02e9e653f4c6488e238a78",
+    "semantic_hash": ""
+  },
+  "app/Strategy/Versions/StrategyStage.php": {
+    "mtime": 1794172361.587946,
+    "seen": 1794172572.5976348,
+    "ast_hash": "d4a2cb027142f96ba6046bcc5535778b",
+    "semantic_hash": ""
+  },
+  "app/Strategy/Versions/StrategyVersion.php": {
+    "mtime": 1794172489.138819,
+    "seen": 1794172572.5976357,
+    "ast_hash": "c7e635244506e32908fc89c0a6c4ba56",
+    "semantic_hash": ""
+  },
+  "database/migrations/2026_11_08_000004_create_strategy_versions_tables.php": {
+    "mtime": 1794172361.5840168,
+    "seen": 1794172572.5984128,
+    "ast_hash": "ef2246ffd071e36e236ca14b01f925b0",
+    "semantic_hash": ""
+  },
+  "tests/Feature/Strategy/StrategyVersionsTest.php": {
+    "mtime": 1794172330.5218463,
+    "seen": 1794172572.5988047,
+    "ast_hash": "0b14a2802ef42cd0c9b10ed404e2330e",
     "semantic_hash": ""
   },
   "package-lock.json": {
