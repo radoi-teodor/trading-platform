@@ -236,10 +236,6 @@ final class RunBacktest extends Command
 
         $spec = $result->spec;
 
-        if ($spec->riskPerTrade !== null || $spec->maxPosition !== null || $spec->maxOpenPositions !== null || $spec->maxTradesPerDay !== null || $spec->cooldownSeconds !== null) {
-            $this->warn('warning: this document\'s sizing and limits are not enforced yet (Phase 3, step 6); the account policy applies.');
-        }
-
         $parameters = [];
 
         foreach ($this->strings('param') as $pair) {

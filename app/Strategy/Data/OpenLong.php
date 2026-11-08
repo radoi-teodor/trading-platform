@@ -15,6 +15,7 @@ final readonly class OpenLong implements Intent
         public ?Price $stop,
         public ?Price $target,
         public string $reason,
+        public ?EntryOrder $order = null,
     ) {}
 
     public function symbol(): Symbol

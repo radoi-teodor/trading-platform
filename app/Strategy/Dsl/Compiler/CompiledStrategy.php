@@ -6,20 +6,31 @@ namespace App\Strategy\Dsl\Compiler;
 
 use App\Market\Data\MarketType;
 use App\Strategy\Baselines\FundingCarry;
+use App\Strategy\Contracts\LimitedStrategy;
 use App\Strategy\Contracts\Strategy;
 use App\Strategy\Data\Close;
+use App\Strategy\Data\EntryOrder;
 use App\Strategy\Data\Intent;
 use App\Strategy\Data\MoveStop;
 use App\Strategy\Data\OpenLong;
 use App\Strategy\Data\OpenShort;
 use App\Strategy\Data\StrategyContext;
 use App\Strategy\Data\StrategyIdentity;
+use App\Strategy\Data\StrategyLimits;
 use App\Strategy\Data\Subscription;
+use App\Strategy\Dsl\Ast\Call;
 use App\Strategy\Dsl\Ast\DurationLiteral;
+use App\Strategy\Dsl\Ast\Node;
+use App\Strategy\Dsl\Ast\NumberLiteral;
+use App\Strategy\Dsl\Ast\Parameter;
+use App\Strategy\Dsl\Ast\PercentLiteral;
+use App\Strategy\Dsl\Ast\Unary;
 use App\Strategy\Dsl\Document\EntrySpec;
 use App\Strategy\Dsl\Document\ParameterSpec;
 use App\Strategy\Dsl\Document\StrategySpec;
+use App\Strategy\Dsl\Functions\Group;
 use App\Strategy\Dsl\Scope;
+use App\Strategy\Dsl\TypeChecker;
 use App\Strategy\Dsl\Types\Kind;
 use App\Strategy\Dsl\Types\Type;
 use App\Support\Number\Decimal;
@@ -28,6 +39,7 @@ use App\Support\Side;
 use App\Support\Symbol;
 use App\Support\Timeframe;
 use InvalidArgumentException;
+use LogicException;
 
 /**
  * A strategy built from a checked document (docs/strategy/configurator.md, section 3). On every closed candle of
@@ -37,7 +49,7 @@ use InvalidArgumentException;
  * - in a position: leaves on the time stop or the exit condition, and trails the stop when it tightens.
  * The stop and the target themselves work on the venue (D-10). One instance runs one backtest or one account.
  */
-final class CompiledStrategy implements Strategy
+final class CompiledStrategy implements LimitedStrategy
 {
     private const array SECONDS = ['m' => 60, 'h' => 3_600, 'd' => 86_400, 'w' => 604_800];
 
@@ -108,12 +120,6 @@ final class CompiledStrategy implements Strategy
             $values[$name] = $value;
         }
 
-        foreach ($spec->entries as $entry) {
-            if ($entry->order !== null) {
-                throw new InvalidArgumentException('Limit entries come with the engine step of Phase 3 (D-55); write order: market for now.');
-            }
-        }
-
         return new self($spec, $values, $version);
     }
 
@@ -138,6 +144,17 @@ final class CompiledStrategy implements Strategy
     public function warmupBars(): int
     {
         return $this->warmup;
+    }
+
+    public function limits(): StrategyLimits
+    {
+        return new StrategyLimits(
+            $this->spec->riskPerTrade,
+            $this->spec->maxPosition,
+            $this->spec->maxOpenPositions,
+            $this->spec->maxTradesPerDay,
+            $this->spec->cooldownSeconds,
+        );
     }
 
     public function onCandle(StrategyContext $context): array
@@ -197,7 +214,7 @@ final class CompiledStrategy implements Strategy
         if ($stopLoss === null) {
             $this->trades[(string) $symbol] = new TradeMemory($entry->side, null);
 
-            return $long ? new OpenLong($symbol, null, null, $reason) : new OpenShort($symbol, null, null, $reason);
+            return $long ? new OpenLong($symbol, null, null, $reason, $this->order($entry)) : new OpenShort($symbol, null, null, $reason, $this->order($entry));
         }
 
         if (! $stopValue instanceof Decimal) {
@@ -226,8 +243,9 @@ final class CompiledStrategy implements Strategy
         $this->trades[(string) $symbol] = new TradeMemory($entry->side, $stop);
         $stopPrice = Price::of($stop);
         $targetPrice = $target === null ? null : Price::of($target);
+        $order = $this->order($entry);
 
-        return $long ? new OpenLong($symbol, $stopPrice, $targetPrice, $reason) : new OpenShort($symbol, $stopPrice, $targetPrice, $reason);
+        return $long ? new OpenLong($symbol, $stopPrice, $targetPrice, $reason, $order) : new OpenShort($symbol, $stopPrice, $targetPrice, $reason, $order);
     }
 
     /**
@@ -272,6 +290,37 @@ final class CompiledStrategy implements Strategy
         }
 
         return [];
+    }
+
+    /** The limit order of an entry (D-55): its offset from the decision price and how long it works. */
+    private function order(EntrySpec $entry): ?EntryOrder
+    {
+        $call = $entry->order?->node;
+
+        if (! $call instanceof Call) {
+            return null;
+        }
+
+        $checker = new TypeChecker;
+        $checker->check($call, $this->scope->allowing(Group::Order));
+        $arguments = $checker->arguments($call);
+        $expiry = $arguments['expiry'] ?? null;
+        $seconds = $expiry instanceof DurationLiteral
+            ? $expiry->amount * ($expiry->unit === 'bars' ? $this->spec->timeframe->seconds() : self::SECONDS[$expiry->unit])
+            : throw new LogicException('A limit order without an expiry.');
+
+        return new EntryOrder($this->constant($arguments['offset'] ?? throw new LogicException('A limit order without an offset.')), $seconds);
+    }
+
+    private function constant(Node $node): Decimal
+    {
+        return match (true) {
+            $node instanceof PercentLiteral => $node->fraction,
+            $node instanceof NumberLiteral => $node->value,
+            $node instanceof Parameter => $this->values[$node->name] ?? throw new LogicException("No value for \${$node->name}."),
+            $node instanceof Unary && $node->operator === 'neg' => $this->constant($node->operand)->negate(),
+            default => throw new LogicException('Not a constant.'),
+        };
     }
 
     /** The compiled expressions of the document, fresh, for one instrument. */

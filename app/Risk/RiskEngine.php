@@ -13,6 +13,7 @@ use App\Strategy\Data\MoveStop;
 use App\Strategy\Data\OpenCarry;
 use App\Strategy\Data\OpenLong;
 use App\Strategy\Data\OpenShort;
+use App\Strategy\Data\StrategyLimits;
 use App\Support\Number\Decimal;
 use App\Support\Number\Price;
 use App\Support\Perpetual;
@@ -36,7 +37,7 @@ final readonly class RiskEngine
         private ?Decimal $maintenanceRate = null,
     ) {}
 
-    public function assessEntry(OpenLong|OpenShort $intent, AccountView $account, InstrumentRules $rules, Price $price, CarbonImmutable $time): Verdict
+    public function assessEntry(OpenLong|OpenShort $intent, AccountView $account, InstrumentRules $rules, Price $price, CarbonImmutable $time, ?StrategyLimits $limits = null): Verdict
     {
         $side = $intent instanceof OpenLong ? Side::Buy : Side::Sell;
         $perpetual = $intent->symbol->isPerpetual();
@@ -55,6 +56,12 @@ final readonly class RiskEngine
 
         if ($account->openPositions >= $this->policy->maxOpenPositions) {
             return Verdict::rejected(RejectionReason::MaxPositions);
+        }
+
+        $strategy = $this->strategyLimit($account, $limits, $time);
+
+        if ($strategy !== null) {
+            return Verdict::rejected($strategy);
         }
 
         if ($intent->target !== null && ! self::beyond($side, $intent->target->value, $price->value)) {
@@ -82,8 +89,8 @@ final readonly class RiskEngine
         }
 
         $adjustments = [];
-        $quantity = $account->equity->times($this->policy->riskPerTrade)->dividedBy($riskPerUnit, self::SCALE);
-        $maximum = $account->equity->times($this->policy->notionalPerInstrument)->dividedBy($price->value, self::SCALE);
+        $quantity = $account->equity->times(self::lower($this->policy->riskPerTrade, $limits?->riskPerTrade))->dividedBy($riskPerUnit, self::SCALE);
+        $maximum = $account->equity->times(self::lower($this->policy->notionalPerInstrument, $limits?->maxPosition))->dividedBy($price->value, self::SCALE);
 
         if ($quantity->isGreaterThan($maximum)) {
             $quantity = $maximum;
@@ -122,6 +129,25 @@ final readonly class RiskEngine
         }
 
         return Verdict::quantity($quantity, $quantity->times($riskPerUnit), $adjustments, $leverage);
+    }
+
+    /** A strategy's own limits (D-54), checked after the account's: positions, entries today, cooldown after a loss. */
+    private function strategyLimit(AccountView $account, ?StrategyLimits $limits, CarbonImmutable $time): ?RejectionReason
+    {
+        return match (true) {
+            $limits === null => null,
+            $limits->maxOpenPositions !== null && $account->strategyPositions >= $limits->maxOpenPositions => RejectionReason::StrategyPositions,
+            $limits->maxTradesPerDay !== null && $account->entriesToday >= $limits->maxTradesPerDay => RejectionReason::TradesPerDay,
+            $limits->cooldownSeconds !== null && $account->lastLossAt !== null
+                && $time->getTimestamp() - $account->lastLossAt->getTimestamp() < $limits->cooldownSeconds => RejectionReason::Cooldown,
+            default => null,
+        };
+    }
+
+    /** The tighter of the policy's value and the strategy's, which can never loosen it (D-54). */
+    private static function lower(Decimal $policy, ?Decimal $strategy): Decimal
+    {
+        return $strategy !== null && $strategy->isLessThan($policy) ? $strategy : $policy;
     }
 
     /** A hedged pair (D-48): one quantity for both legs, no stop, the perpetual leg at a leverage that keeps the buffer. */

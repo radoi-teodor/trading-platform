@@ -24,6 +24,7 @@ use App\Portfolio\Ledger;
 use App\Risk\RiskPolicy;
 use App\Strategy\Contracts\Strategy;
 use App\Strategy\Data\Close;
+use App\Strategy\Data\EntryOrder;
 use App\Strategy\Data\MoveStop;
 use App\Strategy\Data\OpenLong;
 use App\Strategy\Data\StrategyContext;
@@ -430,4 +431,57 @@ it('does not call a strategy before its own warmup, yet keeps its candles aligne
 
     expect(array_map(fn (StrategyContext $c): string => $c->time->format('H:i'), $strategy->seen))->toBe(['00:10'])
         ->and($h->log->quietDecisions)->toBe(1);
+});
+
+function limitLong(string $stop, string $offset, int $expiry, string $name = 'scripted'): OpenLong
+{
+    return new OpenLong(Symbol::parse('BTC/USDT'), Price::of($stop), null, "limit {$name}", new EntryOrder(Decimal::of($offset), $expiry));
+}
+
+it('places a limit entry at the decision price moved by its offset, fills it as a maker and then protects it (D-55)', function (): void {
+    $h = engineHarness(new ScriptedStrategy(['00:01' => [limitLong('95', '-0.01', 600)]]));
+    $h->minute('100', '100', '100', '100');
+    $working = $h->venue->openOrders();
+    // 10000 * 0.005 / (99 - 95) = 12.5 BTC, sized from the limit price
+    $h->minute('100', '100', '99.5', '100');
+    $h->minute('99.5', '100', '98.9', '99');
+    $h->minute('99', '99', '99', '99');
+    $position = $h->engine->ledger()->positions()[0] ?? null;
+
+    expect(array_map(fn ($o): string => "{$o->type->value} {$o->side->value} {$o->quantity} {$o->price}", $working))->toBe(['limit buy 12.5 99'])
+        ->and((string) $position?->quantity)->toBe('12.4875')
+        ->and((string) $position?->entryPrice())->toBe('99')
+        ->and(array_map(fn ($o): string => $o->type->value, $h->venue->openOrders()))->toContain('stop_market');
+});
+
+it('cancels a limit entry when it expires', function (): void {
+    $h = engineHarness(new ScriptedStrategy(['00:01' => [limitLong('95', '-0.01', 120)]]));
+    $h->minute('100', '100', '100', '100');
+    $h->minute('100', '100', '99.5', '100');
+    $h->minute('100', '100', '99.5', '100');
+
+    expect($h->venue->openOrders())->toBe([])
+        ->and($h->events())->toBe(['entry_expired']);
+});
+
+it('refuses another entry while one is still working', function (): void {
+    $h = engineHarness(new ScriptedStrategy(['00:01' => [limitLong('95', '-0.01', 600)], '00:02' => [limitLong('95', '-0.01', 600)]]));
+    $h->minute('100', '100', '100', '100');
+    $h->minute('100', '100', '99.5', '100');
+
+    expect($h->log->decisions[1]->intents[0]->rejection)->toBe('entry_working');
+});
+
+it('cancels working entries when a loss limit halts new entries', function (): void {
+    $h = engineHarness([
+        new ScriptedStrategy(['00:01' => [long('50', null)]], name: 'holder'),
+        new ScriptedStrategy(['00:02' => [limitLong('40', '-0.5', 3600, 'waiter')]], name: 'waiter'),
+    ], policyWith(['daily_loss' => '0.001']));
+    $h->minute('100', '100', '100', '100');
+    $h->minute('100', '100', '100', '100');
+    $h->minute('100', '100', '100', '100');
+    $h->minute('90', '90', '90', '90');
+
+    expect($h->events())->toBe(['daily_loss_halt', 'entry_cancelled'])
+        ->and(array_map(fn ($o): string => "{$o->type->value} {$o->side->value}", $h->venue->openOrders()))->toBe(['stop_market sell']);
 });

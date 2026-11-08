@@ -112,13 +112,14 @@ it('opens a short at the next open, taking margin and the taker fee from the USD
         ->and((string) $h->venue->futuresWallet())->toBe('9949.95');
 });
 
-it('refuses an entry the wallet cannot margin, below the minimum notional, or of a type it does not simulate', function (): void {
+it('refuses an entry the wallet cannot margin or below the minimum notional', function (): void {
     $h = PerpHarness::make('10');
     $h->venue->setLeverage(perp(), 2);
 
     expect($h->venue->submit(OrderRequest::market(ClientOrderId::of('a'), perp(), Side::Sell, Decimal::of('1')))->reason)->toBe('INSUFFICIENT_MARGIN')
         ->and($h->venue->submit(OrderRequest::market(ClientOrderId::of('b'), perp(), Side::Sell, Decimal::of('0.5')))->reason)->toBe('NOTIONAL')
-        ->and($h->venue->submit(OrderRequest::limit(ClientOrderId::of('c'), perp(), Side::Sell, Decimal::of('1'), Price::of('100')))->reason)->toBe('UNSUPPORTED_ORDER_TYPE')
+        ->and($h->venue->submit(OrderRequest::limit(ClientOrderId::of('c'), perp(), Side::Sell, Decimal::of('1'), Price::of('100')))->reason)->toBe('INSUFFICIENT_MARGIN')
+        ->and($h->venue->submit(OrderRequest::limit(ClientOrderId::of('c2'), perp(), Side::Sell, Decimal::of('0.1'), Price::of('100.05')))->reason)->toBe('PRICE_FILTER')
         ->and($h->venue->submit(reduce('d', Side::Buy, '0.5'))->accepted)->toBeTrue();
 });
 
@@ -312,4 +313,37 @@ it('gives back the margin a cancelled entry reserved', function (): void {
         ->and($h->venue->cancel(ClientOrderId::of('a')))->toBeFalse()
         ->and($h->venue->submit(OrderRequest::market(ClientOrderId::of('c'), perp(), Side::Sell, Decimal::of('1')))->accepted)->toBeTrue()
         ->and((string) $h->venue->futuresWallet())->toBe('60');
+});
+
+it('rests a limit entry until the price trades through it, then fills it at the limit as a maker (D-55)', function (): void {
+    $h = PerpHarness::make();
+    $h->venue->setLeverage(perp(), 2);
+    expect($h->venue->submit(OrderRequest::limit(ClientOrderId::of('e'), perp(), Side::Buy, Decimal::of('2'), Price::of('99')))->accepted)->toBeTrue();
+    // A touch of 99 is not a fill; 98.8 trades through by more than a tick.
+    $h->minute('100', '101', '99', '100');
+    $h->minute('99.5', '100', '98.8', '99');
+
+    expect($h->updates())->toBe(['e new', 'e filled buy 2@99 fee 0.0396 USDT'])
+        ->and($h->position())->toBe('buy 2@99 margin 99 x2')
+        ->and((string) $h->venue->futuresWallet())->toBe('9900.9604');
+});
+
+it('fills a limit that is marketable on arrival like a market order, never beyond its limit, as a taker', function (): void {
+    $h = PerpHarness::make();
+    $h->venue->setLeverage(perp(), 2);
+    expect($h->venue->submit(OrderRequest::limit(ClientOrderId::of('e'), perp(), Side::Sell, Decimal::of('2'), Price::of('98')))->accepted)->toBeTrue();
+    $h->minute('100', '101', '99', '100');
+
+    expect($h->updates())->toBe(['e new', 'e filled sell 2@100 fee 0.1 USDT']);
+});
+
+it('fills a resting limit at most a tenth of the minute\'s volume at a time', function (): void {
+    $h = PerpHarness::make();
+    $h->venue->setLeverage(perp(), 2);
+    $h->venue->submit(OrderRequest::limit(ClientOrderId::of('e'), perp(), Side::Buy, Decimal::of('150'), Price::of('99')));
+    $h->minute('100', '100', '98', '99');
+    $h->minute('99', '99', '98', '98.5');
+
+    expect($h->updates())->toBe(['e new', 'e partially_filled buy 100@99 fee 1.98 USDT', 'e filled buy 50@99 fee 0.99 USDT'])
+        ->and($h->position())->toBe('buy 150@99 margin 7425 x2');
 });

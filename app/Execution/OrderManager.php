@@ -33,13 +33,17 @@ final class OrderManager
     /** @var array<string, ProtectionPlan> by strategy and symbol */
     private array $plans = [];
 
+    /** @var array<string, CarbonImmutable> when each working limit entry expires, by client order id (D-55) */
+    private array $expiries = [];
+
     private ?CarbonImmutable $eventTime = null;
 
     private int $sequence = 0;
 
     public function __construct(private readonly Venue $venue, private readonly OrderBook $book) {}
 
-    public function enter(string $strategy, Symbol $symbol, Side $side, Verdict $verdict, ?Price $stop, ?Price $target, CarbonImmutable $time): OrderAck
+    /** Places an entry at market, or as a limit working until $expiresAt (D-55). */
+    public function enter(string $strategy, Symbol $symbol, Side $side, Verdict $verdict, ?Price $stop, ?Price $target, CarbonImmutable $time, ?Price $limit = null, ?CarbonImmutable $expiresAt = null): OrderAck
     {
         $id = $this->nextId($strategy, OrderRole::Entry, $time);
 
@@ -47,16 +51,65 @@ final class OrderManager
             $this->venue->setLeverage($symbol, $verdict->leverage ?? 1);
         }
 
-        $request = $verdict->quoteQuantity !== null
-            ? OrderRequest::marketForQuote($id, $symbol, $verdict->quoteQuantity)
-            : OrderRequest::market($id, $symbol, $side, $verdict->quantity ?? Decimal::zero());
+        $request = match (true) {
+            $limit !== null => OrderRequest::limit($id, $symbol, $side, $verdict->quantity ?? Decimal::zero(), $limit),
+            $verdict->quoteQuantity !== null => OrderRequest::marketForQuote($id, $symbol, $verdict->quoteQuantity),
+            default => OrderRequest::market($id, $symbol, $side, $verdict->quantity ?? Decimal::zero()),
+        };
         $ack = $this->submit($request, $strategy, OrderRole::Entry);
 
         if ($ack->accepted) {
             $this->plans[self::key($strategy, $symbol)] = new ProtectionPlan($stop, $target, $verdict->plannedRisk, $verdict->leverage, $side);
+
+            if ($limit !== null && $expiresAt !== null) {
+                $this->expiries[$id->value] = $expiresAt;
+            }
         }
 
         return $ack;
+    }
+
+    public function hasWorkingEntry(string $strategy, Symbol $symbol): bool
+    {
+        foreach ($this->book->workingFor($strategy, $symbol) as $order) {
+            if ($order->role === OrderRole::Entry) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Cancels the limit entries whose time is up (D-55).
+     *
+     * @return list<TrackedOrder> the entries cancelled
+     */
+    public function expireEntries(CarbonImmutable $time): array
+    {
+        return $this->cancelEntries(fn (TrackedOrder $order): bool => isset($this->expiries[$order->id->value]) && $this->expiries[$order->id->value] <= $time);
+    }
+
+    /**
+     * Cancels working entries, all of them by default: a halt stops new entries but keeps protection (docs/engine.md,
+     * section 5).
+     *
+     * @param  (callable(TrackedOrder): bool)|null  $which
+     * @return list<TrackedOrder> the entries cancelled
+     */
+    public function cancelEntries(?callable $which = null): array
+    {
+        $cancelled = [];
+
+        foreach ($this->book->working() as $order) {
+            if ($order->role === OrderRole::Entry && ($which === null || $which($order))) {
+                $this->cancel($order);
+                unset($this->expiries[$order->id->value]);
+                $cancelled[] = $order;
+            }
+        }
+
+        return $cancelled;
     }
 
     /** @return array{OrderAck, OrderAck|null} the spot leg's answer, and the perpetual leg's when the spot leg was accepted */

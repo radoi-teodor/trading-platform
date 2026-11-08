@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Risk\Data;
 
 use App\Support\Number\Decimal;
+use Carbon\CarbonImmutable;
 
 /**
  * The account as the risk engine needs it at a decision, built by the engine from the ledger: equity and free
@@ -23,5 +24,8 @@ final readonly class AccountView
         public ?Decimal $freeMargin = null,
         public ?Decimal $grossExposure = null,
         public ?Decimal $netExposure = null,
+        public int $strategyPositions = 0,
+        public int $entriesToday = 0,
+        public ?CarbonImmutable $lastLossAt = null,
     ) {}
 }

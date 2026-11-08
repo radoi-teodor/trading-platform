@@ -75,6 +75,10 @@ candle with the fill rules of `simulation.md`, section 3 (D-36, D-37). It never 
   the fill. A stop already crossed when it becomes active fills at that minute's open.
 - When one leg of the OCO fills, fully or partially, the venue cancels the other leg, as Binance does. A partial
   fill leaves a remainder without protection; the next event protects it again with the same stop and target.
+- **Limit entries (D-55).** The limit is the decision price moved by the offset, rounded to the tick so that it
+  never pays more than asked; risk sizes from it. The entry works until it fills or its expiry, then is cancelled;
+  while it works, another entry of the same strategy on the instrument is rejected with `entry_working`. A partly
+  filled entry is protected once it completes, expires or is cancelled.
 - **Client order ids** are derived from the decision id and the order's role (`entry`, `exit`, `stop`, `target`),
   at most 36 characters, so a retry can never place an order twice.
 - **Rounding.** Quantities round down to the lot step. Prices round to the tick in the direction that does not

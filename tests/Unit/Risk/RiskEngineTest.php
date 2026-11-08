@@ -15,6 +15,7 @@ use App\Strategy\Data\MoveStop;
 use App\Strategy\Data\OpenCarry;
 use App\Strategy\Data\OpenLong;
 use App\Strategy\Data\OpenShort;
+use App\Strategy\Data\StrategyLimits;
 use App\Support\Number\Decimal;
 use App\Support\Number\Price;
 use App\Support\Symbol;
@@ -333,4 +334,36 @@ it('sizes a carry pair from its template, the notional cap and the margin buffer
         ->and($poor->adjustments)->toBe(['cash'])
         ->and($crowded->rejection)->toBe(RejectionReason::GrossExposure)
         ->and($held->rejection)->toBe(RejectionReason::PositionOpen);
+});
+
+it('sizes with a strategy\'s lower risk per trade and maximum position (D-54)', function (): void {
+    $limits = new StrategyLimits(riskPerTrade: Decimal::of('0.0025'), maxPosition: Decimal::of('0.1'));
+    // 10000 * 0.0025 / 2000 = 0.0125 BTC, 750 USDT, under 10 % of equity
+    $smaller = engineFor(accountPolicy())->assessEntry(entry('58000'), account(), spotRules(), Price::of('60000'), riskAt('2026-10-01 12:00'), $limits);
+    // 10000 * 0.005 / 200 = 0.25 BTC, capped at 10 % of equity: 1000 / 60000
+    $capped = engineFor(accountPolicy())->assessEntry(entry('59800'), account(), spotRules(), Price::of('60000'), riskAt('2026-10-01 12:00'), new StrategyLimits(maxPosition: Decimal::of('0.1')));
+    // a strategy can only tighten: 2 % risk per trade is ignored above the policy's 0.5 %
+    $looser = engineFor(accountPolicy())->assessEntry(entry('58000'), account(), spotRules(), Price::of('60000'), riskAt('2026-10-01 12:00'), new StrategyLimits(riskPerTrade: Decimal::of('0.02')));
+
+    expect((string) $smaller->quantity)->toBe('0.0125')
+        ->and((string) $capped->quantity)->toBe('0.01666')
+        ->and($capped->adjustments)->toBe(['notional_cap'])
+        ->and((string) $looser->quantity)->toBe('0.025');
+});
+
+it('rejects entries beyond a strategy\'s open positions, trades per day and cooldown (D-54)', function (AccountView $account, StrategyLimits $limits, string $reason): void {
+    $verdict = engineFor(accountPolicy())->assessEntry(entry('58000'), $account, spotRules(), Price::of('60000'), riskAt('2026-10-01 12:00'), $limits);
+
+    expect($verdict->rejection?->value)->toBe($reason);
+})->with([
+    'open positions' => [new AccountView(Decimal::of('10000'), Decimal::of('10000'), 1, Decimal::zero(), false, strategyPositions: 1), new StrategyLimits(maxOpenPositions: 1), 'strategy_positions'],
+    'trades per day' => [new AccountView(Decimal::of('10000'), Decimal::of('10000'), 0, Decimal::zero(), false, entriesToday: 2), new StrategyLimits(maxTradesPerDay: 2), 'trades_per_day'],
+    'cooldown' => [new AccountView(Decimal::of('10000'), Decimal::of('10000'), 0, Decimal::zero(), false, lastLossAt: CarbonImmutable::parse('2026-10-01 05:00', 'UTC')), new StrategyLimits(cooldownSeconds: 8 * 3600), 'cooldown'],
+]);
+
+it('lets an entry through once a cooldown has passed and under the strategy\'s counts', function (): void {
+    $account = new AccountView(Decimal::of('10000'), Decimal::of('10000'), 0, Decimal::zero(), false, strategyPositions: 0, entriesToday: 1, lastLossAt: CarbonImmutable::parse('2026-10-01 04:00', 'UTC'));
+    $verdict = engineFor(accountPolicy())->assessEntry(entry('58000'), $account, spotRules(), Price::of('60000'), riskAt('2026-10-01 12:00'), new StrategyLimits(maxOpenPositions: 1, maxTradesPerDay: 2, cooldownSeconds: 8 * 3600));
+
+    expect($verdict->approved)->toBeTrue();
 });

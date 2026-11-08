@@ -24,4 +24,8 @@ enum RejectionReason: string
     case LiquidationTooClose = 'liquidation_too_close';
     case GrossExposure = 'gross_exposure';
     case NetExposure = 'net_exposure';
+    case StrategyPositions = 'strategy_positions';
+    case TradesPerDay = 'trades_per_day';
+    case Cooldown = 'cooldown';
+    case EntryWorking = 'entry_working';
 }

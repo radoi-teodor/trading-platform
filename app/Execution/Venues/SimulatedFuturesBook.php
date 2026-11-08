@@ -95,7 +95,7 @@ final class SimulatedFuturesBook
         $reserve = Decimal::zero();
 
         if (! $request->reduceOnly) {
-            $reference = ($request->stopPrice ?? $this->lastClose[(string) $request->symbol] ?? throw new LogicException('No price.'))->value;
+            $reference = ($request->price ?? $request->stopPrice ?? $this->lastClose[(string) $request->symbol] ?? throw new LogicException('No price.'))->value;
             $notional = ($request->quantity ?? Decimal::zero())->times($reference);
             $reserve = $notional->dividedBy(Decimal::of($this->leverageOf($request->symbol)), self::SCALE)
                 ->plus($notional->times($this->fees->taker));
@@ -165,12 +165,16 @@ final class SimulatedFuturesBook
         $this->liquidateIf($symbol, $minute, $minute->open->value, $minute->open->value);
         $working = array_filter($this->open, fn (SimulatedOrder $order): bool => $order->request->symbol->equals($symbol));
 
-        foreach ([OrderType::Market, OrderType::StopMarket, OrderType::TakeProfitMarket] as $type) {
+        foreach ([OrderType::Market, OrderType::StopMarket, OrderType::TakeProfitMarket, OrderType::Limit] as $type) {
             foreach ($working as $order) {
                 if ($order->request->type === $type && $order->status->isWorking()) {
                     $this->matchOrder($order, $minute, $rules);
                 }
             }
+        }
+
+        foreach ($working as $order) {
+            $order->arrived = true;
         }
 
         $this->liquidateIf($symbol, $minute, $minute->low->value, $minute->high->value);
@@ -209,6 +213,12 @@ final class SimulatedFuturesBook
 
         if ($request->type === OrderType::Market) {
             $this->fill($order, $open, $minute, $rules);
+
+            return;
+        }
+
+        if ($request->type === OrderType::Limit) {
+            $this->fillLimit($order, $minute, $rules);
 
             return;
         }
@@ -252,12 +262,67 @@ final class SimulatedFuturesBook
         }
 
         $price = $this->slipped($request->side, $reference, $this->costs->slippage($quantity, $minute->volume), $rules);
-        $status = OrderStatus::Filled;
+        $this->settle($order, $quantity, $price, Liquidity::Taker, $reference, $minute, $rules, OrderStatus::Filled);
+    }
+
+    /**
+     * A limit order, by the rules of docs/simulation.md, section 3 (D-37, D-55): marketable on arrival it takes
+     * liquidity like a market order but never beyond its limit; resting, it fills at its limit as a maker only when
+     * the minute trades through it by a tick, at most the volume share of the cost model per minute.
+     */
+    private function fillLimit(SimulatedOrder $order, Candle $minute, InstrumentRules $rules): void
+    {
+        $request = $order->request;
+        $limit = ($request->price ?? throw new LogicException('A limit order without a price.'))->value;
+        $buying = $request->side === Side::Buy;
+        $open = $minute->open->value;
+        $remaining = $order->remaining();
+        $position = $this->positions[(string) $request->symbol] ?? null;
+
+        if ($position !== null && $position->side !== $request->side) {
+            // One strategy per perpetual (D-43): a limit entry never trades against the position.
+            $this->finish($order, OrderStatus::Expired);
+
+            return;
+        }
+
+        if (! $order->arrived && ($buying ? ! $open->isGreaterThan($limit) : ! $open->isLessThan($limit))) {
+            $slipped = $this->slipped($request->side, $open, $this->costs->slippage($remaining, $minute->volume), $rules);
+            $price = $buying ? ($slipped->isGreaterThan($limit) ? $limit : $slipped) : ($slipped->isLessThan($limit) ? $limit : $slipped);
+            $this->settle($order, $remaining, $price, Liquidity::Taker, $open, $minute, $rules, OrderStatus::Filled);
+
+            return;
+        }
+
+        $through = $buying
+            ? ! $minute->low->value->isGreaterThan($limit->minus($rules->tickSize))
+            : ! $minute->high->value->isLessThan($limit->plus($rules->tickSize));
+
+        if (! $through) {
+            return;
+        }
+
+        $capacity = $this->costs->limitCapacity($minute->volume)->roundDownToMultipleOf($rules->stepSize);
+        $quantity = $capacity->isLessThan($remaining) ? $capacity : $remaining;
+
+        if ($quantity->isPositive()) {
+            $this->settle($order, $quantity, $limit, Liquidity::Maker, $limit, $minute, $rules, $quantity->equals($remaining) ? OrderStatus::Filled : OrderStatus::PartiallyFilled);
+        }
+    }
+
+    /** Books a fill of $quantity at $price on the position and the wallet, with the fee of its liquidity. */
+    private function settle(SimulatedOrder $order, Decimal $quantity, Decimal $price, Liquidity $liquidity, Decimal $reference, Candle $minute, InstrumentRules $rules, OrderStatus $status): void
+    {
+        $request = $order->request;
+        $key = (string) $request->symbol;
+        $position = $this->positions[$key] ?? null;
+        $adds = $position === null || $position->side === $request->side;
+        $rate = $this->fees->rate($liquidity);
         $this->release($order);
 
         if ($adds) {
             $leverage = $position->leverage ?? $this->leverageOf($request->symbol);
-            $perUnit = $price->dividedBy(Decimal::of($leverage), self::SCALE)->plus($price->times($this->fees->taker));
+            $perUnit = $price->dividedBy(Decimal::of($leverage), self::SCALE)->plus($price->times($rate));
 
             if ($quantity->times($perUnit)->isGreaterThan($this->wallet)) {
                 $quantity = $this->wallet->dividedBy($perUnit, self::SCALE)->roundDownToMultipleOf($rules->stepSize);
@@ -270,14 +335,14 @@ final class SimulatedFuturesBook
                 return;
             }
 
-            $fee = $quantity->times($price)->times($this->fees->taker);
+            $fee = $quantity->times($price)->times($rate);
             $this->wallet = $this->wallet->minus(Perpetual::initialMargin($quantity, $price, $leverage))->minus($fee);
             $this->positions[$key] = $position === null
                 ? new SimulatedPosition($request->symbol, $request->side, $leverage, $quantity, $price, Perpetual::initialMargin($quantity, $price, $leverage))
                 : $this->added($position, $quantity, $price);
         } else {
             /** @var SimulatedPosition $position */
-            $fee = $quantity->times($price)->times($this->fees->taker);
+            $fee = $quantity->times($price)->times($rate);
             $released = Perpetual::released($position->margin, $quantity, $position->quantity);
             $realized = Perpetual::pnl($position->side, $quantity, $position->entryPrice, $price);
             $this->wallet = $this->wallet->plus($released)->plus($realized)->minus($fee);
@@ -299,7 +364,7 @@ final class SimulatedFuturesBook
             quantity: $quantity,
             price: Price::of($price),
             fee: Money::of($fee, Asset::of(self::MARGIN_ASSET)),
-            liquidity: Liquidity::Taker,
+            liquidity: $liquidity,
             slippage: $price->minus($reference)->abs()->times($quantity),
             time: $minute->openTime,
         ));
@@ -349,7 +414,7 @@ final class SimulatedFuturesBook
 
     private function refusal(OrderRequest $request, InstrumentRules $rules): ?string
     {
-        if (! in_array($request->type, [OrderType::Market, OrderType::StopMarket, OrderType::TakeProfitMarket], true) || $request->quantity === null) {
+        if ($request->quantity === null || ($request->type === OrderType::Limit) !== ($request->price !== null)) {
             return 'UNSUPPORTED_ORDER_TYPE';
         }
 
@@ -360,11 +425,13 @@ final class SimulatedFuturesBook
             return 'LOT_SIZE';
         }
 
-        if ($request->stopPrice !== null && ! $request->stopPrice->value->equals($request->stopPrice->value->roundDownToMultipleOf($rules->tickSize))) {
-            return 'PRICE_FILTER';
+        foreach ([$request->stopPrice, $request->price] as $price) {
+            if ($price !== null && ! $price->value->equals($price->value->roundDownToMultipleOf($rules->tickSize))) {
+                return 'PRICE_FILTER';
+            }
         }
 
-        $reference = $request->stopPrice ?? $this->lastClose[(string) $request->symbol] ?? null;
+        $reference = $request->price ?? $request->stopPrice ?? $this->lastClose[(string) $request->symbol] ?? null;
 
         if ($reference === null) {
             return 'NO_PRICE';

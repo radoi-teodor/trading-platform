@@ -35,6 +35,7 @@ use App\Risk\Data\Verdict;
 use App\Risk\RiskEngine;
 use App\Risk\RiskPolicy;
 use App\Risk\RiskState;
+use App\Strategy\Contracts\LimitedStrategy;
 use App\Strategy\Contracts\Strategy;
 use App\Strategy\Data\Close;
 use App\Strategy\Data\Intent;
@@ -44,6 +45,7 @@ use App\Strategy\Data\OpenLong;
 use App\Strategy\Data\OpenShort;
 use App\Strategy\Data\PositionView;
 use App\Strategy\Data\StrategyContext;
+use App\Strategy\Data\StrategyLimits;
 use App\Support\Number\Decimal;
 use App\Support\Number\Price;
 use App\Support\Perpetual;
@@ -114,6 +116,10 @@ final class Engine
         $owners = [];
 
         foreach ($strategies as $strategy) {
+            if ($strategy instanceof LimitedStrategy) {
+                $this->limits[$strategy->identity()->key()] = $strategy->limits();
+            }
+
             foreach ($strategy->subscriptions() as $subscription) {
                 $this->aggregators["{$subscription->symbol}|{$subscription->timeframe->value}"] ??= new CandleAggregator($subscription->timeframe);
                 $owner = $owners[(string) $subscription->symbol] ??= $strategy->identity()->key();
@@ -125,11 +131,25 @@ final class Engine
         }
     }
 
+    /** The time of the event being handled. */
+    private ?CarbonImmutable $time = null;
+
+    /** @var array<string, StrategyLimits> each limited strategy's own limits, by key (D-54) */
+    private array $limits = [];
+
+    /** @var array<string, array<string, int>> entries placed per strategy and UTC day */
+    private array $entries = [];
+
     /** Handles the minute that closed at $event->closedAt; returns the account's equity marked at that moment. */
     public function handle(MinuteCandles $event): Decimal
     {
         $time = $event->closedAt;
+        $this->time = $time;
         $this->reconcile();
+
+        foreach ($this->orders->expireEntries($time) as $order) {
+            $this->log->event(new EngineRecord($time, 'entry_expired', "{$order->id} of {$order->strategy}"));
+        }
 
         foreach ($event->candles as $symbol => $candle) {
             $parsed = $this->symbols[$symbol] ??= Symbol::parse($symbol);
@@ -281,9 +301,12 @@ final class Engine
     private function applyRiskEvents(CarbonImmutable $time, Decimal $equity): void
     {
         foreach ($this->riskState->update($time, $equity) as $event) {
-            // Phase 2 enters at market only, and a market order fills or expires within the minute that follows
-            // its decision, so no entry is still working when a limit is reached (docs/engine.md, section 5).
             $this->log->event(new EngineRecord($time, $event->kind->value, "equity {$event->equity}"));
+
+            // A halt stops new entries: working ones are cancelled, protection stays (docs/engine.md, section 5).
+            foreach ($this->orders->cancelEntries() as $order) {
+                $this->log->event(new EngineRecord($time, 'entry_cancelled', "{$order->id} of {$order->strategy}"));
+            }
 
             if ($event->kind !== RiskEventKind::DrawdownFlatten) {
                 continue;
@@ -446,16 +469,42 @@ final class Engine
     private function open(string $strategy, OpenLong|OpenShort $intent, Price $price, CarbonImmutable $time): IntentRecord
     {
         $symbol = $intent->symbol;
-        $verdict = $this->risk->assessEntry($intent, $this->account($strategy, [$symbol]), $this->rulesAt($symbol, $time), $price, $time);
+
+        if ($this->orders->hasWorkingEntry($strategy, $symbol)) {
+            return $this->record($intent, Verdict::rejected(RejectionReason::EntryWorking));
+        }
+
+        $side = $intent instanceof OpenLong ? Side::Buy : Side::Sell;
+        $rules = $this->rulesAt($symbol, $time);
+        $limit = $intent->order === null ? null : self::limitPrice($price, $intent->order->offset, $side, $rules);
+        $verdict = $this->risk->assessEntry($intent, $this->account($strategy, [$symbol]), $rules, $limit ?? $price, $time, $this->limits[$strategy] ?? null);
+
+        if ($verdict->approved && $limit !== null && $verdict->quoteQuantity !== null) {
+            // The benchmark profile sizes by quote amount; a limit order needs a quantity.
+            $verdict = Verdict::quantity($verdict->quoteQuantity->dividedBy($limit->value, 18)->roundDownToMultipleOf($rules->stepSize), null, $verdict->adjustments, $verdict->leverage);
+        }
 
         if (! $verdict->approved) {
             return $this->record($intent, $verdict);
         }
 
-        $side = $intent instanceof OpenLong ? Side::Buy : Side::Sell;
-        $ack = $this->orders->enter($strategy, $symbol, $side, $verdict, $intent->stop, $intent->target, $time);
+        $expiresAt = $intent->order === null ? null : $time->addSeconds($intent->order->expirySeconds);
+        $ack = $this->orders->enter($strategy, $symbol, $side, $verdict, $intent->stop, $intent->target, $time, $limit, $expiresAt);
+
+        if ($ack->accepted) {
+            $day = $time->format('Y-m-d');
+            $this->entries[$strategy][$day] = ($this->entries[$strategy][$day] ?? 0) + 1;
+        }
 
         return $this->record($intent, $ack->accepted ? $verdict : Verdict::rejected(RejectionReason::VenueRejected), $ack);
+    }
+
+    /** The decision price moved by the offset, rounded to the tick so that the order never pays more than asked. */
+    private static function limitPrice(Price $price, Decimal $offset, Side $side, InstrumentRules $rules): Price
+    {
+        $limit = $price->value->times(Decimal::of(1)->plus($offset));
+
+        return Price::of($side === Side::Buy ? $limit->roundDownToMultipleOf($rules->tickSize) : $limit->roundUpToMultipleOf($rules->tickSize));
     }
 
     private function openCarry(string $strategy, OpenCarry $intent, Price $perpetualPrice, CarbonImmutable $time): IntentRecord
@@ -544,6 +593,17 @@ final class Engine
         }
 
         $quote = $this->venue->balances()[(string) $this->ledger->quote] ?? null;
+        $mine = count(array_filter($this->ledger->positions(), fn ($p): bool => $p->strategy === $strategy))
+            + count(array_filter($this->ledger->perpPositions(), fn ($p): bool => $p->strategy === $strategy));
+        $lastLoss = null;
+
+        foreach ($this->ledger->roundTrips() as $trip) {
+            if ($trip->strategy === $strategy && $trip->netProfit->isNegative() && ($lastLoss === null || $trip->closedAt > $lastLoss)) {
+                $lastLoss = $trip->closedAt;
+            }
+        }
+
+        $now = $this->time;
 
         return new AccountView(
             $this->ledger->equity($this->marks),
@@ -554,6 +614,9 @@ final class Engine
             $this->venue->futuresWallet(),
             $gross,
             $net,
+            $mine,
+            $now === null ? 0 : $this->entries[$strategy][$now->format('Y-m-d')] ?? 0,
+            $lastLoss,
         );
     }
 

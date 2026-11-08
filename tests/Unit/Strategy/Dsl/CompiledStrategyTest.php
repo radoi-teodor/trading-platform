@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Market\Data\Candle;
 use App\Strategy\Baselines\DonchianBreakout;
 use App\Strategy\Baselines\MovingAverageTrend;
+use App\Strategy\Contracts\LimitedStrategy;
 use App\Strategy\Contracts\Strategy;
 use App\Strategy\Data\Close;
 use App\Strategy\Data\Intent;
@@ -269,3 +270,33 @@ it('refuses parameter values a document does not allow', function (string $name,
     'number for a percent' => ['band', '2', "band takes a percent, such as 1.5%, got '2'."],
     'period not whole' => ['fast', '9.5', "fast is a period: a whole number from 1, got '9.5'."],
 ]);
+
+it('asks for a limit entry and carries the document\'s sizing and limits to the risk engine (D-54, D-55)', function (): void {
+    $dsl = compileDocument(dslDocument(<<<'YAML'
+        params:
+          offset: { default: -0.1% }
+        entries:
+          long:
+            when: close > open
+            order: limit(offset: $offset, expiry: 3 bars)
+        exits:
+          stop_loss: 1%
+        sizing:
+          risk_per_trade: 0.25%
+          max_position: 10%
+        limits:
+          max_open_positions: 1
+          max_trades_per_day: 4
+          cooldown_after_loss: 30m
+        YAML, timeframe: '5m'));
+    $bar = Candle::fromStrings(CarbonImmutable::parse('2026-10-01', 'UTC'), Timeframe::FiveMinutes, '100', '101', '99', '101', '1', '1', 1, '0');
+    $intent = $dsl->onCandle(new StrategyContext($bar->endsAt(), Symbol::parse('BTC/USDT'), $bar, null))[0] ?? null;
+    $limits = $dsl instanceof LimitedStrategy ? $dsl->limits() : null;
+
+    expect($intent)->toBeInstanceOf(OpenLong::class)
+        ->and($intent instanceof OpenLong ? (string) $intent->order?->offset : '')->toBe('-0.001')
+        ->and($intent instanceof OpenLong ? $intent->order?->expirySeconds : 0)->toBe(900)
+        ->and((string) $limits?->riskPerTrade)->toBe('0.0025')
+        ->and((string) $limits?->maxPosition)->toBe('0.1')
+        ->and([$limits?->maxOpenPositions, $limits?->maxTradesPerDay, $limits?->cooldownSeconds])->toBe([1, 4, 1800]);
+});
