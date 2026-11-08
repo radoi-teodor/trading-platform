@@ -105,3 +105,14 @@ only through Binance's public-data hosts and archives and should be confirmed on
 
 **Health.** Each stream writes a row in `heartbeats` (`market:stream spot`, `market:stream perp`) at least every
 30 seconds, with the result of its last gap repair. A heartbeat older than 2 minutes means the process is down.
+
+## 9. Backtests
+
+| Task | Command |
+|------|---------|
+| Backtest a strategy | `php artisan backtest:run <strategy> --from=YYYY-MM-DD --to=YYYY-MM-DD [--symbol=BTC/USDT] [--param=key=value] [--equity=10000] [--no-benchmarks]` |
+
+Strategies and benchmarks are listed in `config/simulation.php`. A run refuses to start on history with gaps,
+warmup included, and says where they are; backfill first. Each run stores its report as
+`storage/app/simulations/<sha256>.json.gz` and a summary row in `backtest_runs`. The same definition on the same data
+gives the same hash (D-42); a different hash on unchanged data and code is a bug.

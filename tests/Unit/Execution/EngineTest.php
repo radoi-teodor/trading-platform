@@ -28,12 +28,10 @@ use App\Portfolio\Ledger;
 use App\Risk\RiskPolicy;
 use App\Strategy\Contracts\Strategy;
 use App\Strategy\Data\Close;
-use App\Strategy\Data\Intent;
 use App\Strategy\Data\MoveStop;
 use App\Strategy\Data\OpenLong;
 use App\Strategy\Data\StrategyContext;
 use App\Strategy\Data\StrategyIdentity;
-use App\Strategy\Data\Subscription;
 use App\Support\Asset;
 use App\Support\Clock\SimClock;
 use App\Support\Number\Decimal;
@@ -42,46 +40,11 @@ use App\Support\Number\Price;
 use App\Support\Symbol;
 use App\Support\Timeframe;
 use Carbon\CarbonImmutable;
+use Tests\Support\ScriptedStrategy;
 
 mutates(Engine::class, OrderManager::class, OrderBook::class);
 
 const ENGINE_START = '2026-10-01 00:00:00';
-
-/** Emits the intents scripted for each decision time (H:i) and remembers what it saw. */
-final class ScriptedStrategy implements Strategy
-{
-    /** @var list<StrategyContext> */
-    public array $seen = [];
-
-    /** @param array<string, list<Intent>> $script */
-    public function __construct(
-        private readonly array $script,
-        private readonly Timeframe $timeframe = Timeframe::OneMinute,
-        private readonly string $name = 'scripted',
-    ) {}
-
-    public function identity(): StrategyIdentity
-    {
-        return new StrategyIdentity($this->name, 1, []);
-    }
-
-    public function subscriptions(): array
-    {
-        return [new Subscription(Symbol::parse('BTC/USDT'), $this->timeframe)];
-    }
-
-    public function warmupBars(): int
-    {
-        return 0;
-    }
-
-    public function onCandle(StrategyContext $context): array
-    {
-        $this->seen[] = $context;
-
-        return $this->script[$context->time->format('H:i')] ?? [];
-    }
-}
 
 /** A venue that reports one USDT more than it holds: the engine must notice. */
 final readonly class OverReportingVenue implements Venue

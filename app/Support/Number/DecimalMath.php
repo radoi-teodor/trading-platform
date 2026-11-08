@@ -38,7 +38,11 @@ final class DecimalMath
         }
 
         $working = $scale + self::GUARD;
-        $product = $exponent->times(self::lnAt($base, $working + self::GUARD))->truncatedTo($working + self::GUARD);
+        // An error in ln(base) grows with the exponent and with the size of the result (about 0.4343 y digits), so
+        // ln is taken with that many more digits.
+        $rough = (int) (string) $exponent->times(self::lnAt($base, $working))->truncatedTo(0);
+        $precise = $working + self::GUARD + intdiv(abs($rough) * 4343, 10000) + strlen((string) $exponent->abs()->truncatedTo(0));
+        $product = $exponent->times(self::lnAt($base, $precise))->truncatedTo($precise);
 
         return self::expAt($product, $working)->roundedTo($scale);
     }

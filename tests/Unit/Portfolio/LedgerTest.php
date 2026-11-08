@@ -84,6 +84,7 @@ it('charges a buy fee in base and a sell fee in quote, and closes the round trip
 
     expect(balanceOf($ledger, 'BTC'))->toBe('0')
         ->and(balanceOf($ledger, 'USDT'))->toBe('10586.8066')
+        ->and((string) $ledger->tradedNotional())->toBe('12593.4')
         ->and($ledger->position('breakout', Symbol::parse('BTC/USDT')))->toBeNull()
         ->and($ledger->roundTrips())->toHaveCount(1);
 

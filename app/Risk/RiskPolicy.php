@@ -79,6 +79,27 @@ final readonly class RiskPolicy
         );
     }
 
+    /** @return array<string, string|int> the profile and its limits, for a run definition */
+    public function toArray(): array
+    {
+        if ($this->profile === RiskProfile::Benchmark) {
+            return ['profile' => $this->profile->value];
+        }
+
+        return [
+            'profile' => $this->profile->value,
+            'risk_per_trade' => (string) $this->riskPerTrade,
+            'total_open_risk' => (string) $this->totalOpenRisk,
+            'notional_per_instrument' => (string) $this->notionalPerInstrument,
+            'max_open_positions' => $this->maxOpenPositions,
+            'daily_loss' => (string) $this->dailyLoss,
+            'weekly_loss' => (string) $this->weeklyLoss,
+            'drawdown_halt' => (string) $this->drawdownHalt,
+            'drawdown_flatten' => (string) $this->drawdownFlatten,
+            'cash_buffer' => (string) $this->cashBuffer,
+        ];
+    }
+
     public static function benchmark(): self
     {
         $one = Decimal::of(1);

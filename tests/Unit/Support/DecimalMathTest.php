@@ -57,6 +57,7 @@ it('raises to fractional and integer powers', function (string $base, string $ex
     ['0', '2.5', '0'],
     ['2', '0.5', '1.414213562373095049'],
     ['0.25', '1.5', '0.125'],
+    ['1.3068', '182.5', '1614973718305298443511.785000725385196368'],
 ]);
 
 // exp multiplies an error in its argument by its result, so ln is taken with more digits than the round trip keeps.

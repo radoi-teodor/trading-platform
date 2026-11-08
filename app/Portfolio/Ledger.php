@@ -38,9 +38,12 @@ final class Ledger
     /** @var array<string, true> */
     private array $fillIds = [];
 
+    private Decimal $tradedNotional;
+
     /** @param list<Money> $initialBalances */
     public function __construct(public readonly Asset $quote, array $initialBalances)
     {
+        $this->tradedNotional = Decimal::zero();
         foreach ($initialBalances as $balance) {
             $this->balances[(string) $balance->asset] = $this->balance($balance->asset)->plus($balance->amount);
         }
@@ -95,6 +98,7 @@ final class Ledger
 
         $this->balances = $balances;
         $this->fillIds[$fill->id] = true;
+        $this->tradedNotional = $this->tradedNotional->plus($notional);
         $this->positions[$key] = $position;
 
         if ($position->quantity->isZero()) {
@@ -134,6 +138,12 @@ final class Ledger
         ksort($balances, SORT_STRING);
 
         return $balances;
+    }
+
+    /** The notional of every fill booked, bought and sold, in quote. */
+    public function tradedNotional(): Decimal
+    {
+        return $this->tradedNotional;
     }
 
     public function dust(Asset $asset): Decimal

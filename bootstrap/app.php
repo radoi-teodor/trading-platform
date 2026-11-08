@@ -15,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withCommands([
         __DIR__.'/../app/Market/Console',
+        __DIR__.'/../app/Simulation/Console',
     ])
     ->withMiddleware(function (Middleware $middleware): void {
         //
