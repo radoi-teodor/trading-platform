@@ -1015,10 +1015,10 @@
     "semantic_hash": "96825fef516022b33d68d157148f1f90"
   },
   "app/Strategy/Indicators/Atr.php": {
-    "mtime": 1794154529.9225326,
-    "seen": 1794165296.722358,
-    "ast_hash": "e5c7a882494bc4358170b1f92710d3d1",
-    "semantic_hash": "e5c7a882494bc4358170b1f92710d3d1"
+    "mtime": 1794166741.407145,
+    "seen": 1794166935.1873136,
+    "ast_hash": "71df1efd47f9dd9235d54cf4e3227e64",
+    "semantic_hash": ""
   },
   "app/Strategy/Indicators/Donchian.php": {
     "mtime": 1794154529.9236367,
@@ -1027,10 +1027,10 @@
     "semantic_hash": "151ebf101ce2db2ea43d5fb1fc42fd7d"
   },
   "app/Strategy/Indicators/Ema.php": {
-    "mtime": 1794154529.9212503,
-    "seen": 1794165296.7224152,
-    "ast_hash": "a8e19b6ed54691901537624ff979da46",
-    "semantic_hash": "a8e19b6ed54691901537624ff979da46"
+    "mtime": 1794166741.3630898,
+    "seen": 1794166935.187343,
+    "ast_hash": "f9d5841353181896c45103f3e4b8f470",
+    "semantic_hash": ""
   },
   "app/Strategy/Indicators/Period.php": {
     "mtime": 1794154529.9178824,
@@ -1039,10 +1039,10 @@
     "semantic_hash": "7c41efb20cb5aa2c99aa7bbdd29d2b39"
   },
   "app/Strategy/Indicators/Sma.php": {
-    "mtime": 1794154529.9191463,
-    "seen": 1794165296.7225168,
-    "ast_hash": "5a238e4af1da88f1b08096f3742179d7",
-    "semantic_hash": "5a238e4af1da88f1b08096f3742179d7"
+    "mtime": 1794166741.3601062,
+    "seen": 1794166935.1873724,
+    "ast_hash": "3e1dbce7f3e2e8b3b97df0c8a6779a29",
+    "semantic_hash": ""
   },
   "app/Support/Asset.php": {
     "mtime": 1794149721.3363042,
@@ -1957,111 +1957,111 @@
     "semantic_hash": ""
   },
   "app/Strategy/Indicators/Bollinger.php": {
-    "mtime": 1794165740.5339735,
-    "seen": 1794165823.8382525,
-    "ast_hash": "c5c6e4e4e30bd4bd5ba9348726cdffeb",
+    "mtime": 1794166741.3832521,
+    "seen": 1794166935.187317,
+    "ast_hash": "461ef4935eca3a8e7e7403afda7ed173",
     "semantic_hash": ""
   },
   "app/Strategy/Indicators/Change.php": {
-    "mtime": 1794165693.6305106,
-    "seen": 1794165823.838255,
-    "ast_hash": "4d08ba9ea68b0bee2689aa84e63b06ac",
+    "mtime": 1794166741.3912036,
+    "seen": 1794166935.1873186,
+    "ast_hash": "8e3cbbb6cd84119b14af100384f088b8",
     "semantic_hash": ""
   },
   "app/Strategy/Indicators/DirectionalMovement.php": {
-    "mtime": 1794165740.5381892,
-    "seen": 1794165823.8382561,
-    "ast_hash": "34303b5d7fa48252243542f0b6ca05e1",
+    "mtime": 1794166741.4212437,
+    "seen": 1794166935.1873202,
+    "ast_hash": "7f27e1af60915c4886b8e725e6731f12",
     "semantic_hash": ""
   },
   "app/Strategy/Indicators/DonchianChannel.php": {
-    "mtime": 1794165740.5355246,
-    "seen": 1794165823.8382728,
-    "ast_hash": "1f53f50eb1e08c18931f0bfd1f3805a8",
+    "mtime": 1794166741.4126449,
+    "seen": 1794166935.1873407,
+    "ast_hash": "40f0616d765a60aa30a78a9adf8e17d2",
     "semantic_hash": ""
   },
   "app/Strategy/Indicators/Highest.php": {
-    "mtime": 1794165693.634606,
-    "seen": 1794165823.8382883,
-    "ast_hash": "218ed1f1c19a450bc873a83520c772c7",
+    "mtime": 1794166741.3859038,
+    "seen": 1794166935.1873446,
+    "ast_hash": "c0694aff603d7ba78b52ae39c17ce739",
     "semantic_hash": ""
   },
   "app/Strategy/Indicators/Hma.php": {
-    "mtime": 1794165747.5655224,
-    "seen": 1794165823.8382895,
-    "ast_hash": "ec919944246db385bd229ea6b483d6cc",
+    "mtime": 1794166741.3705926,
+    "seen": 1794166935.187346,
+    "ast_hash": "8a0b9e09b0d70f67ee532a82ffd4b491",
     "semantic_hash": ""
   },
   "app/Strategy/Indicators/Keltner.php": {
-    "mtime": 1794165740.5366192,
-    "seen": 1794165823.8382905,
-    "ast_hash": "b65ba2dcfad69a37e88b5e863412df53",
+    "mtime": 1794166741.415298,
+    "seen": 1794166935.187347,
+    "ast_hash": "1d693ca76ee97d5cdc47ec2ea01552d7",
     "semantic_hash": ""
   },
   "app/Strategy/Indicators/Lowest.php": {
-    "mtime": 1794165693.634768,
-    "seen": 1794165823.8382914,
-    "ast_hash": "d8bb027f4e6498f5faa2f5389512c290",
+    "mtime": 1794166741.3885753,
+    "seen": 1794166935.187348,
+    "ast_hash": "10712a32705db3f6cd21d10e3a4a4ac3",
     "semantic_hash": ""
   },
   "app/Strategy/Indicators/Macd.php": {
-    "mtime": 1794165740.523272,
-    "seen": 1794165823.8382926,
-    "ast_hash": "7fde27d5fe1d545dc1c02bff35d84675",
+    "mtime": 1794166741.393835,
+    "seen": 1794166935.187349,
+    "ast_hash": "31a48514ad5f9ddf42fd951ca31f85cf",
     "semantic_hash": ""
   },
   "app/Strategy/Indicators/Natr.php": {
-    "mtime": 1794165740.5299041,
-    "seen": 1794165823.8382933,
-    "ast_hash": "3ebe529c77d5ce02b730d2dcf02897bc",
+    "mtime": 1794166741.4097362,
+    "seen": 1794166935.1873505,
+    "ast_hash": "d14f48a6371e0c7803396abd6c8a3f92",
     "semantic_hash": ""
   },
   "app/Strategy/Indicators/RealizedVolatility.php": {
-    "mtime": 1794165740.532863,
-    "seen": 1794165823.838309,
-    "ast_hash": "09b0b27b5d6e90bdf151283eb2d41a96",
+    "mtime": 1794166741.396482,
+    "seen": 1794166935.1873686,
+    "ast_hash": "aea6bd729fa57b968ad5980eccdf7e20",
     "semantic_hash": ""
   },
   "app/Strategy/Indicators/Roc.php": {
-    "mtime": 1794165693.6290672,
-    "seen": 1794165823.8383105,
-    "ast_hash": "fcb71c69fc85e5b1384e3437d0e19849",
+    "mtime": 1794166741.3776217,
+    "seen": 1794166935.1873698,
+    "ast_hash": "d53d54de0de5fa6e3a9aa34456352793",
     "semantic_hash": ""
   },
   "app/Strategy/Indicators/Rsi.php": {
-    "mtime": 1794165693.6280065,
-    "seen": 1794165823.8383114,
-    "ast_hash": "5f710252ff25c76b2be788275e844c63",
+    "mtime": 1794166741.3713078,
+    "seen": 1794166935.187371,
+    "ast_hash": "570bad2ca350795df4908c6491f9c4ba",
     "semantic_hash": ""
   },
   "app/Strategy/Indicators/StandardDeviation.php": {
-    "mtime": 1794165740.531203,
-    "seen": 1794165823.8383276,
-    "ast_hash": "cd03ca674aea2aace84b6e59e1582f12",
+    "mtime": 1794166741.3803966,
+    "seen": 1794166935.1873746,
+    "ast_hash": "83920fd1adbc8a134e46e7af7a68084e",
     "semantic_hash": ""
   },
   "app/Strategy/Indicators/Stochastic.php": {
-    "mtime": 1794165740.5284932,
-    "seen": 1794165823.8383286,
-    "ast_hash": "4dfebcfc33321547aa08ed5cf79ac0e1",
+    "mtime": 1794166741.4046,
+    "seen": 1794166935.1873758,
+    "ast_hash": "01d06f2a8c035e5dad35f5ddb98154ae",
     "semantic_hash": ""
   },
   "app/Strategy/Indicators/Supertrend.php": {
-    "mtime": 1794165740.53929,
-    "seen": 1794165823.8383293,
-    "ast_hash": "48ed512b9ce5b9f2699773028fd31d09",
+    "mtime": 1794166741.4153078,
+    "seen": 1794166935.187377,
+    "ast_hash": "94e2042ec8c57445f68f13ff75b63559",
     "semantic_hash": ""
   },
   "app/Strategy/Indicators/Vwap.php": {
-    "mtime": 1794165693.625412,
-    "seen": 1794165823.83833,
-    "ast_hash": "5d1f4e4d6aee74872e9525eab5ec6146",
+    "mtime": 1794166741.4019287,
+    "seen": 1794166935.1873794,
+    "ast_hash": "d8f7ece04944a86a4df9336f0e752147",
     "semantic_hash": ""
   },
   "app/Strategy/Indicators/Vwma.php": {
-    "mtime": 1794165693.6243231,
-    "seen": 1794165823.8383312,
-    "ast_hash": "372648e106a49909c39402af60090e93",
+    "mtime": 1794166741.3993158,
+    "seen": 1794166935.1873808,
+    "ast_hash": "b6a5ca84e39f72eb21512c9cc21219c0",
     "semantic_hash": ""
   },
   "app/Strategy/Indicators/Wilder.php": {
@@ -2077,9 +2077,9 @@
     "semantic_hash": ""
   },
   "app/Strategy/Indicators/Wma.php": {
-    "mtime": 1794165693.6219049,
-    "seen": 1794165823.838337,
-    "ast_hash": "c05c717f534527e52dec2a5fbda1223c",
+    "mtime": 1794166741.3675408,
+    "seen": 1794166935.1874123,
+    "ast_hash": "93378569bc3be4d0a4213ebf4e381a1d",
     "semantic_hash": ""
   },
   "tests/Fixtures/indicators/generate.py": {
@@ -2284,6 +2284,60 @@
     "mtime": 1794165913.6272783,
     "seen": 1794166528.6323602,
     "ast_hash": "005e555cd1a2b56b655575f1e96c9858",
+    "semantic_hash": ""
+  },
+  "app/Strategy/Dsl/Compiler/CompiledStrategy.php": {
+    "mtime": 1794166847.7464654,
+    "seen": 1794166935.18678,
+    "ast_hash": "710c611017cf269145bf6b7f301fb259",
+    "semantic_hash": ""
+  },
+  "app/Strategy/Dsl/Compiler/Compiler.php": {
+    "mtime": 1794166869.9152284,
+    "seen": 1794166935.1867816,
+    "ast_hash": "9862b1df1bd3eb47549bc46d02063880",
+    "semantic_hash": ""
+  },
+  "app/Strategy/Dsl/Compiler/Frame.php": {
+    "mtime": 1794166643.7462118,
+    "seen": 1794166935.1867836,
+    "ast_hash": "f3f4eaa64716f133d7f7aba34e34a354",
+    "semantic_hash": ""
+  },
+  "app/Strategy/Dsl/Compiler/Program.php": {
+    "mtime": 1794166653.8593047,
+    "seen": 1794166935.186785,
+    "ast_hash": "53e28eef56c7158d3d97a884c8fb2d51",
+    "semantic_hash": ""
+  },
+  "app/Strategy/Dsl/Compiler/RenamedStrategy.php": {
+    "mtime": 1794166792.0953097,
+    "seen": 1794166935.186786,
+    "ast_hash": "bbd9885d8f2aa7c558f4f03e2770d838",
+    "semantic_hash": ""
+  },
+  "app/Strategy/Dsl/Compiler/TradeMemory.php": {
+    "mtime": 1794166645.3633044,
+    "seen": 1794166935.1867871,
+    "ast_hash": "c6212d9f0afd03939bdfcc5a8b56fd35",
+    "semantic_hash": ""
+  },
+  "app/Strategy/Indicators/BarIndicator.php": {
+    "mtime": 1794166741.3587189,
+    "seen": 1794166935.187315,
+    "ast_hash": "d7f06fe2e81d6eae2b91a7eeefee1651",
+    "semantic_hash": ""
+  },
+  "app/Strategy/Indicators/ValueIndicator.php": {
+    "mtime": 1794166741.357526,
+    "seen": 1794166935.1873782,
+    "ast_hash": "36693eefe580b9731467ed40b56ade37",
+    "semantic_hash": ""
+  },
+  "tests/Unit/Strategy/Dsl/CompiledStrategyTest.php": {
+    "mtime": 1794166890.6366267,
+    "seen": 1794166935.1892521,
+    "ast_hash": "5e708d2407cd8b75cd35597967365d35",
     "semantic_hash": ""
   },
   "package-lock.json": {
