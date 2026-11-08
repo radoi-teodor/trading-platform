@@ -60,7 +60,7 @@ final class ManagerHarness
     /** Gives strategy k1 a plan with a stop and an optional target, without leaving an entry working. */
     public function plan(?string $target = '110'): void
     {
-        $ack = $this->manager->enter('k1', btcUsdt(), Verdict::quantity(Decimal::of('1'), null, []), Price::of('95'), $target === null ? null : Price::of($target), managerTime());
+        $ack = $this->manager->enter('k1', btcUsdt(), Side::Buy, Verdict::quantity(Decimal::of('1'), null, []), Price::of('95'), $target === null ? null : Price::of($target), managerTime());
         $this->manager->cancelAll('k1', btcUsdt());
         expect($ack->accepted)->toBeTrue();
     }

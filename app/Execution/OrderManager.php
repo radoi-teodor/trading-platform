@@ -13,6 +13,7 @@ use App\Execution\Data\OrderRole;
 use App\Execution\Data\ProtectionPlan;
 use App\Execution\Data\TrackedOrder;
 use App\Market\Data\InstrumentRules;
+use App\Portfolio\Data\PerpPosition;
 use App\Portfolio\Data\Position;
 use App\Risk\Data\Verdict;
 use App\Support\Number\Decimal;
@@ -38,19 +39,92 @@ final class OrderManager
 
     public function __construct(private readonly Venue $venue, private readonly OrderBook $book) {}
 
-    public function enter(string $strategy, Symbol $symbol, Verdict $verdict, ?Price $stop, ?Price $target, CarbonImmutable $time): OrderAck
+    public function enter(string $strategy, Symbol $symbol, Side $side, Verdict $verdict, ?Price $stop, ?Price $target, CarbonImmutable $time): OrderAck
     {
         $id = $this->nextId($strategy, OrderRole::Entry, $time);
+
+        if ($symbol->isPerpetual()) {
+            $this->venue->setLeverage($symbol, $verdict->leverage ?? 1);
+        }
+
         $request = $verdict->quoteQuantity !== null
             ? OrderRequest::marketForQuote($id, $symbol, $verdict->quoteQuantity)
-            : OrderRequest::market($id, $symbol, Side::Buy, $verdict->quantity ?? Decimal::zero());
+            : OrderRequest::market($id, $symbol, $side, $verdict->quantity ?? Decimal::zero());
         $ack = $this->submit($request, $strategy, OrderRole::Entry);
 
         if ($ack->accepted) {
-            $this->plans[self::key($strategy, $symbol)] = new ProtectionPlan($stop, $target, $verdict->plannedRisk);
+            $this->plans[self::key($strategy, $symbol)] = new ProtectionPlan($stop, $target, $verdict->plannedRisk, $verdict->leverage, $side);
         }
 
         return $ack;
+    }
+
+    /** @return array{OrderAck, OrderAck|null} the spot leg's answer, and the perpetual leg's when the spot leg was accepted */
+    public function enterCarry(string $strategy, Symbol $spot, Symbol $perpetual, Verdict $verdict, CarbonImmutable $time): array
+    {
+        $spotAck = $this->enter($strategy, $spot, Side::Buy, Verdict::quantity($verdict->quantity ?? Decimal::zero(), null, $verdict->adjustments), null, null, $time);
+
+        return [$spotAck, $spotAck->accepted ? $this->enter($strategy, $perpetual, Side::Sell, $verdict, null, null, $time) : null];
+    }
+
+    /** Cancels the perpetual position's working orders, then closes it with a reduce-only market order (D-46). */
+    public function exitPerpetual(PerpPosition $position, OrderRole $role, CarbonImmutable $time): OrderAck
+    {
+        $this->cancelAll($position->strategy, $position->symbol);
+        $id = $this->nextId($position->strategy, $role, $time);
+        $request = OrderRequest::market($id, $position->symbol, self::opposite($position->side), $position->quantity)->reduceOnly();
+
+        return $this->submit($request, $position->strategy, $role);
+    }
+
+    /**
+     * Keeps a reduce-only stop, and a reduce-only take-profit when one was planned, on the venue for a perpetual
+     * position (D-46). Prices round towards the market for the stop and away from it for the target.
+     *
+     * @return 'kept'|'placed'|'unprotected'|'busy'|OrderAck
+     */
+    public function protectPerpetual(PerpPosition $position, InstrumentRules $rules, CarbonImmutable $time): string|OrderAck
+    {
+        $working = $this->book->workingFor($position->strategy, $position->symbol);
+
+        foreach ($working as $order) {
+            if (! $order->role->isProtective()) {
+                return 'busy';
+            }
+        }
+
+        $plan = $this->plan($position->strategy, $position->symbol);
+
+        if ($plan?->stop === null) {
+            return 'unprotected';
+        }
+
+        if ($this->isProtected($working, $position->quantity, $plan)) {
+            return 'kept';
+        }
+
+        $this->cancelAll($position->strategy, $position->symbol);
+        $exit = self::opposite($position->side);
+        $round = fn (Price $price): Price => Price::of($position->side === Side::Buy
+            ? $price->value->roundUpToMultipleOf($rules->tickSize)
+            : $price->value->roundDownToMultipleOf($rules->tickSize));
+        $stopId = $this->nextId($position->strategy, OrderRole::Stop, $time);
+        $ack = $this->submit(OrderRequest::stop($stopId, $position->symbol, $exit, $position->quantity, $round($plan->stop))->reduceOnly(), $position->strategy, OrderRole::Stop);
+
+        if (! $ack->accepted) {
+            return $ack;
+        }
+
+        if ($plan->target !== null) {
+            $targetId = $this->nextId($position->strategy, OrderRole::Target, $time);
+            $ack = $this->submit(OrderRequest::takeProfit($targetId, $position->symbol, $exit, $position->quantity, $round($plan->target)), $position->strategy, OrderRole::Target);
+
+            if (! $ack->accepted) {
+                return $ack;
+            }
+        }
+
+        return 'placed';
     }
 
     /**
@@ -201,6 +275,11 @@ final class OrderManager
         $this->sequence++;
 
         return ClientOrderId::of(sprintf('%s-%s-%s%d', $strategy, base_convert((string) $time->getTimestamp(), 10, 36), $role->value, $this->sequence));
+    }
+
+    private static function opposite(Side $side): Side
+    {
+        return $side === Side::Buy ? Side::Sell : Side::Buy;
     }
 
     private static function key(string $strategy, Symbol $symbol): string

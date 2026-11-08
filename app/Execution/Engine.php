@@ -17,12 +17,14 @@ use App\Execution\Data\OrderRole;
 use App\Execution\Data\TrackedOrder;
 use App\Execution\Data\VenueFill;
 use App\Market\Data\Candle;
+use App\Market\Data\FundingRate;
 use App\Market\Data\InstrumentRules;
 use App\Market\Data\MinuteCandles;
 use App\Market\Data\RulesHistory;
 use App\Market\Feed\CandleAggregator;
 use App\Portfolio\Data\Fill;
 use App\Portfolio\Data\Marks;
+use App\Portfolio\Data\PerpPosition;
 use App\Portfolio\Data\Position;
 use App\Portfolio\Ledger;
 use App\Risk\Data\AccountView;
@@ -37,14 +39,19 @@ use App\Strategy\Contracts\Strategy;
 use App\Strategy\Data\Close;
 use App\Strategy\Data\Intent;
 use App\Strategy\Data\MoveStop;
+use App\Strategy\Data\OpenCarry;
 use App\Strategy\Data\OpenLong;
+use App\Strategy\Data\OpenShort;
 use App\Strategy\Data\PositionView;
 use App\Strategy\Data\StrategyContext;
 use App\Support\Number\Decimal;
 use App\Support\Number\Price;
+use App\Support\Perpetual;
+use App\Support\Side;
 use App\Support\Symbol;
 use Carbon\CarbonImmutable;
 use InvalidArgumentException;
+use LogicException;
 
 /**
  * One account's engine (docs/engine.md). It handles each minute event to the end before the next, in the order of
@@ -75,6 +82,9 @@ final class Engine
     /** @var array<string, Symbol> parsed once */
     private array $symbols = [];
 
+    /** @var array<string, FundingRate> the last funding rate seen, by perpetual */
+    private array $funding = [];
+
     /**
      * @param  list<Strategy>  $strategies
      * @param  array<string, RulesHistory>  $rules  by unified symbol
@@ -89,20 +99,28 @@ final class Engine
         private readonly array $rules,
         private readonly CarbonImmutable $tradingFrom,
         private readonly ?CarbonImmutable $decideFrom = null,
+        ?Decimal $maintenanceRate = null,
     ) {
         if ($policy->profile === RiskProfile::Benchmark && $mode !== EngineMode::Backtest) {
             throw new InvalidArgumentException("The benchmark risk profile is for backtests only (D-40); this engine runs {$mode->value}.");
         }
 
         $this->riskState = new RiskState($policy);
-        $this->risk = new RiskEngine($policy, $this->riskState);
+        $this->risk = new RiskEngine($policy, $this->riskState, $maintenanceRate);
         $this->book = new OrderBook;
         $this->orders = new OrderManager($venue, $this->book);
         $this->marks = new Marks($ledger->quote);
 
+        $owners = [];
+
         foreach ($strategies as $strategy) {
             foreach ($strategy->subscriptions() as $subscription) {
                 $this->aggregators["{$subscription->symbol}|{$subscription->timeframe->value}"] ??= new CandleAggregator($subscription->timeframe);
+                $owner = $owners[(string) $subscription->symbol] ??= $strategy->identity()->key();
+
+                if ($subscription->symbol->isPerpetual() && $owner !== $strategy->identity()->key()) {
+                    throw new InvalidArgumentException("Two strategies trade {$subscription->symbol}; at most one strategy per perpetual (D-43).");
+                }
             }
         }
     }
@@ -117,6 +135,10 @@ final class Engine
             $parsed = $this->symbols[$symbol] ??= Symbol::parse($symbol);
             $this->marks = $this->marks->with($parsed, $candle->close);
             $this->ledger->observe($parsed, $candle->high, $candle->low);
+        }
+
+        foreach ($event->funding as $symbol => $rate) {
+            $this->funding[$symbol] = $rate;
         }
 
         $equity = $this->ledger->equity($this->marks);
@@ -167,6 +189,28 @@ final class Engine
             if (! $ours->equals($theirs)) {
                 throw new ReconciliationMismatch("The ledger holds {$ours} {$code}; the venue holds {$theirs}.");
             }
+        }
+
+        if (! $this->ledger->futuresWallet()->equals($this->venue->futuresWallet())) {
+            throw new ReconciliationMismatch("The ledger's USD-M wallet holds {$this->ledger->futuresWallet()}; the venue's {$this->venue->futuresWallet()}.");
+        }
+
+        $positions = [];
+
+        foreach ($this->ledger->perpPositions() as $position) {
+            $positions[(string) $position->symbol] = "{$position->side->value} {$position->quantity}@{$position->entryPrice} margin {$position->margin}";
+        }
+
+        $venuePositions = array_map(fn ($p): string => "{$p->side->value} {$p->quantity}@{$p->entryPrice} margin {$p->margin}", $this->venue->positions());
+        ksort($positions, SORT_STRING);
+        ksort($venuePositions, SORT_STRING);
+
+        if ($positions !== $venuePositions) {
+            throw new ReconciliationMismatch(sprintf(
+                'Perpetual positions differ: the ledger has [%s], the venue has [%s].',
+                implode(', ', array_map(fn ($k, $v) => "{$k} {$v}", array_keys($positions), $positions)),
+                implode(', ', array_map(fn ($k, $v) => "{$k} {$v}", array_keys($venuePositions), $venuePositions)),
+            ));
         }
 
         $ours = array_map(fn (TrackedOrder $order): string => $order->id->value, $this->book->working());
@@ -230,6 +274,7 @@ final class Engine
             slippage: $fill->slippage,
             initialStop: $order->role === OrderRole::Entry ? $this->orders->plan($order->strategy, $order->symbol)?->stop : null,
             exitReason: $order->role->exitReason(),
+            leverage: $order->role === OrderRole::Entry ? $this->orders->plan($order->strategy, $order->symbol)?->leverage : null,
         );
     }
 
@@ -244,8 +289,13 @@ final class Engine
                 continue;
             }
 
+            // Spot first, then the perpetuals, so a carry's hedge is closed last (docs/risk-policy.md, section 5).
             foreach ($this->ledger->positions() as $position) {
                 $this->exit($position, OrderRole::Flatten, $time);
+            }
+
+            foreach ($this->ledger->perpPositions() as $position) {
+                $this->orders->exitPerpetual($position, OrderRole::Flatten, $time);
             }
         }
     }
@@ -255,6 +305,26 @@ final class Engine
     {
         foreach ($this->ledger->positions() as $position) {
             $this->protect($position, $time);
+        }
+
+        foreach ($this->ledger->perpPositions() as $position) {
+            $this->protectPerpetual($position, $time);
+        }
+
+        // A perpetual's stop or take-profit whose position is gone: the other leg filled, or a liquidation (D-46).
+        foreach ($this->book->working() as $order) {
+            if ($order->role->isProtective() && $order->symbol->isPerpetual() && $this->ledger->perpPosition($order->strategy, $order->symbol) === null) {
+                $this->orders->cancelAll($order->strategy, $order->symbol);
+            }
+        }
+    }
+
+    private function protectPerpetual(PerpPosition $position, CarbonImmutable $time): void
+    {
+        $outcome = $this->orders->protectPerpetual($position, $this->rulesAt($position->symbol, $time), $time);
+
+        if ($outcome instanceof OrderAck) {
+            $this->log->event(new EngineRecord($time, 'venue_rejected', "protection of {$position->symbol} for {$position->strategy}: {$outcome->reason}"));
         }
     }
 
@@ -301,10 +371,17 @@ final class Engine
     private function decide(Strategy $strategy, Symbol $symbol, Candle $candle, CarbonImmutable $time): void
     {
         $key = $strategy->identity()->key();
-        $position = $this->ledger->position($key, $symbol);
         $plan = $this->orders->plan($key, $symbol);
-        $view = $position === null ? null : new PositionView($position->quantity, $position->entryPrice(), $plan?->stop, $position->openedAt);
-        $intents = $strategy->onCandle(new StrategyContext($time, $symbol, $candle, $view));
+
+        if ($symbol->isPerpetual()) {
+            $perpetual = $this->ledger->perpPosition($key, $symbol);
+            $view = $perpetual === null ? null : new PositionView($perpetual->quantity, $perpetual->entryPrice, $plan?->stop, $perpetual->openedAt, $perpetual->side);
+        } else {
+            $position = $this->ledger->position($key, $symbol);
+            $view = $position === null ? null : new PositionView($position->quantity, $position->entryPrice(), $plan?->stop, $position->openedAt);
+        }
+
+        $intents = $strategy->onCandle(new StrategyContext($time, $symbol, $candle, $view, $this->funding[(string) $symbol] ?? null));
         $records = [];
         $entered = [];
 
@@ -328,45 +405,84 @@ final class Engine
     private function act(string $strategy, Intent $intent, Price $price, CarbonImmutable $time, array &$entered): IntentRecord
     {
         $symbol = $intent->symbol();
-        $position = $this->ledger->position($strategy, $symbol);
 
-        if ($intent instanceof OpenLong) {
+        if ($intent instanceof OpenLong || $intent instanceof OpenShort || $intent instanceof OpenCarry) {
             if (isset($entered[(string) $symbol])) {
                 return $this->record($intent, Verdict::rejected(RejectionReason::DuplicateIntent));
             }
 
             $entered[(string) $symbol] = true;
-            $verdict = $this->risk->assessEntry($intent, $this->account($strategy, $symbol), $this->rulesAt($symbol, $time), $price, $time);
 
-            if (! $verdict->approved) {
-                return $this->record($intent, $verdict);
-            }
-
-            $ack = $this->orders->enter($strategy, $symbol, $verdict, $intent->stop, $intent->target, $time);
-
-            return $this->record($intent, $ack->accepted ? $verdict : Verdict::rejected(RejectionReason::VenueRejected), $ack);
+            return $intent instanceof OpenCarry ? $this->openCarry($strategy, $intent, $price, $time) : $this->open($strategy, $intent, $price, $time);
         }
 
-        if ($position === null) {
+        $perpetual = $symbol->isPerpetual() ? $this->ledger->perpPosition($strategy, $symbol) : null;
+        $position = $symbol->isPerpetual() ? null : $this->ledger->position($strategy, $symbol);
+
+        if ($perpetual === null && $position === null) {
             return $this->record($intent, Verdict::rejected(RejectionReason::NoPosition));
         }
 
         if ($intent instanceof Close) {
-            return $this->record($intent, Verdict::approved(), $this->exit($position, OrderRole::Exit, $time));
+            $ack = $perpetual !== null ? $this->orders->exitPerpetual($perpetual, OrderRole::Exit, $time) : $this->exit($position ?? throw new LogicException('No position.'), OrderRole::Exit, $time);
+
+            return $this->record($intent, Verdict::approved(), $ack);
         }
 
         if (! $intent instanceof MoveStop) {
             throw new InvalidArgumentException('Unknown intent '.$intent::class.'.');
         }
 
-        $verdict = $this->risk->assessStopMove($intent, $this->orders->plan($strategy, $symbol)?->stop, $price);
+        $verdict = $this->risk->assessStopMove($intent, $this->orders->plan($strategy, $symbol)?->stop, $price, $perpetual->side ?? Side::Buy);
 
         if ($verdict->approved) {
             $this->orders->moveStop($strategy, $symbol, $intent->stop);
-            $this->protect($position, $time);
+            $perpetual !== null ? $this->protectPerpetual($perpetual, $time) : $this->protect($position ?? throw new LogicException('No position.'), $time);
         }
 
         return $this->record($intent, $verdict);
+    }
+
+    private function open(string $strategy, OpenLong|OpenShort $intent, Price $price, CarbonImmutable $time): IntentRecord
+    {
+        $symbol = $intent->symbol;
+        $verdict = $this->risk->assessEntry($intent, $this->account($strategy, [$symbol]), $this->rulesAt($symbol, $time), $price, $time);
+
+        if (! $verdict->approved) {
+            return $this->record($intent, $verdict);
+        }
+
+        $side = $intent instanceof OpenLong ? Side::Buy : Side::Sell;
+        $ack = $this->orders->enter($strategy, $symbol, $side, $verdict, $intent->stop, $intent->target, $time);
+
+        return $this->record($intent, $ack->accepted ? $verdict : Verdict::rejected(RejectionReason::VenueRejected), $ack);
+    }
+
+    private function openCarry(string $strategy, OpenCarry $intent, Price $perpetualPrice, CarbonImmutable $time): IntentRecord
+    {
+        $spotPrice = $this->marks->priceOfSymbol($intent->spot) ?? throw new ReconciliationMismatch("No price for {$intent->spot} yet.");
+        $verdict = $this->risk->assessCarry(
+            $intent,
+            $this->account($strategy, [$intent->spot, $intent->perpetual]),
+            $this->rulesAt($intent->spot, $time),
+            $this->rulesAt($intent->perpetual, $time),
+            $spotPrice,
+            $perpetualPrice,
+            $time,
+        );
+
+        if (! $verdict->approved) {
+            return $this->record($intent, $verdict);
+        }
+
+        [$spotAck, $perpetualAck] = $this->orders->enterCarry($strategy, $intent->spot, $intent->perpetual, $verdict, $time);
+        $accepted = $spotAck->accepted && $perpetualAck !== null && $perpetualAck->accepted;
+
+        if (! $accepted) {
+            $this->log->event(new EngineRecord($time, 'venue_rejected', "carry of {$strategy}: ".($perpetualAck->reason ?? $spotAck->reason)));
+        }
+
+        return $this->record($intent, $accepted ? $verdict : Verdict::rejected(RejectionReason::VenueRejected), $perpetualAck ?? $spotAck);
     }
 
     private function exit(Position $position, OrderRole $role, CarbonImmutable $time): ?OrderAck
@@ -386,24 +502,43 @@ final class Engine
         $this->log->event(new EngineRecord($time, 'dust', "{$position->quantity} {$position->symbol->base} of {$position->strategy}"));
     }
 
-    private function account(string $strategy, Symbol $symbol): AccountView
+    /** @param list<Symbol> $symbols the instruments of the intent; holding any of them blocks it */
+    private function account(string $strategy, array $symbols): AccountView
     {
         $openRisk = Decimal::zero();
+        $gross = Decimal::zero();
+        $net = Decimal::zero();
         $positions = 0;
         $holds = false;
+        $concerns = fn (string $owner, Symbol $symbol): bool => $owner === $strategy
+            && array_filter($symbols, fn (Symbol $s): bool => $s->equals($symbol)) !== [];
 
         foreach ($this->ledger->positions() as $position) {
             $positions++;
-            $holds = $holds || ($position->strategy === $strategy && $position->symbol->equals($symbol));
+            $holds = $holds || $concerns($position->strategy, $position->symbol);
             $stop = $this->orders->plan($position->strategy, $position->symbol)?->stop;
             $perUnit = $stop === null ? Decimal::zero() : $position->entryPrice()->minus($stop->value);
             $openRisk = $perUnit->isPositive() ? $openRisk->plus($perUnit->times($position->quantity)) : $openRisk;
+            $notional = $position->quantity->times($this->mark($position->symbol)->value);
+            $gross = $gross->plus($notional);
+            $net = $net->plus($notional);
+        }
+
+        foreach ($this->ledger->perpPositions() as $position) {
+            $positions++;
+            $holds = $holds || $concerns($position->strategy, $position->symbol);
+            $stop = $this->orders->plan($position->strategy, $position->symbol)?->stop;
+            $perUnit = $stop === null ? Decimal::zero() : Perpetual::pnl($position->side, Decimal::of(1), $stop->value, $position->entryPrice);
+            $openRisk = $perUnit->isPositive() ? $openRisk->plus($perUnit->times($position->quantity)) : $openRisk;
+            $notional = $position->quantity->times($this->mark($position->symbol)->value);
+            $gross = $gross->plus($notional);
+            $net = $position->side === Side::Buy ? $net->plus($notional) : $net->minus($notional);
         }
 
         foreach ($this->book->working() as $order) {
             if ($order->role === OrderRole::Entry) {
                 $positions++;
-                $holds = $holds || ($order->strategy === $strategy && $order->symbol->equals($symbol));
+                $holds = $holds || $concerns($order->strategy, $order->symbol);
                 $openRisk = $openRisk->plus($this->orders->plan($order->strategy, $order->symbol)->plannedRisk ?? Decimal::zero());
             }
         }
@@ -416,6 +551,9 @@ final class Engine
             $positions,
             $openRisk,
             $holds,
+            $this->venue->futuresWallet(),
+            $gross,
+            $net,
         );
     }
 
@@ -424,6 +562,8 @@ final class Engine
         return new IntentRecord(
             type: match (true) {
                 $intent instanceof OpenLong => 'open_long',
+                $intent instanceof OpenShort => 'open_short',
+                $intent instanceof OpenCarry => 'open_carry',
                 $intent instanceof Close => 'close',
                 $intent instanceof MoveStop => 'move_stop',
                 default => $intent::class,
@@ -445,6 +585,7 @@ final class Engine
 
     private function mark(Symbol $symbol): Price
     {
-        return $this->marks->priceOf($symbol->base) ?? throw new ReconciliationMismatch("No price for {$symbol} yet.");
+        return ($symbol->isPerpetual() ? $this->marks->priceOfSymbol($symbol) : $this->marks->priceOf($symbol->base))
+            ?? throw new ReconciliationMismatch("No price for {$symbol} yet.");
     }
 }

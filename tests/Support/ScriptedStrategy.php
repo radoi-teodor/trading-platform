@@ -23,6 +23,8 @@ final class ScriptedStrategy implements Strategy
         private readonly array $script,
         private readonly Timeframe $timeframe = Timeframe::OneMinute,
         private readonly string $name = 'scripted',
+        /** @var list<Symbol> */
+        private readonly array $symbols = [],
     ) {}
 
     public function identity(): StrategyIdentity
@@ -32,7 +34,9 @@ final class ScriptedStrategy implements Strategy
 
     public function subscriptions(): array
     {
-        return [new Subscription(Symbol::parse('BTC/USDT'), $this->timeframe)];
+        $symbols = $this->symbols === [] ? [Symbol::parse('BTC/USDT')] : $this->symbols;
+
+        return array_map(fn (Symbol $symbol): Subscription => new Subscription($symbol, $this->timeframe), $symbols);
     }
 
     public function warmupBars(): int
@@ -43,6 +47,11 @@ final class ScriptedStrategy implements Strategy
     public function onCandle(StrategyContext $context): array
     {
         $this->seen[] = $context;
+
+        // With several subscriptions, the script plays on the first one only.
+        if ($this->symbols !== [] && ! $context->symbol->equals($this->symbols[0])) {
+            return [];
+        }
 
         return $this->script[$context->time->format('H:i')] ?? [];
     }
