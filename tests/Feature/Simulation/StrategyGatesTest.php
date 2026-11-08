@@ -35,11 +35,11 @@ it('writes a gate report from the walk-forward, the hold-out used once, robustne
         ->and($output)->toContain('Hold-out 2026-10-29 to 2026-11-05, used once for this version')
         ->and($output)->toContain('Cost stress from 2026-10-12')
         ->and($output)->toContain('Monte Carlo, trades:')
-        ->and(array_column($report->report['gates'] ?? [], 'gate'))->toBe(['trades', 'edge', 'profit_factor', 'walk_forward', 'deflated_sharpe', 'robustness', 'cost_stress', 'outliers', 'drawdown'])
-        // a few dozen trades on 36 days cannot pass a 100-trade gate
+        ->and(data_get($report->report, 'gates.*.gate'))->toBe(['trades', 'edge', 'profit_factor', 'walk_forward', 'deflated_sharpe', 'robustness', 'cost_stress', 'outliers', 'drawdown'])
+        // a month of 5-minute candles cannot pass a 100-trade gate
         ->and($report->passed)->toBeFalse()
-        ->and($report->report['monte_carlo']['seed'] ?? null)->toBe(2026)
-        ->and(array_keys($report->report['regimes'] ?? []))->toEqualCanonicalizing(['trend', 'range', 'high_volatility', 'unknown'])
+        ->and(data_get($report->report, 'monte_carlo.seed'))->toBe(2026)
+        ->and(data_get($report->report, 'regimes'))->toHaveKeys(['trend', 'range', 'high_volatility', 'unknown'])
         ->and(StrategyHoldout::query()->sole()->window_from->toDateString())->toBe('2026-10-29');
 
     // The second report reads the recorded hold-out instead of looking at it again (D-58), and gives the same gates.
