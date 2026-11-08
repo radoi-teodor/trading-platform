@@ -43,4 +43,22 @@ Each phase ends with its tests green, its docs updated and its screens built in 
 
 ## How to run
 
-Not yet: Phase 0 creates the skeleton. This section will hold the `docker compose` and `composer` commands.
+The platform runs locally (D-27). Requirements: PHP 8.4 or newer with the `bcmath`, `intl`, `pdo_pgsql` and
+`redis` extensions, Composer, Node 22, Docker.
+
+```sh
+cp .env.example .env
+docker compose up -d        # PostgreSQL 17 (with the trading_test database) and Redis 7, on 127.0.0.1 only
+composer setup              # dependencies, tools/pint, app key, migrations, front-end build
+```
+
+Checks, as CI runs them:
+
+```sh
+composer format -- --test   # Pint, from tools/pint
+composer analyse            # PHPStan level max
+composer test               # Pest: feature, architecture and brand suites, no network
+npm run build               # Vite and Tailwind, IBM Plex fonts bundled
+```
+
+`php artisan serve` starts the web process; `/up` is the health check. There are no screens yet.
