@@ -10,6 +10,7 @@ use App\Market\Data\MarketType;
 use App\Market\Feed\DatabaseCandleFeed;
 use App\Market\FundingRateRepository;
 use App\Market\Quality\QualityCheck;
+use App\Portfolio\Data\RoundTrip;
 use App\Risk\RiskPolicy;
 use App\Simulation\Backtest;
 use App\Simulation\Data\Participant;
@@ -21,6 +22,9 @@ use App\Simulation\Models\StrategyTrial;
 use App\Simulation\Report\CanonicalJson;
 use App\Simulation\Validation\Cscv;
 use App\Simulation\Validation\DeflatedSharpe;
+use App\Simulation\Validation\WalkForward;
+use App\Simulation\Validation\WalkForwardSet;
+use App\Simulation\Validation\WalkForwardWindow;
 use App\Strategy\Contracts\Strategy;
 use App\Strategy\Dsl\Compiler\CompiledStrategy;
 use App\Strategy\Dsl\Document\StrategySpec;
@@ -52,7 +56,12 @@ final class GridBacktest extends Command
         {--from= : First day of the window, YYYY-MM-DD}
         {--to= : Day after the last one, YYYY-MM-DD}
         {--grid=* : Values of a parameter, as fast=5,7,9 or slow=15..34:3 (default: its range and step)}
-        {--equity= : Initial quote balance (default from config/simulation.php)}';
+        {--equity= : Initial quote balance (default from config/simulation.php)}
+        {--walk-forward : Also walk forward over the sets (docs/simulation.md, section 5)}
+        {--in=12m : In-sample length, months (12m) or days (20d)}
+        {--out=3m : Out-of-sample length}
+        {--step=3m : Step between windows}
+        {--min-trades=100 : Trades a set needs in-sample to be chosen}';
 
     protected $description = 'Backtest every parameter set of a strategy document in one pass, with DSR and PBO';
 
@@ -73,6 +82,7 @@ final class GridBacktest extends Command
 
             $spec = $result->spec;
             $sets = $this->sets($spec);
+            $walk = $this->option('walk-forward') === true ? $this->walkOptions() : null;
             $strategies = array_map(fn (array $set): Strategy => CompiledStrategy::fromSpec($spec, $set), $sets);
             $from = $this->day('from');
             $to = $this->day('to');
@@ -136,6 +146,16 @@ final class GridBacktest extends Command
         $this->recordTrials($spec, $definition, $rows, $from, $to, $clock);
         $validation = $this->validate($spec, $rows);
         $this->show($rows, $validation);
+
+        if ($walk !== null) {
+            try {
+                $validation['walk_forward'] = $this->walkForward($results, $from, $to, $walk);
+            } catch (InvalidArgumentException $failure) {
+                $this->error($failure->getMessage());
+
+                return self::FAILURE;
+            }
+        }
         $artifact = $this->store(
             $this->text($config, 'simulation.artifacts'),
             'grid-'.substr(hash('sha256', CanonicalJson::encode(['definition' => $definition->toArray(), 'rows' => $rows, 'validation' => $validation])), 0, 16),
@@ -353,6 +373,77 @@ final class GridBacktest extends Command
         foreach (is_array($validation['notes'] ?? null) ? $validation['notes'] : [] as $note) {
             $this->warn(is_string($note) ? $note : '');
         }
+    }
+
+    /** @return array{in: string, out: string, step: string, min: int} */
+    private function walkOptions(): array
+    {
+        $text = fn (string $name): string => is_string($this->option($name)) ? $this->option($name) : '';
+        [$in, $out, $step] = [$text('in'), $text('out'), $text('step')];
+
+        foreach ([$in, $out, $step] as $length) {
+            if (preg_match('/^[1-9]\d{0,3}[md]$/', $length) !== 1) {
+                throw new InvalidArgumentException('--in and --out are whole numbers of days or months, such as 12m or 20d.');
+            }
+        }
+
+        $min = $text('min-trades');
+
+        if (preg_match('/^[1-9]\d{0,5}$/', $min) !== 1) {
+            throw new InvalidArgumentException('--min-trades is a whole number from 1.');
+        }
+
+        return ['in' => $in, 'out' => $out, 'step' => $step, 'min' => (int) $min];
+    }
+
+    /**
+     * Walks forward over the sets' continuous runs (D-57) and shows every window and the stitched result.
+     *
+     * @param  list<ParticipantResult>  $results
+     * @param  array{in: string, out: string, step: string, min: int}  $walk
+     * @return array<string, mixed>
+     */
+    private function walkForward(array $results, CarbonImmutable $from, CarbonImmutable $to, array $walk): array
+    {
+        $sets = array_map(fn (ParticipantResult $result): WalkForwardSet => new WalkForwardSet(
+            $result->participant->strategy->identity()->parameters,
+            array_map(fn (RoundTrip $trip): array => ['opened' => $trip->openedAt, 'closed' => $trip->closedAt, 'net' => $trip->netProfit], $result->ledger->roundTrips()),
+        ), $results);
+        $result = WalkForward::evaluate($sets, $from, $to, $walk['in'], $walk['out'], $walk['step'], $walk['min']);
+        $words = fn (string $length): string => substr($length, 0, -1).(str_ends_with($length, 'm') ? ' months' : ' days');
+        $number = fn (?Decimal $value): string => $value === null ? 'n/a' : (string) $value->roundedTo(3);
+
+        $this->line(sprintf(
+            'Walk-forward: %d windows of %s in-sample and %s out of sample, stepped by %s; a set needs %d trades in-sample.',
+            count($result->windows), $words($walk['in']), $words($walk['out']), $words($walk['step']), $walk['min'],
+        ));
+        $this->table(['Out of sample', 'Chosen in-sample', 'In-sample expectancy', 'Trades', 'Net'], array_map(fn (WalkForwardWindow $w): array => [
+            "{$w->outFrom->toDateString()} to {$w->outTo->toDateString()}",
+            $w->chosen === null ? 'none traded enough' : self::label($w->chosen),
+            $number($w->inExpectancy),
+            (string) $w->outTrades.($w->startedEarlier > 0 ? " ({$w->startedEarlier} opened before)" : ''),
+            $number($w->outNet),
+        ], $result->windows));
+        $this->line(sprintf(
+            'Out of sample: %d trades, net %s, expectancy %s (95 %% interval %s to %s), profit factor %s; %d of %d positive windows (the gate wants 2 of every 3).',
+            count($result->outOfSample), $number($result->net), $number($result->expectancy),
+            $number($result->interval['low'] ?? null), $number($result->interval['high'] ?? null),
+            $number($result->profitFactor), $result->positiveWindows, count($result->windows),
+        ));
+
+        return [
+            'windows' => array_map(fn (WalkForwardWindow $w): array => [
+                'in_from' => $w->inFrom, 'out_from' => $w->outFrom, 'out_to' => $w->outTo, 'chosen' => $w->chosen,
+                'in_expectancy' => $w->inExpectancy, 'in_trades' => $w->inTrades, 'out_trades' => $w->outTrades,
+                'out_net' => $w->outNet, 'opened_before' => $w->startedEarlier,
+            ], $result->windows),
+            'trades' => count($result->outOfSample),
+            'net' => $result->net,
+            'expectancy' => $result->expectancy,
+            'interval' => $result->interval,
+            'profit_factor' => $result->profitFactor,
+            'positive_windows' => $result->positiveWindows,
+        ];
     }
 
     /** @param array<string, string> $parameters */

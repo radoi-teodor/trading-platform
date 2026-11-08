@@ -313,3 +313,26 @@ it('records every backtest of a document as a trial of its family', function ():
     expect(StrategyTrial::query()->sole()->family)->toBe('ema-cross-test')
         ->and(StrategyTrial::query()->sole()->parameters)->toBe(['fast' => '9', 'slow' => '21']);
 });
+
+it('walks forward over the grid\'s continuous runs', function (): void {
+    backtestFixture(days: 36);
+
+    $exit = Artisan::call('backtest:grid', [
+        '--file' => strategyFile(EMA_CROSS_DOCUMENT), '--from' => '2026-10-02', '--to' => '2026-11-05',
+        '--grid' => ['fast=5,9', 'slow=15,21'], '--walk-forward' => true, '--in' => '0', '--out' => '0',
+    ]);
+
+    expect($exit)->toBe(1)
+        ->and(Artisan::output())->toContain('--in and --out are whole numbers of days or months, such as 12m or 20d.');
+
+    $exit = Artisan::call('backtest:grid', [
+        '--file' => strategyFile(EMA_CROSS_DOCUMENT), '--from' => '2026-10-02', '--to' => '2026-11-05',
+        '--grid' => ['fast=5,9', 'slow=15,21'], '--walk-forward' => true, '--in' => '10d', '--out' => '5d', '--step' => '5d', '--min-trades' => '1',
+    ]);
+    $output = Artisan::output();
+
+    expect($exit)->toBe(0)
+        ->and($output)->toContain('Walk-forward: 4 windows of 10 days in-sample and 5 days out of sample, stepped by 5 days')
+        ->and($output)->toContain('Out of sample:')
+        ->and($output)->toContain('positive windows');
+});

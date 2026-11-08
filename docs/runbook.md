@@ -114,6 +114,7 @@ only through Binance's public-data hosts and archives and should be confirmed on
 | Check a strategy document | `php artisan strategy:compile catalog/strategies/<id>.strategy.yaml` |
 | Backtest a strategy document | `php artisan backtest:run --file=catalog/strategies/<id>.strategy.yaml --from=YYYY-MM-DD --to=YYYY-MM-DD [--param=fast=12] [--no-benchmarks]` |
 | Search a document's parameters | `php artisan backtest:grid --file=catalog/strategies/<id>.strategy.yaml --from=YYYY-MM-DD --to=YYYY-MM-DD [--grid=fast=5..13:2] [--grid=slow=15,21,34]` |
+| Walk forward over a grid | `php artisan backtest:grid --file=... --from=... --to=... --walk-forward [--in=12m] [--out=3m] [--step=3m] [--min-trades=100]` |
 
 Strategies written in the DSL (`docs/strategy/configurator.md`) live in `catalog/strategies/` and run with `--file`;
 their instruments and timeframe come from the document and `--param` overrides a declared parameter. `backtest:grid` runs every
