@@ -1448,9 +1448,9 @@
     "semantic_hash": "27836203d1bf0c6ea54c3c7de5d1c4e8"
   },
   "tests/Feature/Simulation/RunBacktestCommandTest.php": {
-    "mtime": 1794167559.5881848,
-    "seen": 1794167704.8191829,
-    "ast_hash": "3c452c48c7dcbe56027db8c385755fd7",
+    "mtime": 1794170617.01308,
+    "seen": 1794170769.1762798,
+    "ast_hash": "93d429a2885201c71fd687bf922dffd1",
     "semantic_hash": ""
   },
   "tests/Feature/Support/ClockBindingTest.php": {
@@ -1909,9 +1909,9 @@
     "semantic_hash": ""
   },
   "docs/runbook.md": {
-    "mtime": 1794167653.5909274,
-    "seen": 1794167704.8204856,
-    "ast_hash": "5084ed6dffb46134c0e18eaceb569941",
+    "mtime": 1794170692.8334334,
+    "seen": 1794170769.1778698,
+    "ast_hash": "041f267c2128d7a38cdac6bf334dd9be",
     "semantic_hash": ""
   },
   "docs/security.md": {
@@ -2359,9 +2359,9 @@
     "semantic_hash": ""
   },
   "app/Simulation/Console/GridBacktest.php": {
-    "mtime": 1794167613.9270356,
-    "seen": 1794167704.816122,
-    "ast_hash": "874d47ed8b03642d1f3bd375a652eb0c",
+    "mtime": 1794170658.5922623,
+    "seen": 1794170769.1728172,
+    "ast_hash": "30739018d1ce15576e497d64b2cdf6d9",
     "semantic_hash": ""
   },
   "app/Simulation/Console/PreparesBacktests.php": {
@@ -2434,6 +2434,36 @@
     "mtime": 1794170233.6409576,
     "seen": 1794170488.8318481,
     "ast_hash": "fb90782944d34d9681c903cfea49b4bf",
+    "semantic_hash": ""
+  },
+  "app/Simulation/Validation/WalkForward.php": {
+    "mtime": 1794170691.2475994,
+    "seen": 1794170769.1731317,
+    "ast_hash": "1b7b6184fc98a57d6d049b510323931d",
+    "semantic_hash": ""
+  },
+  "app/Simulation/Validation/WalkForwardResult.php": {
+    "mtime": 1794170608.6413968,
+    "seen": 1794170769.1731343,
+    "ast_hash": "a5c427b7e8b32949a43b9778c646cb74",
+    "semantic_hash": ""
+  },
+  "app/Simulation/Validation/WalkForwardSet.php": {
+    "mtime": 1794170608.638976,
+    "seen": 1794170769.1731358,
+    "ast_hash": "ed4bb482ba897f74d9f0fa5eb4f4647a",
+    "semantic_hash": ""
+  },
+  "app/Simulation/Validation/WalkForwardWindow.php": {
+    "mtime": 1794170608.640261,
+    "seen": 1794170769.173137,
+    "ast_hash": "c4febc3a5cba6df1eee5bce9876df1cd",
+    "semantic_hash": ""
+  },
+  "tests/Unit/Simulation/WalkForwardTest.php": {
+    "mtime": 1794170636.684599,
+    "seen": 1794170769.1773522,
+    "ast_hash": "69de66740400da5709623be8513360cf",
     "semantic_hash": ""
   },
   "package-lock.json": {
