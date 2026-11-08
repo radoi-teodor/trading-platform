@@ -162,6 +162,20 @@ the rates last read from the account; before any account is connected they use R
 the BNB discount, the pessimistic case: spot 0.100 % maker and taker (confirmed on Binance's fee page on
 2026-11-08), USD-M 0.020 % maker and 0.050 % taker (from secondary sources, to confirm against the account).
 
+**D-29. Internal tool, never a service; product decisions delegated** (2026-11-08, accepted)
+Trading X is used internally by its operator and will never be offered as SaaS or to other users. This
+strengthens D-5. Consequences, decided without further questions:
+- single tenant: no tenant ids, plans, billing, onboarding, marketing pages or public sign-up;
+- English-only interface (D-21), operator-centric: dense screens, keyboard shortcuts and expert features before
+  guided flows;
+- reports and exports are written for the operator, not for clients or regulators;
+- tooling and infrastructure are chosen for one maintainer on one machine first (D-27).
+
+Delegation: product and design questions whose answer follows from internal, single-operator use are decided by
+the assistant and recorded here as D-numbers instead of being asked. Always still asked: anything that moves or
+risks money (risk limits, sizing, live stages), exchange keys and secrets, paid services and LLM budgets, deleting
+data, and the plan approval that `feature-work` requires before code.
+
 ## Open
 
 | Id | Question | Blocks |

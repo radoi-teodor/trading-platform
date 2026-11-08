@@ -81,7 +81,9 @@ journal and what the operator sees, you are not done analysing.
 Collect every ambiguity and every decision that would change the work materially, and ask them in ONE round with
 `AskUserQuestion` (options plus a recommended default), grouped: scope and non-goals, risk and money impact,
 where the operator sees it, data and migration, exchange and agent limits, performance, naming. Do not assume an
-answer that changes the design. Do not ask what the code or the docs already answer.
+answer that changes the design. Do not ask what the code or the docs already answer. Product and design questions
+whose answer follows from internal, single-operator use (D-29) are decided by you and recorded as a D-number in
+the plan, not asked; money, risk, live trading, secrets, paid services and data deletion are always asked.
 
 ### 4. Plan and approval
 

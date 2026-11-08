@@ -37,6 +37,12 @@ explains what was wrong with it.
 - The repository is public. No secret in code, config, docs, logs, prompts, commits or journal entries.
 - Tests never touch a live account or production data.
 
+## Decisions
+
+Trading X is an internal tool for one operator and never a service (D-29). Product and design questions that
+follow from that are decided by the assistant and recorded in `docs/decisions.md`; questions about money, risk,
+live trading, secrets, paid services or deleting data always go to the operator.
+
 ## Language
 
 Talk to the operator in the language they write in (usually Romanian). Code, docs, commit messages and UI text
