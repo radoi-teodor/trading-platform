@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 use App\Risk\RiskPolicy;
 use App\Simulation\Data\Participant;
+use App\Simulation\Metrics\PerformanceMetrics;
+use App\Simulation\Metrics\TradeStatistics;
 use App\Simulation\Report\CanonicalJson;
 use App\Simulation\Report\Report;
+use App\Simulation\Report\ReportBuilder;
 use App\Strategy\Baselines\BuyAndHold;
 use App\Strategy\Baselines\DonchianBreakout;
 use App\Strategy\Baselines\MovingAverageTrend;
@@ -18,6 +21,9 @@ use Tests\Support\GoldenData;
  * committed. A changed hash must be explained in the commit message. To accept a change on purpose, run
  * `UPDATE_GOLDEN=1 vendor/bin/pest tests/Golden`, review the diff of tests/Golden/reports and update the hashes here.
  */
+
+// The golden reports pin every field of a report, so mutation testing may use them for the classes that build one.
+mutates(ReportBuilder::class, PerformanceMetrics::class, TradeStatistics::class);
 
 const GOLDEN_HASHES = [
     'buy-and-hold-btc' => '8aad85b739a1896ed0cf32756be6e56c8275be1c1c2526c1c19a316fbc2891b0',

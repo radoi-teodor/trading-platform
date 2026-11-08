@@ -176,8 +176,10 @@ A strategy that does not beat cash after costs and risk is not promoted, however
 
 ## 12. Performance targets
 
-To be measured in Phase 2 and adjusted with a D-number:
-
-- one year of 1-minute candles, one instrument, one strategy: under 60 seconds;
-- a 3-year walk-forward with a 50-point parameter neighbourhood: under 30 minutes, spread over the `simulation`
-  queue workers.
+- One year of 1-minute candles, one instrument, one strategy: under 60 seconds. Measured on 2026-11-08 in the
+  development container (PHP 8.4, one core, PostgreSQL on the same machine): `donchian-breakout` on BTC/USDT from
+  2025-10-01 to 2026-10-01, 531,360 candles with its warmup, 49 s. Met; no D-number needed.
+- With both benchmarks in the same pass, three accounts over 1,033,920 candles (2024-11 to 2026-10, the 50/200 rule's
+  warmup included) take 156 s.
+- A 3-year walk-forward with a 50-point parameter neighbourhood: under 30 minutes, spread over the `simulation`
+  queue workers. To be measured in Phase 3, where walk-forward is built.

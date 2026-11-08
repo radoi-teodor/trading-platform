@@ -94,7 +94,8 @@ combined WebSocket stream for all instruments of that market in the universe.
 
 ## 5. Quality and verification
 
-`php artisan market:check <symbol> --market=... --from=... --to=...` reports:
+`php artisan market:check <symbol> --market=... --from=... --to=...` reports, reading a day at a time so that a
+window of years fits in memory (two years of BTC/USDT: 22 s within 256 MB):
 
 | Check | Severity |
 |-------|----------|
