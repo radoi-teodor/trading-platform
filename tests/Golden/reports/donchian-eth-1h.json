@@ -65,12 +65,13 @@
         },
         "seed": 0,
         "strategy": {
-            "key": "1d714e03",
+            "key": "a6fd95cd",
             "name": "donchian-breakout",
             "parameters": {
                 "atr": "14",
                 "entry": "20",
                 "exit": "10",
+                "side": "long",
                 "stop_atr": "2",
                 "target_r": "3",
                 "timeframe": "1h"
@@ -994,12 +995,12 @@
     },
     "events": [
         {
-            "detail": "0.0000886 ETH of 1d714e03",
+            "detail": "0.0000886 ETH of a6fd95cd",
             "kind": "dust",
             "time": "2026-10-02T14:55:00Z"
         },
         {
-            "detail": "0.0000739 ETH of 1d714e03",
+            "detail": "0.0000739 ETH of a6fd95cd",
             "kind": "dust",
             "time": "2026-10-07T01:59:00Z"
         }

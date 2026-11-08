@@ -8,24 +8,28 @@ use App\Strategy\Contracts\BuildableStrategy;
 use App\Strategy\Contracts\Strategy;
 use App\Strategy\Data\Close;
 use App\Strategy\Data\OpenLong;
+use App\Strategy\Data\OpenShort;
 use App\Strategy\Data\StrategyContext;
 use App\Strategy\Data\StrategyIdentity;
 use App\Strategy\Data\Subscription;
 use App\Strategy\Indicators\Sma;
+use App\Support\Side;
 use App\Support\Symbol;
 use App\Support\Timeframe;
 use InvalidArgumentException;
 
 /**
  * Long while the fast simple average of closes is above the slow one, flat otherwise: the trend baseline
- * (docs/simulation.md, section 11, 50/200 on daily candles by default). No stop, so it runs with the benchmark
- * profile (D-40).
+ * (docs/simulation.md, section 11, 50/200 on daily candles by default). With side=short, on a perpetual, short while
+ * the fast average is below the slow one (D-50). No stop, so it runs with the benchmark profile (D-40).
  */
 final class MovingAverageTrend implements BuildableStrategy
 {
     private readonly Sma $fast;
 
     private readonly Sma $slow;
+
+    private readonly Side $side;
 
     /** @param array<string, string> $parameters */
     private function __construct(private readonly array $parameters, private readonly Symbol $symbol, private readonly Timeframe $timeframe)
@@ -39,11 +43,12 @@ final class MovingAverageTrend implements BuildableStrategy
 
         $this->fast = new Sma($fast);
         $this->slow = new Sma($slow);
+        $this->side = Parameters::side($parameters, 'side', $symbol);
     }
 
     public static function defaults(): array
     {
-        return ['fast' => '50', 'slow' => '200', 'timeframe' => '1d'];
+        return ['fast' => '50', 'side' => 'long', 'slow' => '200', 'timeframe' => '1d'];
     }
 
     public static function build(array $parameters, array $symbols): Strategy
@@ -74,6 +79,14 @@ final class MovingAverageTrend implements BuildableStrategy
 
         if ($fast === null || $slow === null) {
             return [];
+        }
+
+        if ($this->side === Side::Sell) {
+            if ($fast->isLessThan($slow)) {
+                return $context->position === null ? [new OpenShort($this->symbol, null, null, 'fast average below slow')] : [];
+            }
+
+            return $context->position === null ? [] : [new Close($this->symbol, 'fast average at or above slow')];
         }
 
         if ($fast->isGreaterThan($slow)) {

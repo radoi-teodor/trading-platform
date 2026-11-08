@@ -27,8 +27,8 @@ mutates(ReportBuilder::class, PerformanceMetrics::class, TradeStatistics::class)
 
 const GOLDEN_HASHES = [
     'buy-and-hold-btc' => '8aad85b739a1896ed0cf32756be6e56c8275be1c1c2526c1c19a316fbc2891b0',
-    'ma-trend-btc-1h' => '4e44533c9829ab538f4f5d4a11b3d93baea62ef2bdd292e5e1133c2bdce005d4',
-    'donchian-eth-1h' => '08ce374cab3d139da8fed8bec4560f8b49879f275885d377d1100cb6d0283776',
+    'ma-trend-btc-1h' => '672640af16f7b6bf6c92c4bcdb03899a1da9d701d3bf5aa5d650ed5df0d835d3',
+    'donchian-eth-1h' => 'f9bc685879731c16b824ddc59dc94f044748700d1acd091cbda823d7a5fea9e1',
 ];
 
 /** @return array<string, Closure(): Report> */
@@ -40,7 +40,7 @@ function goldenRuns(): array
     return [
         'buy-and-hold-btc' => fn (): Report => GoldenData::run(BuyAndHold::build([], $btc), RiskPolicy::benchmark(), '2026-10-02'),
         'ma-trend-btc-1h' => fn (): Report => GoldenData::run(
-            MovingAverageTrend::build(['fast' => '12', 'slow' => '48', 'timeframe' => '1h'], $btc), RiskPolicy::benchmark(), '2026-10-03',
+            MovingAverageTrend::build([...MovingAverageTrend::defaults(), 'fast' => '12', 'slow' => '48', 'timeframe' => '1h'], $btc), RiskPolicy::benchmark(), '2026-10-03',
         ),
         'donchian-eth-1h' => fn (): Report => GoldenData::run(
             DonchianBreakout::build([...DonchianBreakout::defaults(), 'timeframe' => '1h'], $eth),

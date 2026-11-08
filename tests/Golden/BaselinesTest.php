@@ -65,7 +65,7 @@ it('buys and holds exactly as the closed form says', function (): void {
 it('follows the 12/48 hourly trend rule exactly as an independent reference', function (): void {
     $from = CarbonImmutable::parse('2026-10-03', 'UTC');
     $report = GoldenData::run(
-        MovingAverageTrend::build(['fast' => '12', 'slow' => '48', 'timeframe' => '1h'], [Symbol::parse('BTC/USDT')]),
+        MovingAverageTrend::build([...MovingAverageTrend::defaults(), 'fast' => '12', 'slow' => '48', 'timeframe' => '1h'], [Symbol::parse('BTC/USDT')]),
         RiskPolicy::benchmark(),
         '2026-10-03',
     );

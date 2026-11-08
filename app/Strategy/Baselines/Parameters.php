@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Strategy\Baselines;
 
 use App\Support\Number\Decimal;
+use App\Support\Side;
+use App\Support\Symbol;
 use App\Support\Timeframe;
 use InvalidArgumentException;
 
@@ -33,6 +35,42 @@ final class Parameters
         }
 
         return $value;
+    }
+
+    /**
+     * A number of any sign, such as a funding rate threshold.
+     *
+     * @param  array<string, string>  $parameters
+     */
+    public static function rate(array $parameters, string $key): Decimal
+    {
+        $value = $parameters[$key] ?? '';
+
+        if (preg_match('/^-?\d+(\.\d+)?$/', $value) !== 1) {
+            throw new InvalidArgumentException("Parameter '{$key}' must be a number, got '{$value}'.");
+        }
+
+        return Decimal::of($value);
+    }
+
+    /**
+     * Long buys, short sells; a short needs a perpetual (D-50).
+     *
+     * @param  array<string, string>  $parameters
+     */
+    public static function side(array $parameters, string $key, Symbol $symbol): Side
+    {
+        $side = match ($parameters[$key] ?? '') {
+            'long' => Side::Buy,
+            'short' => Side::Sell,
+            default => throw new InvalidArgumentException("Parameter '{$key}' must be long or short, got '".($parameters[$key] ?? '')."'."),
+        };
+
+        if ($side === Side::Sell && ! $symbol->isPerpetual()) {
+            throw new InvalidArgumentException("A short needs a perpetual, not {$symbol}.");
+        }
+
+        return $side;
     }
 
     /** @param array<string, string> $parameters */

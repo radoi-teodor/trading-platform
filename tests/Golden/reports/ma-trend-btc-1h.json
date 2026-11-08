@@ -42,10 +42,11 @@
         },
         "seed": 0,
         "strategy": {
-            "key": "f2d0589b",
+            "key": "527337ae",
             "name": "ma-trend",
             "parameters": {
                 "fast": "12",
+                "side": "long",
                 "slow": "48",
                 "timeframe": "1h"
             },
@@ -868,17 +869,17 @@
     },
     "events": [
         {
-            "detail": "0.00000194 BTC of f2d0589b",
+            "detail": "0.00000194 BTC of 527337ae",
             "kind": "dust",
             "time": "2026-10-03T02:01:00Z"
         },
         {
-            "detail": "0.00000379 BTC of f2d0589b",
+            "detail": "0.00000379 BTC of 527337ae",
             "kind": "dust",
             "time": "2026-10-06T03:01:00Z"
         },
         {
-            "detail": "0.00000581 BTC of f2d0589b",
+            "detail": "0.00000581 BTC of 527337ae",
             "kind": "dust",
             "time": "2026-10-06T23:01:00Z"
         }

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 use App\Strategy\Baselines\BuyAndHold;
 use App\Strategy\Baselines\DonchianBreakout;
+use App\Strategy\Baselines\FundingCarry;
 use App\Strategy\Baselines\MovingAverageTrend;
 
 // Backtests (docs/simulation.md). No secrets. Changing a cost or fee assumption changes every report; a new
@@ -38,6 +39,7 @@ return [
         'buy-and-hold' => ['class' => BuyAndHold::class, 'profile' => 'benchmark'],
         'ma-trend' => ['class' => MovingAverageTrend::class, 'profile' => 'benchmark'],
         'donchian-breakout' => ['class' => DonchianBreakout::class, 'profile' => 'account'],
+        'funding-carry' => ['class' => FundingCarry::class, 'profile' => 'account'],
     ],
 
     // Comparisons run in the same pass as every strategy (docs/simulation.md, section 11), by label.
