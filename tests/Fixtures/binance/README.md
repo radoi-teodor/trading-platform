@@ -18,3 +18,10 @@ Binance's daily 1-minute spot archives of BTCUSDT and ETHUSDT for 2026-10-01 to 
 `https://data.binance.vision/data/spot/daily/klines/<SYMBOL>/1m/` on 2026-11-08 with their `.CHECKSUM` files; every
 zip matched its published SHA-256. The golden tests (`tests/Golden`) read them through the real archive parser.
 They are never edited: a new dataset is a new directory and new golden hashes.
+
+`golden/futures/` holds the USD-M BTCUSDT perpetual for the same days, from
+`https://data.binance.vision/data/futures/um/daily/klines/BTCUSDT/1m/`, and its funding archive for October 2026, from
+`https://data.binance.vision/data/futures/um/monthly/fundingRate/BTCUSDT/`, downloaded on 2026-11-08 with their
+`.CHECKSUM` files; every zip matched its published SHA-256. The archive file names match the spot ones, hence the
+subdirectory. The perpetual's filters in the golden runs are those of `perp-exchange-info.hand-written.json`, and the
+reports say they were assumed.
