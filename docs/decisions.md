@@ -290,8 +290,10 @@ on a perpetual sizes the position at 99 % of the free USD-M wallet at 1x, leavin
 **D-51. DSL grammar, parameters and numbers** (2026-11-08, accepted with the Phase 3 plan)
 The expression grammar is the one in `docs/strategy/configurator.md`, section 2, plus `true` and `false` and named
 parameters written `$name`. A document declares its parameters under `params:` with a default and, optionally, a
-range and a step; walk-forward and the robustness check move only these. Documents are read with `symfony/yaml`;
-line and column of every key come from an index built over the text, so errors point where the operator typed.
+range and a step; walk-forward and the robustness check move only these. Documents are read by our own reader for
+the YAML subset they use (block and one-line flow mappings and lists, quoted and plain scalars, folded and literal
+text, comments), which keeps every scalar as its exact text with its line and column. `symfony/yaml`, named in the
+approved plan, was dropped while building it: it turns `0.30` into a float. Errors point where the operator typed.
 Every number is a `Decimal` with 18 digits (D-11, D-39).
 
 **D-52. Function library, first version** (2026-11-08, accepted with the Phase 3 plan)
