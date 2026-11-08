@@ -17,6 +17,7 @@ use App\Execution\Data\OrderType;
 use App\Execution\Data\OrderUpdate;
 use App\Execution\Data\VenueFill;
 use App\Market\Data\Candle;
+use App\Market\Data\FundingRate;
 use App\Market\Data\InstrumentRules;
 use App\Market\Data\RulesHistory;
 use App\Support\Asset;
@@ -52,8 +53,9 @@ final class SimulatedVenue implements Venue
     /** @var array<string, SimulatedOrder> the orders still working, in submission order */
     private array $open = [];
 
-    /** @var list<OrderUpdate> */
-    private array $updates = [];
+    private readonly UpdateStream $stream;
+
+    private readonly SimulatedFuturesBook $futures;
 
     /** @var array<string, Candle> the last minute seen, by symbol */
     private array $lastMinute = [];
@@ -73,14 +75,37 @@ final class SimulatedVenue implements Venue
         private readonly CostModel $costs,
         private readonly array $rules,
         array $balances,
+        ?FeeSchedule $perpFees = null,
+        ?Decimal $maintenanceRate = null,
+        ?Decimal $futuresWallet = null,
     ) {
         foreach ($balances as $balance) {
             $this->credit((string) $balance->asset, $balance->amount);
         }
+
+        $this->stream = new UpdateStream;
+        $this->futures = new SimulatedFuturesBook(
+            $clock,
+            $perpFees ?? $fees,
+            $costs,
+            $maintenanceRate ?? Decimal::of('0.01'),
+            $futuresWallet ?? Decimal::zero(),
+            $this->stream,
+        );
     }
 
     public function submit(OrderRequest $request): OrderAck
     {
+        if ($request->symbol->isPerpetual()) {
+            $history = $this->rules[(string) $request->symbol] ?? null;
+
+            return match (true) {
+                $history === null => OrderAck::rejected($request->clientOrderId, 'UNKNOWN_SYMBOL'),
+                $this->isKnown($request->clientOrderId) => OrderAck::rejected($request->clientOrderId, 'DUPLICATE_CLIENT_ORDER_ID'),
+                default => $this->futures->submit($request, $history->at($this->clock->now())),
+            };
+        }
+
         $refusal = $this->refusal($request);
 
         if ($refusal !== null) {
@@ -125,6 +150,10 @@ final class SimulatedVenue implements Venue
 
     public function cancel(ClientOrderId $id): bool
     {
+        if ($this->futures->has($id)) {
+            return $this->futures->cancel($id);
+        }
+
         $order = $this->orders[$id->value] ?? null;
 
         if ($order === null || ! $order->status->isWorking()) {
@@ -139,12 +168,33 @@ final class SimulatedVenue implements Venue
 
     public function updatesSince(int $sequence): array
     {
-        return array_slice($this->updates, max(0, $sequence));
+        return $this->stream->since($sequence);
     }
 
     public function openOrders(): array
     {
-        return array_values(array_map(fn (SimulatedOrder $order) => $order->snapshot(), $this->open));
+        return [...array_values(array_map(fn (SimulatedOrder $order) => $order->snapshot(), $this->open)), ...$this->futures->openOrders()];
+    }
+
+    public function futuresWallet(): Decimal
+    {
+        return $this->futures->wallet();
+    }
+
+    public function positions(): array
+    {
+        return $this->futures->positions();
+    }
+
+    public function setLeverage(Symbol $symbol, int $leverage): void
+    {
+        $this->futures->setLeverage($symbol, $leverage);
+    }
+
+    /** Settles the funding of $symbol at its time, valued at $mark (D-44); the backtest calls it after matching that minute. */
+    public function settleFunding(Symbol $symbol, FundingRate $rate, Price $mark): void
+    {
+        $this->futures->settleFunding($symbol, $rate, $mark);
     }
 
     public function balances(): array
@@ -164,6 +214,12 @@ final class SimulatedVenue implements Venue
     /** Matches the working orders of $symbol against one closed 1-minute candle. */
     public function match(Symbol $symbol, Candle $minute): void
     {
+        if ($symbol->isPerpetual()) {
+            $this->futures->match($symbol, $minute, $this->rulesFor($symbol));
+
+            return;
+        }
+
         $working = array_filter($this->open, fn (SimulatedOrder $order): bool => $order->request->symbol->equals($symbol));
 
         foreach ([OrderType::Market, OrderType::StopMarket, OrderType::Limit] as $type) {
@@ -190,6 +246,7 @@ final class SimulatedVenue implements Venue
             OrderType::Market => $this->fillMarket($order, $minute, $rules),
             OrderType::StopMarket => $this->fillStop($order, $minute, $rules),
             OrderType::Limit => $this->fillLimit($order, $minute, $rules),
+            OrderType::TakeProfitMarket => throw new LogicException('Spot take-profits are limit orders.'),
         };
     }
 
@@ -376,13 +433,13 @@ final class SimulatedVenue implements Venue
 
     private function record(SimulatedOrder $order, ?VenueFill $fill = null): void
     {
-        $this->updates[] = new OrderUpdate(
-            count($this->updates) + 1,
+        $this->stream->push(new OrderUpdate(
+            $this->stream->next(),
             $order->request->clientOrderId,
             $order->status,
             $this->clock->now(),
             $fill,
-        );
+        ));
     }
 
     private function unlock(SimulatedOrder $order, Decimal $amount): void
@@ -430,8 +487,12 @@ final class SimulatedVenue implements Venue
             return 'UNKNOWN_SYMBOL';
         }
 
-        if (isset($this->orders[$request->clientOrderId->value])) {
+        if ($this->isKnown($request->clientOrderId)) {
             return 'DUPLICATE_CLIENT_ORDER_ID';
+        }
+
+        if ($request->reduceOnly || $request->type === OrderType::TakeProfitMarket) {
+            return 'UNSUPPORTED_ORDER_TYPE';
         }
 
         $rules = $history->at($this->clock->now());
@@ -464,6 +525,11 @@ final class SimulatedVenue implements Venue
         }
 
         return null;
+    }
+
+    private function isKnown(ClientOrderId $id): bool
+    {
+        return isset($this->orders[$id->value]) || $this->futures->has($id);
     }
 
     private function lastClose(Symbol $symbol): ?Price

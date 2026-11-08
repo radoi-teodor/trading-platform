@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Execution\Data\ClientOrderId;
 use App\Execution\Data\FeeSchedule;
+use App\Execution\Data\Income;
 use App\Execution\Data\Liquidity;
 use App\Execution\Data\OcoRequest;
 use App\Execution\Data\OrderRequest;
@@ -56,11 +57,17 @@ final class VenueHarness
     /** @return list<string> */
     public function updates(): array
     {
-        return array_map(
-            fn (OrderUpdate $u): string => "{$u->clientOrderId} {$u->status->value}".($u->fill === null ? '' : " {$u->fill->quantity}@{$u->fill->price} fee {$u->fill->fee} {$u->fill->liquidity->value}"),
-            $this->venue->updatesSince(0),
-        );
+        return array_map(function (OrderUpdate|Income $update): string {
+            $u = orderUpdate($update);
+
+            return "{$u->clientOrderId} {$u->status->value}".($u->fill === null ? '' : " {$u->fill->quantity}@{$u->fill->price} fee {$u->fill->fee} {$u->fill->liquidity->value}");
+        }, $this->venue->updatesSince(0));
     }
+}
+
+function orderUpdate(OrderUpdate|Income $update): OrderUpdate
+{
+    return $update instanceof OrderUpdate ? $update : throw new RuntimeException('Expected an order update.');
 }
 
 function venueHarness(string ...$balances): VenueHarness
@@ -111,9 +118,9 @@ it('fills a market buy at the next open plus slippage, rounded up to the tick, w
         ->and($h->updates())->toBe(['e1 new', 'e1 filled 1@100.03 fee 0.0005 BTC taker'])
         ->and($h->balance('BTC'))->toBe('0.9995/0')
         ->and($h->balance('USDT'))->toBe('9899.97/0')
-        ->and((string) $h->venue->updatesSince(1)[0]->fill?->slippage)->toBe('0.03')
-        ->and($h->venue->updatesSince(1)[0]->fill?->time->format('H:i'))->toBe('00:01')
-        ->and($h->venue->updatesSince(1)[0]->fill?->id)->toBe('sim-1')
+        ->and((string) orderUpdate($h->venue->updatesSince(1)[0])->fill?->slippage)->toBe('0.03')
+        ->and(orderUpdate($h->venue->updatesSince(1)[0])->fill?->time->format('H:i'))->toBe('00:01')
+        ->and(orderUpdate($h->venue->updatesSince(1)[0])->fill?->id)->toBe('sim-1')
         ->and($h->venue->updatesSince(-3))->toHaveCount(2);
 });
 
@@ -214,7 +221,7 @@ it('triggers a stop on the minute range and fills it at the stop minus slippage'
     // 95 * (1 - 0.0003) = 94.9715, rounded down to 94.97
     $h->minute('96', '97', '94', '95');
     expect($h->updates()[1])->toBe('s1 filled 1@94.97 fee 0.047485 USDT taker')
-        ->and((string) $h->venue->updatesSince(1)[0]->fill?->slippage)->toBe('0.03');
+        ->and((string) orderUpdate($h->venue->updatesSince(1)[0])->fill?->slippage)->toBe('0.03');
 });
 
 it('fills a stop at the open when the minute gaps through it', function (): void {
@@ -358,7 +365,7 @@ it('describes its working orders and reports updates after a cursor', function (
         ->and((string) $stop->stopPrice)->toBe('95')
         ->and((string) $stop->quantity)->toBe('0.5')
         ->and((string) $stop->filledQuantity)->toBe('0')
-        ->and(array_map(fn (OrderUpdate $u): int => $u->sequence, $h->venue->updatesSince(1)))->toBe([2])
+        ->and(array_map(fn (OrderUpdate|Income $u): int => $u->sequence, $h->venue->updatesSince(1)))->toBe([2])
         ->and($h->venue->updatesSince(2))->toBe([]);
 });
 
@@ -450,7 +457,7 @@ it('matches only the orders of the minute\'s instrument', function (): void {
 
     $venue->match(Symbol::parse('ETH/USDT'), $minute(1, '2010'));
 
-    expect((string) $venue->updatesSince(1)[0]->fill?->price)->toBe('2010')
+    expect((string) orderUpdate($venue->updatesSince(1)[0])->fill?->price)->toBe('2010')
         ->and((string) $venue->balances()['USDT']->free)->toBe('2012.99');
 });
 

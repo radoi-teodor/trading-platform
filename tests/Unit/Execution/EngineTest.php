@@ -4,13 +4,9 @@ declare(strict_types=1);
 
 use App\Execution\Contracts\Venue;
 use App\Execution\Data\Balance;
-use App\Execution\Data\ClientOrderId;
 use App\Execution\Data\EngineMode;
 use App\Execution\Data\EngineRecord;
 use App\Execution\Data\FeeSchedule;
-use App\Execution\Data\OcoRequest;
-use App\Execution\Data\OrderAck;
-use App\Execution\Data\OrderRequest;
 use App\Execution\Data\OrderType;
 use App\Execution\Engine;
 use App\Execution\Journal\InMemoryDecisionLog;
@@ -40,6 +36,7 @@ use App\Support\Number\Price;
 use App\Support\Symbol;
 use App\Support\Timeframe;
 use Carbon\CarbonImmutable;
+use Tests\Support\ForwardingVenue;
 use Tests\Support\ScriptedStrategy;
 
 mutates(Engine::class, OrderManager::class, OrderBook::class);
@@ -47,35 +44,8 @@ mutates(Engine::class, OrderManager::class, OrderBook::class);
 const ENGINE_START = '2026-10-01 00:00:00';
 
 /** A venue that reports one USDT more than it holds: the engine must notice. */
-final readonly class OverReportingVenue implements Venue
+final class OverReportingVenue extends ForwardingVenue
 {
-    public function __construct(private SimulatedVenue $inner) {}
-
-    public function submit(OrderRequest $request): OrderAck
-    {
-        return $this->inner->submit($request);
-    }
-
-    public function submitOco(OcoRequest $request): OrderAck
-    {
-        return $this->inner->submitOco($request);
-    }
-
-    public function cancel(ClientOrderId $id): bool
-    {
-        return $this->inner->cancel($id);
-    }
-
-    public function updatesSince(int $sequence): array
-    {
-        return $this->inner->updatesSince($sequence);
-    }
-
-    public function openOrders(): array
-    {
-        return $this->inner->openOrders();
-    }
-
     public function balances(): array
     {
         $balances = $this->inner->balances();
@@ -415,35 +385,8 @@ it('journals a protection the venue refuses', function (): void {
 });
 
 it('notices a balance the venue has and the ledger does not', function (): void {
-    $h = engineHarness(new ScriptedStrategy([]), wrap: fn (SimulatedVenue $venue): Venue => new class($venue) implements Venue
+    $h = engineHarness(new ScriptedStrategy([]), wrap: fn (SimulatedVenue $venue): Venue => new class($venue) extends ForwardingVenue
     {
-        public function __construct(private readonly SimulatedVenue $inner) {}
-
-        public function submit(OrderRequest $request): OrderAck
-        {
-            return $this->inner->submit($request);
-        }
-
-        public function submitOco(OcoRequest $request): OrderAck
-        {
-            return $this->inner->submitOco($request);
-        }
-
-        public function cancel(ClientOrderId $id): bool
-        {
-            return $this->inner->cancel($id);
-        }
-
-        public function updatesSince(int $sequence): array
-        {
-            return $this->inner->updatesSince($sequence);
-        }
-
-        public function openOrders(): array
-        {
-            return $this->inner->openOrders();
-        }
-
         public function balances(): array
         {
             return [...$this->inner->balances(), 'BNB' => new Balance(Asset::of('BNB'), Decimal::of('0.5'), Decimal::zero())];
@@ -454,35 +397,8 @@ it('notices a balance the venue has and the ledger does not', function (): void 
 })->throws(ReconciliationMismatch::class, 'The ledger holds 0 BNB; the venue holds 0.5.');
 
 it('notices a balance the ledger has and the venue does not report', function (): void {
-    $h = engineHarness(new ScriptedStrategy([]), wrap: fn (SimulatedVenue $venue): Venue => new class($venue) implements Venue
+    $h = engineHarness(new ScriptedStrategy([]), wrap: fn (SimulatedVenue $venue): Venue => new class($venue) extends ForwardingVenue
     {
-        public function __construct(private readonly SimulatedVenue $inner) {}
-
-        public function submit(OrderRequest $request): OrderAck
-        {
-            return $this->inner->submit($request);
-        }
-
-        public function submitOco(OcoRequest $request): OrderAck
-        {
-            return $this->inner->submitOco($request);
-        }
-
-        public function cancel(ClientOrderId $id): bool
-        {
-            return $this->inner->cancel($id);
-        }
-
-        public function updatesSince(int $sequence): array
-        {
-            return $this->inner->updatesSince($sequence);
-        }
-
-        public function openOrders(): array
-        {
-            return $this->inner->openOrders();
-        }
-
         public function balances(): array
         {
             return array_diff_key($this->inner->balances(), ['USDT' => true]);

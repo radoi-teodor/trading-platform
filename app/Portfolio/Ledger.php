@@ -123,20 +123,21 @@ final class Ledger
         }
     }
 
-    /** Funding paid (negative) or received (positive) by a perpetual position, through the USD-M wallet (D-44). */
+    /**
+     * Funding paid (negative) or received (positive) by a perpetual position, through the USD-M wallet (D-44); what
+     * the wallet cannot pay is taken from the position's margin.
+     */
     public function applyFunding(string $id, string $strategy, Symbol $symbol, Decimal $amount, CarbonImmutable $at): void
     {
         $key = self::key($strategy, $symbol);
         $position = $this->perpPositions[$key] ?? throw new LedgerViolation("Funding {$id}: strategy {$strategy} holds no {$symbol}.");
         $this->claimIncome($id);
         $wallet = $this->futuresWallet->plus($amount);
+        // What the wallet cannot pay comes out of the position's margin, as on the venue.
+        $fromMargin = $wallet->isNegative() ? $wallet : Decimal::zero();
 
-        if ($wallet->isNegative()) {
-            throw new LedgerViolation("Funding {$id} would leave {$wallet} in the USD-M wallet at {$at->toIso8601String()}.");
-        }
-
-        $this->futuresWallet = $wallet;
-        $this->perpPositions[$key] = $position->withFunding($amount);
+        $this->futuresWallet = $wallet->isNegative() ? Decimal::zero() : $wallet;
+        $this->perpPositions[$key] = $position->withFunding($amount, $fromMargin);
     }
 
     /** A liquidated position: closed at $price, its whole isolated margin lost (D-45). */

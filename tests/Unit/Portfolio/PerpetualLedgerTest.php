@@ -226,3 +226,13 @@ it('keeps the first stop when a position is added to without one', function (): 
         ->and((string) $trip->initialRisk)->toBe('30')
         ->and((string) $trip->rMultiple)->toBe('1');
 });
+
+it('takes funding the wallet cannot pay from the position\'s margin', function (): void {
+    $ledger = perpLedger('50.05');
+    $ledger->apply(perpFill('1', Side::Sell, '1', '100', '0.05'));
+    $ledger->applyFunding('f', 's', perpSymbol(), Decimal::of('-0.02'), CarbonImmutable::parse('2026-10-01 08:00', 'UTC'));
+
+    expect((string) $ledger->futuresWallet())->toBe('0')
+        ->and((string) $ledger->perpPosition('s', perpSymbol())?->margin)->toBe('49.98')
+        ->and((string) $ledger->perpPosition('s', perpSymbol())?->funding)->toBe('-0.02');
+});

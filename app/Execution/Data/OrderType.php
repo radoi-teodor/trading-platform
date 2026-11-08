@@ -9,4 +9,5 @@ enum OrderType: string
     case Market = 'market';
     case Limit = 'limit';
     case StopMarket = 'stop_market';
+    case TakeProfitMarket = 'take_profit_market';
 }

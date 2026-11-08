@@ -76,11 +76,12 @@ final readonly class PerpPosition
         ), $realized, $released];
     }
 
-    public function withFunding(Decimal $amount): self
+    /** @param Decimal $marginChange zero, or the negative part of the funding the wallet could not pay */
+    public function withFunding(Decimal $amount, Decimal $marginChange): self
     {
         return new self(
             $this->strategy, $this->symbol, $this->side, $this->leverage, $this->openedAt, $this->quantity,
-            $this->entryPrice, $this->margin, $this->enteredQuantity, $this->exitedQuantity, $this->exitNotional,
+            $this->entryPrice, $this->margin->plus($marginChange), $this->enteredQuantity, $this->exitedQuantity, $this->exitNotional,
             $this->realized, $this->fees, $this->funding->plus($amount), $this->slippage, $this->initialStop,
             $this->highest, $this->lowest, $this->exitReason,
         );

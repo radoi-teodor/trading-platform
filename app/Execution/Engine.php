@@ -9,6 +9,8 @@ use App\Execution\Contracts\Venue;
 use App\Execution\Data\DecisionRecord;
 use App\Execution\Data\EngineMode;
 use App\Execution\Data\EngineRecord;
+use App\Execution\Data\Income;
+use App\Execution\Data\IncomeKind;
 use App\Execution\Data\IntentRecord;
 use App\Execution\Data\OrderAck;
 use App\Execution\Data\OrderRole;
@@ -140,6 +142,13 @@ final class Engine
     {
         foreach ($this->venue->updatesSince($this->cursor) as $update) {
             $this->cursor = $update->sequence;
+
+            if ($update instanceof Income) {
+                $this->bookIncome($update);
+
+                continue;
+            }
+
             $order = $this->book->apply($update);
 
             if ($update->fill !== null) {
@@ -172,6 +181,29 @@ final class Engine
                 implode(', ', $theirs),
             ));
         }
+    }
+
+    /** Funding and liquidations belong to the one strategy that holds the perpetual (D-43). */
+    private function bookIncome(Income $income): void
+    {
+        $owner = null;
+
+        foreach ($this->ledger->perpPositions() as $position) {
+            $owner = $position->symbol->equals($income->symbol) ? $position->strategy : $owner;
+        }
+
+        if ($owner === null) {
+            throw new ReconciliationMismatch("The venue reports {$income->kind->value} on {$income->symbol}, which no strategy holds.");
+        }
+
+        if ($income->kind === IncomeKind::Funding) {
+            $this->ledger->applyFunding($income->id, $owner, $income->symbol, $income->amount, $income->time);
+
+            return;
+        }
+
+        $this->ledger->liquidate($income->id, $owner, $income->symbol, $income->price ?? throw new ReconciliationMismatch('A liquidation without a price.'), $income->time);
+        $this->log->event(new EngineRecord($income->time, 'liquidation', "{$income->symbol} of {$owner}: margin {$income->amount}"));
     }
 
     private function booking(VenueFill $fill, TrackedOrder $order): Fill

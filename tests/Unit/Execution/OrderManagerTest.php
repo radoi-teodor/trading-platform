@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Execution\Data\ClientOrderId;
 use App\Execution\Data\FeeSchedule;
+use App\Execution\Data\Income;
 use App\Execution\Data\OrderAck;
 use App\Execution\Data\OrderRole;
 use App\Execution\Data\OrderStatus;
@@ -99,7 +100,7 @@ it('names orders after the strategy, the event time and their role, counting wit
     $h->plan();
     $h->protect(heldPosition('1.0004'));
     $exit = $h->manager->exit(heldPosition('1.0004'), OrderRole::Exit, $h->rules, Price::of('100'), managerTime(2));
-    $ids = array_map(fn (OrderUpdate $u): string => $u->clientOrderId->value, $h->venue->updatesSince(0));
+    $ids = array_map(fn (OrderUpdate|Income $u): string => $u instanceof OrderUpdate ? $u->clientOrderId->value : $u->id, $h->venue->updatesSince(0));
 
     expect(array_values(array_unique($ids)))->toBe(["k1-{$time}-e1", "k1-{$time}-s2", "k1-{$time}-t3", 'k1-'.base_convert((string) managerTime(2)->getTimestamp(), 10, 36).'-x1'])
         ->and($exit?->accepted)->toBeTrue();

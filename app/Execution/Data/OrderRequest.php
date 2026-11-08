@@ -22,6 +22,7 @@ final readonly class OrderRequest
         public ?Decimal $quoteQuantity = null,
         public ?Price $price = null,
         public ?Price $stopPrice = null,
+        public bool $reduceOnly = false,
     ) {
         $amount = $quantity ?? $quoteQuantity;
 
@@ -48,5 +49,20 @@ final readonly class OrderRequest
     public static function stop(ClientOrderId $id, Symbol $symbol, Side $side, Decimal $quantity, Price $stopPrice): self
     {
         return new self($id, $symbol, $side, OrderType::StopMarket, $quantity, stopPrice: $stopPrice);
+    }
+
+    /** A perpetual take-profit: a market order triggered when the price reaches $trigger, always reduce-only (D-46). */
+    public static function takeProfit(ClientOrderId $id, Symbol $symbol, Side $side, Decimal $quantity, Price $trigger): self
+    {
+        return new self($id, $symbol, $side, OrderType::TakeProfitMarket, $quantity, stopPrice: $trigger, reduceOnly: true);
+    }
+
+    /** The same order, allowed only to reduce a perpetual position. */
+    public function reduceOnly(): self
+    {
+        return new self(
+            $this->clientOrderId, $this->symbol, $this->side, $this->type, $this->quantity, $this->quoteQuantity,
+            $this->price, $this->stopPrice, true,
+        );
     }
 }
