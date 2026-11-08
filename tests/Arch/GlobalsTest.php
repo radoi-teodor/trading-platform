@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Controller;
+use App\Market\Binance\BinanceRequestFailed;
 use Pest\Preset;
 
 arch('php preset', function (): void {
@@ -26,5 +27,6 @@ arch('every file declares strict types', function (): void {
 });
 
 arch('application classes are final unless built for extension', function (): void {
-    expect('App')->classes()->toBeFinal()->ignoring(Controller::class);
+    // The ignored classes are the ones built for extension.
+    expect('App')->classes()->toBeFinal()->ignoring([Controller::class, BinanceRequestFailed::class]);
 });

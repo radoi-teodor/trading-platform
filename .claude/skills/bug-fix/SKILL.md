@@ -161,6 +161,9 @@ Add to the list when a fix reveals a new one.
   carries millisecond jitter. A parser that assumes one unit puts candles in the year 57,000 or in 1970.
   Recognize the unit by digit count and fail on anything else (`docs/market-data.md`, section 3). Search:
   `/ 1000`, `* 1000`, `createFromTimestampMs` in `app/Market`.
+- **Asset codes are not ASCII.** Binance spot lists `币安人生/USDT`; an `[A-Z0-9]` check made the whole
+  instrument sync fail on one symbol (found by `composer test:network`, phase 1 step 4). Asset and Symbol accept
+  letters and digits of any script (`\p{L}\p{N}`, `/u`). Search: `A-Z`, `strtoupper` in `app/`.
 - **`api.binance.com` answers 451 from restricted locations** (cloud sandboxes, some regions). It is not an
   outage; use the configured public-data hosts (`*.binance.vision`) or run from the operator's machine.
 - **Packages that bring their own `App\` namespace.** `laravel/pint` maps `App\` to its own internal app, which

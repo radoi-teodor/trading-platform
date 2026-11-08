@@ -30,6 +30,14 @@ it('keeps a settle asset that differs from the quote', function (): void {
         ->and((string) $inverse)->toBe('BTC/USD:BTC');
 });
 
+it('parses symbols whose base is not ASCII', function (): void {
+    $symbol = Symbol::parse('币安人生/USDT');
+
+    expect($symbol->base->code)->toBe('币安人生')
+        ->and($symbol->venueSymbol())->toBe('币安人生USDT')
+        ->and((string) $symbol)->toBe('币安人生/USDT');
+});
+
 it('compares symbols by value', function (): void {
     expect(Symbol::parse('ETH/USDT')->equals(Symbol::parse('eth/usdt')))->toBeTrue()
         ->and(Symbol::parse('ETH/USDT')->equals(Symbol::parse('ETH/USDT:USDT')))->toBeFalse();

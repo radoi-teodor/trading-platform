@@ -1,0 +1,11 @@
+# Binance fixtures
+
+Where each file comes from. Tests never call the network; `composer test:network` checks the real endpoints.
+
+| File | Provenance |
+|------|------------|
+| `spot-exchange-info.json` | Real response of `GET https://data-api.binance.vision/api/v3/exchangeInfo?symbols=["BTCUSDT","ETHUSDT","XRPUSDT"]`, captured 2026-11-08 |
+| `spot-klines-btcusdt.json` | Real response of `GET https://data-api.binance.vision/api/v3/klines?symbol=BTCUSDT&interval=1m&startTime=1790812800000&limit=5` (2026-10-01 00:00 to 00:04 UTC), captured 2026-11-08 |
+| `perp-klines-btcusdt.from-archive.json` | The first five rows of the real USD-M archive `futures/um/daily/klines/BTCUSDT/1m/BTCUSDT-1m-2026-11-06.zip` (checksum verified), written in the 12-field REST layout documented for `GET /fapi/v1/klines`. `fapi.binance.com` refused this environment (451) |
+| `perp-funding-btcusdt.from-archive.json` | The first three rates of the real archive `futures/um/monthly/fundingRate/BTCUSDT/BTCUSDT-fundingRate-2026-09.zip`, in the object layout documented for `GET /fapi/v1/fundingRate`; `fundingTime` floored to the second, `markPrice` empty because the archive has none |
+| `perp-exchange-info.hand-written.json` | Written by hand from the field structure documented for `GET /fapi/v1/exchangeInfo`; values are plausible, not captured. Includes a quarterly contract and a settling symbol to test filtering. Replace with a real capture when one is made from the operator's machine |

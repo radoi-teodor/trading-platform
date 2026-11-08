@@ -18,7 +18,7 @@ final readonly class Symbol implements Stringable
 
     public static function parse(string $symbol): self
     {
-        if (preg_match('/^([A-Za-z0-9]+)\/([A-Za-z0-9]+)(?::([A-Za-z0-9]+))?$/', $symbol, $parts) !== 1) {
+        if (preg_match('/^([\p{L}\p{N}]+)\/([\p{L}\p{N}]+)(?::([\p{L}\p{N}]+))?$/u', $symbol, $parts) !== 1) {
             throw new InvalidArgumentException("Not a unified symbol: '{$symbol}'.");
         }
 

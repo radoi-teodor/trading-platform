@@ -55,7 +55,12 @@
         "analyse": "phpstan analyse --memory-limit=1G",
         "test": [
             "@php artisan config:clear --ansi @no_additional_args",
-            "pest --exclude-group=testnet,llm"
+            "pest --exclude-group=testnet,llm,network"
+        ],
+        "test:network": [
+            "Composer\\Config::disableProcessTimeout",
+            "@putenv TRADING_NETWORK=1",
+            "pest --group=network"
         ],
         "test:testnet": [
             "Composer\\Config::disableProcessTimeout",
@@ -103,6 +108,7 @@
         "format": "Format the code with Pint (add -- --test to check only).",
         "analyse": "Run PHPStan through Larastan at the project level.",
         "test": "Run the default suite: no network, no exchange, no LLM.",
+        "test:network": "Read the real public market data endpoints (opt-in, no keys).",
         "test:testnet": "Run the Binance testnet suite (opt-in).",
         "test:llm": "Run the suite that calls the Claude API (opt-in, costs money).",
         "mutate": "Run Pest mutation testing on the domain unit tests (D-34)."

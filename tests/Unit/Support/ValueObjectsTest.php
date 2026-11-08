@@ -22,6 +22,11 @@ it('normalizes asset codes and rejects invalid ones', function (): void {
         ->and(fn () => Asset::of(str_repeat('A', 21)))->toThrow(InvalidArgumentException::class);
 });
 
+it('accepts asset codes that are not ASCII, as Binance lists them', function (): void {
+    expect(Asset::of('币安人生')->code)->toBe('币安人生')
+        ->and(Asset::of('ünı')->code)->toBe('ÜNI');
+});
+
 it('keeps prices positive and rounds them to a tick in the asked direction', function (): void {
     $price = Price::of('100.019');
 
