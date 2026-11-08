@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace App\Simulation\Console;
 
+use App\Execution\Data\FeeSchedule;
+use App\Execution\Venues\CostModel;
 use App\Market\Data\MarketType;
 use App\Market\Data\RulesHistory;
+use App\Market\Feed\DatabaseCandleFeed;
 use App\Market\FundingRateRepository;
 use App\Market\Instruments\StoredInstruments;
 use App\Market\Models\Instrument;
@@ -13,22 +16,34 @@ use App\Market\Quality\QualityCheck;
 use App\Risk\RiskPolicy;
 use App\Simulation\Backtest;
 use App\Simulation\Data\Participant;
+use App\Simulation\Data\RunDefinition;
+use App\Simulation\Data\SetOutcome;
+use App\Simulation\Metrics\Statistics;
+use App\Simulation\Models\StrategyTrial;
+use App\Simulation\Report\CanonicalJson;
+use App\Simulation\Validation\Cscv;
+use App\Simulation\Validation\DeflatedSharpe;
 use App\Strategy\Contracts\BuildableStrategy;
 use App\Strategy\Contracts\Strategy;
+use App\Strategy\Dsl\Compiler\CompiledStrategy;
 use App\Strategy\Dsl\Document\DocumentChecker;
 use App\Strategy\Dsl\Document\PolicyLimits;
 use App\Strategy\Dsl\Document\StrategySpec;
 use App\Strategy\Versions\StrategyRepository;
+use App\Support\Asset;
 use App\Support\Clock\Clock;
 use App\Support\Number\Decimal;
 use App\Support\Number\Money;
 use App\Support\Symbol;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Config\Repository;
+use Illuminate\Contracts\Process\InvokedProcess as InvokedProcessContract;
+use Illuminate\Database\ConnectionInterface;
+use Illuminate\Process\Factory as Processes;
 use InvalidArgumentException;
 use RuntimeException;
 
-/** What backtest:run and backtest:grid share: reading options and config, filters, data coverage, wallets. */
+/** What the backtest commands share: reading options and config, filters, data coverage, wallets, running parameter sets. */
 trait PreparesBacktests
 {
     /** @return array{string, class-string<BuildableStrategy>, string} */
@@ -309,6 +324,242 @@ trait PreparesBacktests
         return is_string($value) ? Decimal::of($value) : throw new InvalidArgumentException("Missing decimal setting '{$key}'.");
     }
 
+    /** Fees times 1.5 and slippage (half spread and impact) times 2: the cost stress of docs/simulation.md, section 5. */
+    public const array STRESS = ['fees' => '1.5', 'slippage' => '2'];
+
+    /**
+     * Runs parameter sets of a document over the same candles in one pass (D-57), or split over child processes that
+     * each run a share of the sets from the same warmup start, which gives the same outcomes in the same order.
+     *
+     * @param  list<array<string, string>>  $sets
+     * @return array{outcomes: list<SetOutcome>, definition: RunDefinition, fingerprint: string, candles: int}
+     */
+    protected function runSets(
+        Repository $config, QualityCheck $quality, FundingRateRepository $funding, ConnectionInterface $db, StrategySpec $spec, string $document,
+        array $sets, int $version, CarbonImmutable $from, CarbonImmutable $to, string $equityText, bool $stressed = false, int $workers = 1,
+        ?Processes $processes = null, ?CarbonImmutable $warmupFrom = null,
+    ): array {
+        $strategies = array_map(fn (array $set): Strategy => CompiledStrategy::fromSpec($spec, $set, $version), $sets);
+        $symbols = self::followed($strategies[0]);
+        $rules = $this->rules($symbols);
+
+        if ($warmupFrom === null) {
+            $warmupFrom = $from;
+
+            foreach ($strategies as $strategy) {
+                $start = self::warmupFrom($strategy, $from);
+                $warmupFrom = $start < $warmupFrom ? $start : $warmupFrom;
+            }
+
+            foreach ($symbols as $symbol) {
+                $problem = $this->coverage($quality, $symbol, $warmupFrom, $to) ?? $this->fundingCoverage($funding, $symbol, $warmupFrom, $to);
+
+                if ($problem !== null) {
+                    throw new InvalidArgumentException("{$symbol}: {$problem}. Backfill it before backtesting (market:backfill).");
+                }
+            }
+        }
+
+        $policy = $spec->benchmark ? RiskPolicy::benchmark() : RiskPolicy::account($this->section($config, 'risk.account'));
+        $equity = Money::of($equityText, Asset::of($this->text($config, 'simulation.quote')));
+        [$spotBalance, $futuresBalance] = $this->wallets($config, $symbols, $equity);
+        $costs = $this->section($config, 'simulation.cost_model');
+        $fees = $this->section($config, 'simulation.fees');
+        $perpetual = $this->section($config, 'simulation.perpetual');
+        $perpetualFees = is_array($perpetual['fees'] ?? null) ? $perpetual['fees'] : [];
+        $fee = Decimal::of($stressed ? self::STRESS['fees'] : '1');
+        $slip = Decimal::of($stressed ? self::STRESS['slippage'] : '1');
+        $definition = new RunDefinition(
+            strategy: $strategies[0]->identity(),
+            market: $futuresBalance === null ? MarketType::Spot : MarketType::Perp,
+            symbols: $symbols,
+            from: $from,
+            to: $to,
+            warmupFrom: $warmupFrom,
+            initialBalance: $spotBalance,
+            fees: new FeeSchedule(self::decimal($fees, 'maker')->times($fee), self::decimal($fees, 'taker')->times($fee)),
+            costs: new CostModel(
+                is_int($costs['version'] ?? null) ? $costs['version'] : 0, self::decimal($costs, 'half_spread')->times($slip), self::decimal($costs, 'impact')->times($slip),
+                self::decimal($costs, 'limit_volume_share'),
+            ),
+            policy: $policy,
+            futuresBalance: $futuresBalance,
+            perpetualFees: $futuresBalance === null ? null : new FeeSchedule(self::decimal($perpetualFees, 'maker')->times($fee), self::decimal($perpetualFees, 'taker')->times($fee)),
+            maintenanceRate: $futuresBalance === null ? null : self::decimal($perpetual, 'maintenance_margin_rate'),
+        );
+
+        if ($workers > 1 && count($sets) > 1 && $processes !== null) {
+            return ['definition' => $definition, ...$this->splitSets($processes, $document, $sets, $version, $from, $to, $warmupFrom, $equityText, $stressed, $workers)];
+        }
+
+        $participants = array_map(
+            fn (Strategy $strategy): Participant => new Participant(implode(' ', array_map(fn (string $k, string $v): string => "{$k}={$v}", array_keys($strategy->identity()->parameters), $strategy->identity()->parameters)) ?: 'defaults', $strategy, $policy, self::warmupFrom($strategy, $from)),
+            $strategies,
+        );
+        $run = (new Backtest(new DatabaseCandleFeed($db)))->run($definition, $participants[0], $rules, array_slice($participants, 1));
+
+        return [
+            'outcomes' => array_map(SetOutcome::of(...), [$run->main, ...$run->benchmarks]),
+            'definition' => $definition,
+            'fingerprint' => $run->fingerprint,
+            'candles' => $run->candles,
+        ];
+    }
+
+    /**
+     * @param  list<array<string, string>>  $sets
+     * @return array{outcomes: list<SetOutcome>, fingerprint: string, candles: int}
+     */
+    private function splitSets(
+        Processes $processes, string $document, array $sets, int $version, CarbonImmutable $from, CarbonImmutable $to, CarbonImmutable $warmupFrom,
+        string $equity, bool $stressed, int $workers,
+    ): array {
+        $parts = min($workers, count($sets));
+        $chunks = array_chunk($sets, max(1, intdiv(count($sets) + $parts - 1, $parts)));
+        $directory = sys_get_temp_dir().'/trading-grid-'.getmypid().'-'.substr(hash('sha256', $document.CanonicalJson::encode($sets)), 0, 12);
+
+        if (! is_dir($directory) && ! mkdir($directory, 0700, true)) {
+            throw new RuntimeException("Cannot create {$directory}.");
+        }
+
+        $jobs = [];
+
+        foreach ($chunks as $index => $chunk) {
+            $job = "{$directory}/part-{$index}.json";
+            file_put_contents($job, CanonicalJson::encode([
+                'document' => $document, 'version' => $version, 'sets' => $chunk, 'from' => $from->toDateString(), 'to' => $to->toDateString(),
+                'warmup_from' => $warmupFrom->toIso8601ZuluString(), 'equity' => $equity, 'stressed' => $stressed, 'out' => "{$directory}/out-{$index}.json",
+            ]));
+            $jobs[] = $job;
+        }
+
+        $artisan = $this->laravel->basePath('artisan');
+        // The workers read the database this process reads, whatever their environment says.
+        $connection = $this->laravel->make('db')->connection();
+        $environment = [
+            'APP_ENV' => $this->laravel->environment(),
+            'DB_CONNECTION' => $connection->getName(),
+            'DB_DATABASE' => $connection->getDatabaseName(),
+        ];
+        $running = array_map(fn (string $job): InvokedProcessContract => $processes->newPendingProcess()->forever()->env($environment)->start([PHP_BINARY, $artisan, 'backtest:grid-part', $job]), $jobs);
+        $outcomes = [];
+        $fingerprint = '';
+        $candles = 0;
+
+        foreach ($jobs as $index => $job) {
+            $result = $running[$index]->wait();
+
+            if (! $result->successful()) {
+                throw new RuntimeException("A grid worker failed: {$result->errorOutput()}{$result->output()}");
+            }
+
+            $out = json_decode((string) file_get_contents("{$directory}/out-{$index}.json"), true, flags: JSON_THROW_ON_ERROR);
+            $part = is_array($out) ? $out : [];
+            $fingerprint = $fingerprint === '' && is_string($part['fingerprint'] ?? null) ? $part['fingerprint'] : $fingerprint;
+            $candles = max($candles, is_int($part['candles'] ?? null) ? $part['candles'] : 0);
+
+            foreach (is_array($part['outcomes'] ?? null) ? $part['outcomes'] : [] as $outcome) {
+                $outcomes[] = SetOutcome::fromArray(is_array($outcome) ? $outcome : []);
+            }
+
+            @unlink($job);
+            @unlink("{$directory}/out-{$index}.json");
+        }
+
+        @rmdir($directory);
+
+        return ['outcomes' => $outcomes, 'fingerprint' => $fingerprint, 'candles' => $candles];
+    }
+
+    /** @return list<Decimal> */
+    protected static function span(Decimal $min, Decimal $max, Decimal $step): array
+    {
+        $values = [];
+
+        for ($value = $min; ! $value->isGreaterThan($max) && count($values) <= 100_000; $value = $value->plus($step)) {
+            $values[] = $value;
+        }
+
+        return $values;
+    }
+
+    /** @param list<array{parameters: array<string, string>, daily_sharpe: ?Decimal, daily: list<Decimal>}> $rows */
+    protected function recordTrials(StrategySpec $spec, RunDefinition $definition, array $rows, CarbonImmutable $from, CarbonImmutable $to, Clock $clock): void
+    {
+        foreach ($rows as $row) {
+            StrategyTrial::query()->create([
+                'family' => $spec->id,
+                'strategy' => $spec->id,
+                'parameters' => $row['parameters'],
+                'definition_hash' => $definition->hash(),
+                'window_from' => $from,
+                'window_to' => $to,
+                'daily_sharpe' => $row['daily_sharpe'] === null ? null : (string) $row['daily_sharpe'],
+                'observations' => count($row['daily']),
+                'created_at' => $clock->now(),
+            ]);
+        }
+    }
+
+    /**
+     * The deflated Sharpe ratio of the best set against every trial of the family, and PBO over the grid.
+     *
+     * @param  list<array{parameters: array<string, string>, daily_sharpe: ?Decimal, daily: list<Decimal>}>  $rows
+     * @return array<string, mixed>
+     */
+    protected function validate(StrategySpec $spec, array $rows): array
+    {
+        $ranked = array_values(array_filter($rows, fn (array $row): bool => $row['daily_sharpe'] !== null));
+        usort($ranked, fn (array $a, array $b): int => ($b['daily_sharpe'] ?? Decimal::zero())->compare($a['daily_sharpe'] ?? Decimal::zero()));
+        $validation = ['best' => null, 'deflated_sharpe' => null, 'pbo' => null, 'notes' => []];
+
+        if ($ranked === []) {
+            $validation['notes'][] = 'No set has daily returns that move: nothing to rank.';
+
+            return $validation;
+        }
+
+        $best = $ranked[0];
+        $validation['best'] = self::label($best['parameters']);
+        $sharpes = array_values(array_map(
+            fn (mixed $value): Decimal => Decimal::of(is_string($value) ? $value : '0'),
+            StrategyTrial::query()->where('family', $spec->id)->whereNotNull('daily_sharpe')->orderBy('id')->pluck('daily_sharpe')->all(),
+        ));
+        $variance = count($sharpes) >= 2 ? Statistics::standardDeviation($sharpes) : null;
+        $variance = $variance === null ? Decimal::zero() : $variance->times($variance);
+        $moments = DeflatedSharpe::moments($best['daily']);
+        $benchmark = DeflatedSharpe::expectedMaximum(max(1, count($sharpes)), $variance);
+
+        try {
+            $validation['deflated_sharpe'] = [
+                'probability' => DeflatedSharpe::probability($best['daily_sharpe'] ?? Decimal::zero(), count($best['daily']), $moments['skewness'], $moments['kurtosis'], $benchmark),
+                'daily_sharpe' => $best['daily_sharpe'],
+                'expected_maximum' => $benchmark,
+                'trials' => count($sharpes),
+                'trial_variance' => $variance,
+                'observations' => count($best['daily']),
+                'skewness' => $moments['skewness'],
+                'kurtosis' => $moments['kurtosis'],
+            ];
+        } catch (InvalidArgumentException $failure) {
+            $validation['notes'][] = "Deflated Sharpe ratio: {$failure->getMessage()}";
+        }
+
+        try {
+            $validation['pbo'] = Cscv::overfitting(array_map(fn (array $row): array => $row['daily'], $rows));
+        } catch (InvalidArgumentException $failure) {
+            $validation['notes'][] = "Probability of backtest overfitting: {$failure->getMessage()}";
+        }
+
+        return $validation;
+    }
+
+    /** @param array<string, string> $parameters */
+    protected static function label(array $parameters): string
+    {
+        return implode(' ', array_map(fn (string $name, string $value): string => "{$name}={$value}", array_keys($parameters), $parameters)) ?: 'defaults';
+    }
+
     /** The saved strategy versions, checked against the stored instruments and the account policy (D-61). */
     protected function versions(Repository $config, Clock $clock): StrategyRepository
     {
@@ -321,7 +572,7 @@ trait PreparesBacktests
      * Reads a strategy document from a saved version (<id>@v<n>) or a file, checks it, prints its warnings and
      * errors, and returns the checked spec with the document's version number (1 for a file), or null on errors.
      *
-     * @return array{StrategySpec, int}|null
+     * @return array{StrategySpec, int, string}|null the spec, the version number and the document's text
      */
     protected function loadDocument(Repository $config, Clock $clock, ?string $label, ?string $file): ?array
     {
@@ -345,6 +596,6 @@ trait PreparesBacktests
             $this->error("{$source}:{$error->position->line}:{$error->position->column}: {$error->problem}");
         }
 
-        return $result->spec === null ? null : [$result->spec, $number];
+        return $result->spec === null ? null : [$result->spec, $number, $text];
     }
 }

@@ -1436,8 +1436,8 @@
     "semantic_hash": "27836203d1bf0c6ea54c3c7de5d1c4e8"
   },
   "tests/Feature/Simulation/RunBacktestCommandTest.php": {
-    "mtime": 1794172634.2080986,
-    "seen": 1794172862.2406273,
+    "mtime": 1794176544.9122667,
+    "seen": 1794176943.9551408,
     "ast_hash": "9ba24e7ce85b2f5a865879c9aeeb3071",
     "semantic_hash": ""
   },
@@ -2341,15 +2341,15 @@
     "semantic_hash": ""
   },
   "app/Simulation/Console/GridBacktest.php": {
-    "mtime": 1794172725.095392,
-    "seen": 1794172862.2374098,
-    "ast_hash": "a5e75942ae351e6857f949f52fa27e30",
+    "mtime": 1794176676.7469482,
+    "seen": 1794176943.9516873,
+    "ast_hash": "f30b0813703e7ef490978c4ee03e0ffb",
     "semantic_hash": ""
   },
   "app/Simulation/Console/PreparesBacktests.php": {
-    "mtime": 1794172490.1768012,
-    "seen": 1794172572.595096,
-    "ast_hash": "98d81ad6afbcc9ec33c94765c62efc69",
+    "mtime": 1794176772.786899,
+    "seen": 1794176943.9517095,
+    "ast_hash": "ba57c586c58955aeef31c49776b8d22e",
     "semantic_hash": ""
   },
   "app/Simulation/Models/StrategyTrial.php": {
@@ -2716,6 +2716,120 @@
     "mtime": 1794175861.6716895,
     "seen": 1794175983.1387599,
     "ast_hash": "124f8b3df02c755acecc3269ebabdeb2",
+    "semantic_hash": ""
+  },
+  "app/Simulation/Console/GridPart.php": {
+    "mtime": 1794176696.957893,
+    "seen": 1794176943.9516897,
+    "ast_hash": "565790460c41d417c800379f9b44a673",
+    "semantic_hash": ""
+  },
+  "app/Simulation/Data/SetOutcome.php": {
+    "mtime": 1794176739.7272446,
+    "seen": 1794176943.9518325,
+    "ast_hash": "19188ed0907af529a3789f84eb558409",
+    "semantic_hash": ""
+  },
+  "app/Simulation/Models/StrategyGateReport.php": {
+    "mtime": 1794176588.3231325,
+    "seen": 1794176943.9519665,
+    "ast_hash": "ba597202d52559809ea1966e398cba87",
+    "semantic_hash": ""
+  },
+  "app/Simulation/Models/StrategyHoldout.php": {
+    "mtime": 1794176588.3219268,
+    "seen": 1794176943.9519677,
+    "ast_hash": "70234ad15e42602e902d6eb354cd07d8",
+    "semantic_hash": ""
+  },
+  "app/Simulation/Validation/Gates.php": {
+    "mtime": 1794176639.572225,
+    "seen": 1794176943.9520955,
+    "ast_hash": "af6c375546d60da760d7a36a2fa4e00d",
+    "semantic_hash": ""
+  },
+  "app/Simulation/Validation/MonteCarlo.php": {
+    "mtime": 1794176739.7274704,
+    "seen": 1794176943.9520965,
+    "ast_hash": "f6ba79f43a6aa35b1c040eb54b62aff3",
+    "semantic_hash": ""
+  },
+  "app/Simulation/Validation/RegimeLabels.php": {
+    "mtime": 1794176266.9607027,
+    "seen": 1794176943.952114,
+    "ast_hash": "f9757517282e615ef0f105f2975ffebb",
+    "semantic_hash": ""
+  },
+  "catalog/baselines/buy-and-hold.strategy.yaml": {
+    "mtime": 1794176009.9449308,
+    "seen": 1794176943.95425,
+    "ast_hash": "fa60c7274ab10615edb80e0d1dad9c50",
+    "semantic_hash": ""
+  },
+  "catalog/baselines/donchian-breakout-short.strategy.yaml": {
+    "mtime": 1794176009.951276,
+    "seen": 1794176943.9542515,
+    "ast_hash": "38b55a3e507fcb4bbe05252348203951",
+    "semantic_hash": ""
+  },
+  "catalog/baselines/donchian-breakout.strategy.yaml": {
+    "mtime": 1794176009.9498844,
+    "seen": 1794176943.9542527,
+    "ast_hash": "42ec05b49b475cad73f5239c528e1951",
+    "semantic_hash": ""
+  },
+  "catalog/baselines/funding-carry.strategy.yaml": {
+    "mtime": 1794176009.9528196,
+    "seen": 1794176943.9542544,
+    "ast_hash": "959907e2f0a51f0ea6a8162b6088ac8a",
+    "semantic_hash": ""
+  },
+  "catalog/baselines/ma-trend-short.strategy.yaml": {
+    "mtime": 1794176009.948643,
+    "seen": 1794176943.9542556,
+    "ast_hash": "81fd412edf648ed66e296dcde38e4fda",
+    "semantic_hash": ""
+  },
+  "catalog/baselines/ma-trend.strategy.yaml": {
+    "mtime": 1794176009.947301,
+    "seen": 1794176943.954257,
+    "ast_hash": "65e8fa7be9a74fd6636bbc0f06a1248d",
+    "semantic_hash": ""
+  },
+  "database/migrations/2026_11_08_000007_create_strategy_gate_tables.php": {
+    "mtime": 1794176588.3167143,
+    "seen": 1794176943.9547114,
+    "ast_hash": "9a00828d53e46b407208e54df6bd1b0b",
+    "semantic_hash": ""
+  },
+  "tests/Feature/Simulation/GridWorkersTest.php": {
+    "mtime": 1794176820.2559197,
+    "seen": 1794176943.9551392,
+    "ast_hash": "0c44e6adb5d6f73c0b4d229d7ade2c31",
+    "semantic_hash": ""
+  },
+  "tests/Golden/DslBaselinesTest.php": {
+    "mtime": 1794176739.7281718,
+    "seen": 1794176943.955356,
+    "ast_hash": "ae79d216642db489141574cfa56b4b11",
+    "semantic_hash": ""
+  },
+  "tests/Unit/Simulation/GatesTest.php": {
+    "mtime": 1794176739.7279506,
+    "seen": 1794176943.956033,
+    "ast_hash": "ff947f1df4fe0b78b2f2372f0dc89287",
+    "semantic_hash": ""
+  },
+  "tests/Unit/Simulation/MonteCarloTest.php": {
+    "mtime": 1794176746.7312868,
+    "seen": 1794176943.9560344,
+    "ast_hash": "4f3107e6cd3242be97ec85d93b9c8bc2",
+    "semantic_hash": ""
+  },
+  "tests/Unit/Simulation/RegimeLabelsTest.php": {
+    "mtime": 1794176287.7767036,
+    "seen": 1794176943.9560356,
+    "ast_hash": "34666a8e0ad79e34d897aaa00b645339",
     "semantic_hash": ""
   },
   "package-lock.json": {

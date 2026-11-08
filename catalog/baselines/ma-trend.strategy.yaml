@@ -1,0 +1,26 @@
+strategy: ma-trend
+title: Moving-average trend, 50/200 daily, the second benchmark
+family: trend
+hypothesis: >
+  Trends persist: holding while the fast average is above the slow one keeps most of the rises and avoids the longest
+  falls.
+fails_when: Choppy markets, where the averages cross back and forth.
+profile: benchmark
+
+params:
+  fast: { default: 50, range: [5, 100], step: 1 }
+  slow: { default: 200, range: [20, 400], step: 1 }
+
+market:
+  exchange: binance
+  type: spot
+  instruments: [BTC/USDT]
+timeframe: 1d
+
+entries:
+  long:
+    when: sma($fast) > sma($slow)
+
+exits:
+  stop_loss: none
+  when: sma($fast) <= sma($slow)

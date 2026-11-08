@@ -1,0 +1,26 @@
+strategy: donchian-breakout
+title: Donchian breakout, 20/10 on 4h, the coded baseline
+family: trend
+hypothesis: >
+  A close above the highest high of the last 20 candles starts a move that late buyers extend; leaving at the lowest low
+  of the last 10 keeps the trend and cuts the reversal.
+fails_when: Ranges with false breakouts, each paying a stop.
+
+params:
+  entry: { default: 20, range: [10, 40], step: 5 }
+  exit: { default: 10, range: [5, 20], step: 5 }
+
+market:
+  exchange: binance
+  type: spot
+  instruments: [BTC/USDT]
+timeframe: 4h
+
+entries:
+  long:
+    when: close > highest(high, $entry)[1]
+
+exits:
+  stop_loss: 2 * atr(14)
+  take_profit: 3R
+  when: close < lowest(low, $exit)[1]

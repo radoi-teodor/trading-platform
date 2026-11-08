@@ -1,0 +1,25 @@
+strategy: ma-trend-short
+title: Moving-average trend, short, on the perpetual
+family: trend
+hypothesis: >
+  The mirror of the trend benchmark: short while the fast average is below the slow one, paying or earning funding.
+fails_when: Choppy markets and sharp rallies.
+profile: benchmark
+
+params:
+  fast: { default: 50, range: [5, 100], step: 1 }
+  slow: { default: 200, range: [20, 400], step: 1 }
+
+market:
+  exchange: binance
+  type: perp
+  instruments: [BTC/USDT:USDT]
+timeframe: 1d
+
+entries:
+  short:
+    when: sma($fast) < sma($slow)
+
+exits:
+  stop_loss: none
+  when: sma($fast) >= sma($slow)
