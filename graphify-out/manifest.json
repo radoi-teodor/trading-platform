@@ -1849,9 +1849,9 @@
     "semantic_hash": ""
   },
   "docs/README.md": {
-    "mtime": 1794164994.2660937,
-    "seen": 1794165432.5192912,
-    "ast_hash": "2059110c8902a3299e44a620b38041b2",
+    "mtime": 1794166254.2027147,
+    "seen": 1794166528.632657,
+    "ast_hash": "465177a7bf4a643467be3cba2458e2a1",
     "semantic_hash": ""
   },
   "docs/architecture.md": {
@@ -1879,9 +1879,9 @@
     "semantic_hash": ""
   },
   "docs/decisions.md": {
-    "mtime": 1794164956.9880617,
-    "seen": 1794165432.5192952,
-    "ast_hash": "ac015b9fbdba61da3c93dcb07068589d",
+    "mtime": 1794166223.6552894,
+    "seen": 1794166528.6327155,
+    "ast_hash": "c5a65dd905182b8c48b77f3d7cd092ea",
     "semantic_hash": ""
   },
   "docs/engine.md": {
@@ -2098,6 +2098,192 @@
     "mtime": 1794165781.7351427,
     "seen": 1794165823.8400621,
     "ast_hash": "8f088d8932fedfac27f23a900be53932",
+    "semantic_hash": ""
+  },
+  "app/Market/Contracts/InstrumentDirectory.php": {
+    "mtime": 1794166341.0235693,
+    "seen": 1794166528.6281626,
+    "ast_hash": "6d918e1ce3be61b2568a0da81d82e347",
+    "semantic_hash": ""
+  },
+  "app/Market/Instruments/StoredInstruments.php": {
+    "mtime": 1794166341.025704,
+    "seen": 1794166528.62844,
+    "ast_hash": "cc0a1bd8007b2ac50d2227c32833b137",
+    "semantic_hash": ""
+  },
+  "app/Strategy/Dsl/Document/CarryTemplate.php": {
+    "mtime": 1794166341.021347,
+    "seen": 1794166528.6298432,
+    "ast_hash": "d980ae19118597e31f97b9952107a3ff",
+    "semantic_hash": ""
+  },
+  "app/Strategy/Dsl/Document/CheckResult.php": {
+    "mtime": 1794166341.0204098,
+    "seen": 1794166528.629845,
+    "ast_hash": "772ea3939916da773431cf8e9faac479",
+    "semantic_hash": ""
+  },
+  "app/Strategy/Dsl/Document/DocumentChecker.php": {
+    "mtime": 1794166444.6151848,
+    "seen": 1794166528.629846,
+    "ast_hash": "8043f134e37c4015d968663d7e50a1d8",
+    "semantic_hash": ""
+  },
+  "app/Strategy/Dsl/Document/EntrySpec.php": {
+    "mtime": 1794166341.0158925,
+    "seen": 1794166528.6298468,
+    "ast_hash": "e58f3bea1193348a52cce44f82d53cc8",
+    "semantic_hash": ""
+  },
+  "app/Strategy/Dsl/Document/ExitSpec.php": {
+    "mtime": 1794166341.0168936,
+    "seen": 1794166528.6298478,
+    "ast_hash": "68f891b0897d569bef9af7f342bdd2dd",
+    "semantic_hash": ""
+  },
+  "app/Strategy/Dsl/Document/Expression.php": {
+    "mtime": 1794166341.0140748,
+    "seen": 1794166528.6298485,
+    "ast_hash": "467b52904fb11701b89ef5c391b8aa08",
+    "semantic_hash": ""
+  },
+  "app/Strategy/Dsl/Document/ParameterSpec.php": {
+    "mtime": 1794166341.0181043,
+    "seen": 1794166528.6298492,
+    "ast_hash": "6df5219a656b1c18f63892436feb0233",
+    "semantic_hash": ""
+  },
+  "app/Strategy/Dsl/Document/PolicyLimits.php": {
+    "mtime": 1794166341.0193763,
+    "seen": 1794166528.62985,
+    "ast_hash": "a4d747c6463adc6d37d9230931de99f9",
+    "semantic_hash": ""
+  },
+  "app/Strategy/Dsl/Document/StrategySpec.php": {
+    "mtime": 1794166341.0224423,
+    "seen": 1794166528.6298509,
+    "ast_hash": "98c4ec61baecf32ae54271aa479e3c3c",
+    "semantic_hash": ""
+  },
+  "app/Strategy/Dsl/DslWriter.php": {
+    "mtime": 1794166069.4832838,
+    "seen": 1794166528.629869,
+    "ast_hash": "73d8d1e40e8a686dd81f7cd5d56eaaea",
+    "semantic_hash": ""
+  },
+  "app/Strategy/Dsl/Functions/FunctionSpec.php": {
+    "mtime": 1794166032.2869723,
+    "seen": 1794166528.62987,
+    "ast_hash": "5e9ffda211cd489d279bdd29a874008d",
+    "semantic_hash": ""
+  },
+  "app/Strategy/Dsl/Functions/Group.php": {
+    "mtime": 1794166032.2831087,
+    "seen": 1794166528.6298707,
+    "ast_hash": "9bebf94726bd07e067cd81f6d1f552c7",
+    "semantic_hash": ""
+  },
+  "app/Strategy/Dsl/Functions/Library.php": {
+    "mtime": 1794166032.2881415,
+    "seen": 1794166528.629872,
+    "ast_hash": "8f9d0a0a08ec2828e1b1e5385dfd0796",
+    "semantic_hash": ""
+  },
+  "app/Strategy/Dsl/Functions/ParamKind.php": {
+    "mtime": 1794166032.2849264,
+    "seen": 1794166528.6298728,
+    "ast_hash": "be8c9d24dbd879a4eac239e2358f1ab9",
+    "semantic_hash": ""
+  },
+  "app/Strategy/Dsl/Functions/ParamSpec.php": {
+    "mtime": 1794166032.286036,
+    "seen": 1794166528.6298742,
+    "ast_hash": "73cf3ba165a8cd4608e561ae730e3407",
+    "semantic_hash": ""
+  },
+  "app/Strategy/Dsl/Scope.php": {
+    "mtime": 1794166055.942112,
+    "seen": 1794166528.629925,
+    "ast_hash": "f9e2fa6e91975dafd703d770b370beab",
+    "semantic_hash": ""
+  },
+  "app/Strategy/Dsl/TypeChecker.php": {
+    "mtime": 1794166148.0476537,
+    "seen": 1794166528.6299577,
+    "ast_hash": "3999c14258c20e92a5e50d576343a4ab",
+    "semantic_hash": ""
+  },
+  "app/Strategy/Dsl/Types/Kind.php": {
+    "mtime": 1794166000.4658442,
+    "seen": 1794166528.6299586,
+    "ast_hash": "7588d37736e76525620ffe90f113f94b",
+    "semantic_hash": ""
+  },
+  "app/Strategy/Dsl/Types/Type.php": {
+    "mtime": 1794166000.4687395,
+    "seen": 1794166528.6299603,
+    "ast_hash": "ec39180794539b2c9ac9006e738877d5",
+    "semantic_hash": ""
+  },
+  "app/Strategy/Dsl/Types/Unit.php": {
+    "mtime": 1794166000.4676652,
+    "seen": 1794166528.6299613,
+    "ast_hash": "d8f80bba06927458d948f71ee2e91c14",
+    "semantic_hash": ""
+  },
+  "app/Strategy/Dsl/Yaml/YamlList.php": {
+    "mtime": 1794165967.1848657,
+    "seen": 1794166528.629962,
+    "ast_hash": "63137f8e788a953b5f9e2631abc49572",
+    "semantic_hash": ""
+  },
+  "app/Strategy/Dsl/Yaml/YamlMap.php": {
+    "mtime": 1794165967.186186,
+    "seen": 1794166528.629963,
+    "ast_hash": "213254b62deb8bf790f917f1003cd67b",
+    "semantic_hash": ""
+  },
+  "app/Strategy/Dsl/Yaml/YamlReader.php": {
+    "mtime": 1794166166.9883547,
+    "seen": 1794166528.6299639,
+    "ast_hash": "04d36bb316ca790cc896fcc8883ba765",
+    "semantic_hash": ""
+  },
+  "app/Strategy/Dsl/Yaml/YamlScalar.php": {
+    "mtime": 1794165967.1837163,
+    "seen": 1794166528.6299648,
+    "ast_hash": "a1644d39cbf09468721392efd7c22ffc",
+    "semantic_hash": ""
+  },
+  "app/Strategy/Dsl/Yaml/YamlValue.php": {
+    "mtime": 1794165967.1816278,
+    "seen": 1794166528.6299655,
+    "ast_hash": "ea100fac608bb029f8e7fe484e4a1327",
+    "semantic_hash": ""
+  },
+  "tests/Support/KnownInstruments.php": {
+    "mtime": 1794166341.0268145,
+    "seen": 1794166528.6319838,
+    "ast_hash": "51afea8edc37af3261eedb5e899114d3",
+    "semantic_hash": ""
+  },
+  "tests/Unit/Strategy/Dsl/DocumentCheckerTest.php": {
+    "mtime": 1794166486.257923,
+    "seen": 1794166528.6323388,
+    "ast_hash": "295d0bd6ca546ad45ff87f7f873ff653",
+    "semantic_hash": ""
+  },
+  "tests/Unit/Strategy/Dsl/TypeCheckerTest.php": {
+    "mtime": 1794166154.9539769,
+    "seen": 1794166528.632359,
+    "ast_hash": "7df8c3b08b7323eeda8b4517b1d923ec",
+    "semantic_hash": ""
+  },
+  "tests/Unit/Strategy/Dsl/YamlReaderTest.php": {
+    "mtime": 1794165913.6272783,
+    "seen": 1794166528.6323602,
+    "ast_hash": "005e555cd1a2b56b655575f1e96c9858",
     "semantic_hash": ""
   },
   "package-lock.json": {
