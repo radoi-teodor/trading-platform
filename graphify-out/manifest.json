@@ -157,10 +157,10 @@
     "semantic_hash": "2e44e4836669fc5c99ed0c43962b1acf"
   },
   "app/Execution/Engine.php": {
-    "mtime": 1794160848.10656,
-    "seen": 1794165296.7189023,
-    "ast_hash": "56edbec262a5bb5bd6c7d5fd6b1f5309",
-    "semantic_hash": "56edbec262a5bb5bd6c7d5fd6b1f5309"
+    "mtime": 1794170360.0212986,
+    "seen": 1794170488.8297434,
+    "ast_hash": "ac65452971dc3af1c895ef1d69fa8469",
+    "semantic_hash": ""
   },
   "app/Execution/Journal/InMemoryDecisionLog.php": {
     "mtime": 1794156358.689865,
@@ -175,10 +175,10 @@
     "semantic_hash": "84da4ec12ee20ea2a4800d2570379cbb"
   },
   "app/Execution/OrderManager.php": {
-    "mtime": 1794160797.005061,
-    "seen": 1794165296.7189567,
-    "ast_hash": "dfb156816f2d336e3d9ce19ad9e1a766",
-    "semantic_hash": "dfb156816f2d336e3d9ce19ad9e1a766"
+    "mtime": 1794170352.00095,
+    "seen": 1794170488.8297796,
+    "ast_hash": "e7ae9b672afd7400136319bd76a188fe",
+    "semantic_hash": ""
   },
   "app/Execution/ReconciliationMismatch.php": {
     "mtime": 1794155002.5132453,
@@ -193,10 +193,10 @@
     "semantic_hash": "ea47d06e188d78339b730c371957f1ed"
   },
   "app/Execution/Venues/SimulatedFuturesBook.php": {
-    "mtime": 1794160608.9672966,
-    "seen": 1794165296.7190084,
-    "ast_hash": "5a5a53f8d48ed7abd8bc3e409ce43e59",
-    "semantic_hash": "5a5a53f8d48ed7abd8bc3e409ce43e59"
+    "mtime": 1794170213.0436866,
+    "seen": 1794170488.8298154,
+    "ast_hash": "d9debccb405c800289c196f052ad15eb",
+    "semantic_hash": ""
   },
   "app/Execution/Venues/SimulatedOrder.php": {
     "mtime": 1794154247.205916,
@@ -637,16 +637,16 @@
     "semantic_hash": "d8b9b7fa76441412ef769fdecc5a81d2"
   },
   "app/Risk/Data/AccountView.php": {
-    "mtime": 1794160502.018997,
-    "seen": 1794165296.720583,
-    "ast_hash": "d5c1dc7df74f609222a1852544129d45",
-    "semantic_hash": "d5c1dc7df74f609222a1852544129d45"
+    "mtime": 1794170272.1196606,
+    "seen": 1794170488.831075,
+    "ast_hash": "c968855a97bece09c8a3b6c20cf00417",
+    "semantic_hash": ""
   },
   "app/Risk/Data/RejectionReason.php": {
-    "mtime": 1794160502.0188506,
-    "seen": 1794165296.7206006,
-    "ast_hash": "92c8347bca6ecbe569a5e8de7f7cb84c",
-    "semantic_hash": "92c8347bca6ecbe569a5e8de7f7cb84c"
+    "mtime": 1794170272.1198432,
+    "seen": 1794170488.8310764,
+    "ast_hash": "58f87b7d646b652cbdf0224956e8a465",
+    "semantic_hash": ""
   },
   "app/Risk/Data/RiskEvent.php": {
     "mtime": 1794154652.2379763,
@@ -673,10 +673,10 @@
     "semantic_hash": "a87b5faf6e02245565506d6f1f41f920"
   },
   "app/Risk/RiskEngine.php": {
-    "mtime": 1794160609.2157834,
-    "seen": 1794165296.7206836,
-    "ast_hash": "83aa05da8b034ebd7eed64e02787b57d",
-    "semantic_hash": "83aa05da8b034ebd7eed64e02787b57d"
+    "mtime": 1794170272.1200309,
+    "seen": 1794170488.8311448,
+    "ast_hash": "f7d506f49688b96fefd0c2f4b6ff2764",
+    "semantic_hash": ""
   },
   "app/Risk/RiskPolicy.php": {
     "mtime": 1794160514.873606,
@@ -697,9 +697,9 @@
     "semantic_hash": "e478d6aa1ae593d61941b5a34c341837"
   },
   "app/Simulation/Console/RunBacktest.php": {
-    "mtime": 1794167600.1283543,
-    "seen": 1794167704.816126,
-    "ast_hash": "ca3f9c37043d92fa4074b52a8e6c98ed",
+    "mtime": 1794170402.9351187,
+    "seen": 1794170488.8312702,
+    "ast_hash": "1bde18a25fe98e9e969107763a82548e",
     "semantic_hash": ""
   },
   "app/Simulation/Data/BacktestResult.php": {
@@ -847,16 +847,16 @@
     "semantic_hash": "a78f9560f8962de0bb27d976b3a96b73"
   },
   "app/Strategy/Data/OpenLong.php": {
-    "mtime": 1794154607.3428895,
-    "seen": 1794165296.7211666,
-    "ast_hash": "9252d5e4ac9e16c0099a68b2d4e406e2",
-    "semantic_hash": "9252d5e4ac9e16c0099a68b2d4e406e2"
+    "mtime": 1794170233.651862,
+    "seen": 1794170488.8317966,
+    "ast_hash": "8884fb5eea42a0ca6733ad66b7356aa8",
+    "semantic_hash": ""
   },
   "app/Strategy/Data/OpenShort.php": {
-    "mtime": 1794160502.0070245,
-    "seen": 1794165296.7211823,
-    "ast_hash": "849305658c9bf88761e5d17f445b8aca",
-    "semantic_hash": "849305658c9bf88761e5d17f445b8aca"
+    "mtime": 1794170233.664124,
+    "seen": 1794170488.8317983,
+    "ast_hash": "198b819f5334f046c05dfaa3e6b1ca5f",
+    "semantic_hash": ""
   },
   "app/Strategy/Data/PositionView.php": {
     "mtime": 1794160502.0185988,
@@ -1639,10 +1639,10 @@
     "semantic_hash": "745817d3077827d2fe70e91d73dbdab1"
   },
   "tests/Unit/Execution/EngineTest.php": {
-    "mtime": 1794160570.420885,
-    "seen": 1794165296.7240894,
-    "ast_hash": "3e6a06724666ebae2ab35601cd7edceb",
-    "semantic_hash": "3e6a06724666ebae2ab35601cd7edceb"
+    "mtime": 1794170404.0401042,
+    "seen": 1794170488.8350234,
+    "ast_hash": "8ae796e1cb1873e58f0a7f97756c7dc8",
+    "semantic_hash": ""
   },
   "tests/Unit/Execution/OrderManagerTest.php": {
     "mtime": 1794160848.660072,
@@ -1651,10 +1651,10 @@
     "semantic_hash": "f8070b25689971c978c729b2c2c583dd"
   },
   "tests/Unit/Execution/SimulatedPerpVenueTest.php": {
-    "mtime": 1794160365.7736888,
-    "seen": 1794165296.7241201,
-    "ast_hash": "59ffa45248b3a7d6aea1465b80ec6e86",
-    "semantic_hash": "59ffa45248b3a7d6aea1465b80ec6e86"
+    "mtime": 1794170223.4759777,
+    "seen": 1794170488.835042,
+    "ast_hash": "6fda71cd38f0a857439707d8fc0bccd3",
+    "semantic_hash": ""
   },
   "tests/Unit/Execution/SimulatedVenueTest.php": {
     "mtime": 1794160229.110739,
@@ -1711,10 +1711,10 @@
     "semantic_hash": "10f78dc29ede7cfeadb9c0829cbe5b7e"
   },
   "tests/Unit/Risk/RiskEngineTest.php": {
-    "mtime": 1794160571.0128665,
-    "seen": 1794165296.7242775,
-    "ast_hash": "512b8dc3bd8543191870d0070e94a381",
-    "semantic_hash": "512b8dc3bd8543191870d0070e94a381"
+    "mtime": 1794170404.9321728,
+    "seen": 1794170488.835187,
+    "ast_hash": "d678c795b1277b12d006a28d6d3b4fce",
+    "semantic_hash": ""
   },
   "tests/Unit/Simulation/BacktestTest.php": {
     "mtime": 1794163569.2138293,
@@ -1885,9 +1885,9 @@
     "semantic_hash": ""
   },
   "docs/engine.md": {
-    "mtime": 1794164994.2658575,
-    "seen": 1794165432.519296,
-    "ast_hash": "a071b7bb4eee4137237e74bc9ab2a565",
+    "mtime": 1794170482.9526486,
+    "seen": 1794170488.8357904,
+    "ast_hash": "99220afceb6f7d0e00d042725cbcb807",
     "semantic_hash": ""
   },
   "docs/glossary.md": {
@@ -2287,9 +2287,9 @@
     "semantic_hash": ""
   },
   "app/Strategy/Dsl/Compiler/CompiledStrategy.php": {
-    "mtime": 1794166847.7464654,
-    "seen": 1794166935.18678,
-    "ast_hash": "710c611017cf269145bf6b7f301fb259",
+    "mtime": 1794170389.0887074,
+    "seen": 1794170488.8321302,
+    "ast_hash": "25f034b496efffdb24493f85c7439880",
     "semantic_hash": ""
   },
   "app/Strategy/Dsl/Compiler/Compiler.php": {
@@ -2335,9 +2335,9 @@
     "semantic_hash": ""
   },
   "tests/Unit/Strategy/Dsl/CompiledStrategyTest.php": {
-    "mtime": 1794166890.6366267,
-    "seen": 1794166935.1892521,
-    "ast_hash": "5e708d2407cd8b75cd35597967365d35",
+    "mtime": 1794170389.0729485,
+    "seen": 1794170488.8353143,
+    "ast_hash": "55e6f56115ae932a8c85ed177fc83e8a",
     "semantic_hash": ""
   },
   "app/Simulation/Console/CompileStrategy.php": {
@@ -2416,6 +2416,24 @@
     "mtime": 1794167399.2717295,
     "seen": 1794167704.8199885,
     "ast_hash": "1f2b330744a5d1e8959031d7bebc580b",
+    "semantic_hash": ""
+  },
+  "app/Strategy/Contracts/LimitedStrategy.php": {
+    "mtime": 1794170233.6420414,
+    "seen": 1794170488.8317118,
+    "ast_hash": "9da8aff203b7929013363ed9faa8388e",
+    "semantic_hash": ""
+  },
+  "app/Strategy/Data/EntryOrder.php": {
+    "mtime": 1794170233.6370661,
+    "seen": 1794170488.831747,
+    "ast_hash": "5e8f9937f440f763c3a1e983d5e8bcc3",
+    "semantic_hash": ""
+  },
+  "app/Strategy/Data/StrategyLimits.php": {
+    "mtime": 1794170233.6409576,
+    "seen": 1794170488.8318481,
+    "ast_hash": "fb90782944d34d9681c903cfea49b4bf",
     "semantic_hash": ""
   },
   "package-lock.json": {
