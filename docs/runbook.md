@@ -149,3 +149,14 @@ Connect a client to `http://<host>:8000/mcp` with the header `Authorization: Bea
 `claude mcp add --transport http trading-x http://127.0.0.1:8000/mcp --header "Authorization: Bearer <token>"`.
 The endpoint is for your own network; anywhere else it must sit behind TLS. Every call is listed in `mcp_calls`.
 
+The rate limit (60 calls a minute per token, `MCP_CALLS_PER_MINUTE`) is kept in the cache store, Redis by default;
+without Redis running, set `CACHE_STORE=file`. A run waits in `simulation_jobs` until the worker takes it, and each
+token has at most 2 runs waiting or running. A window over missing candles fails with the gap named in `get_job`
+(for BTC perpetual, Binance did not publish 2026-10-28; end windows before it, or fill it as section 8 says).
+
+The usual flow for an agent: `list_instruments`, `get_indicators` on the chart it studies, `dsl_reference`, then
+`compile_strategy` until it compiles, `save_strategy` (a draft, `<id>@v<n>`, authored `agent:<token name>`),
+`run_grid` with a walk-forward on that version, and `get_job` until it is done. Checked on 2026-11-08 with the
+official MCP Python SDK over HTTP on real BTC perpetual candles: a 6-set grid with a 30d/15d walk-forward over
+2026-08-01 to 2026-10-27 took 39 s in the worker.
+
