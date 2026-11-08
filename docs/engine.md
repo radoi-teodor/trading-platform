@@ -146,3 +146,37 @@ our code, so a difference can only be a bug: the run stops with the mismatch.
 summarises them in its report: decisions, intents, verdicts by reason code, orders, halts. The database journal
 comes in Phase 4. Intents emitted during warmup (before the run's start, while indicators fill) are not acted
 on and are counted apart.
+
+## 8. Perpetuals (Phase 2b)
+
+USD-M perpetuals settled in USDT, one-way mode, isolated margin (D-43). The account has two wallets: spot and USD-M.
+USDT in the spot wallet is not margin; the split is set when a run starts (D-49).
+
+**Positions.** One strategy at most per perpetual instrument and account, so the venue's net position is the
+strategy's position; the engine refuses a second one. A position has a side, a quantity, an average entry price `E`,
+a leverage `L` set before the entry, and an isolated margin `M`:
+
+| Event | Effect |
+|-------|--------|
+| Fill that opens or adds `q` at `p` | `M += q × p / L` taken from the wallet; fee taken from the wallet; `E` becomes the average |
+| Fill that reduces by `q` at `p` | Realized `side × q × (p - E)` and the released margin `M × q / Q` go back to the wallet; fee taken from the wallet |
+| Funding at time `T`, rate `r`, mark `P` | `-side × Q × P × r` paid from or received into the wallet (D-44) |
+| Liquidation | The position closes and `M` is lost (D-45) |
+
+Equity is the spot holdings at their marks, plus the USD-M wallet, plus every position's `M + side × Q × (P - E)`.
+
+**Liquidation price** with the maintenance margin rate `m` (D-45): a long at `(Q × E - M) / (Q × (1 - m))`, a short at
+`(Q × E + M) / (Q × (1 + m))`.
+
+**Protection (D-46).** Binance futures has no OCO. A position keeps a reduce-only STOP_MARKET and, when the strategy
+gave a target, a reduce-only TAKE_PROFIT_MARKET. When one fills the engine cancels the other at the next event;
+reduce-only makes sure the other can never open a position in between. Exits, flattening and signal closes are
+reduce-only market orders.
+
+**Carry pairs (D-48).** `OpenCarry` buys spot and sells the perpetual for the same quantity in one decision. The pair
+has no stop: the hedge is its protection. Its size and leverage follow D-48; when one leg is gone the strategy closes
+the other; a flatten closes the spot leg first, then the hedge.
+
+**Reconciliation** compares, at every event, the spot balances, the USD-M wallet and every position (side, quantity,
+entry price, margin) with the venue's. The venue's updates are one numbered stream of order updates and income
+(funding, liquidation), so the ledger books them in the order they happened.

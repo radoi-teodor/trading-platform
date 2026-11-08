@@ -244,6 +244,49 @@ comparisons. Reports are stored compressed under `storage/app/simulations` with 
 `Engine::VERSION` is raised by hand with every behaviour change; golden tests catch the changes that were not
 meant.
 
+**D-43. Perpetual accounting** (2026-11-08, accepted)
+USD-M perpetuals settled in USDT, in one-way mode with isolated margin, in a USD-M wallet separate from the spot
+wallet. At most one strategy trades a given perpetual in an account, so that the exchange's net position is that
+strategy's position; the engine refuses a second one. Formulas in `docs/engine.md`, section 8.
+
+**D-44. Mark price and funding in simulation** (2026-11-08, accepted)
+The simulation uses the last price as the mark price: wicks reach liquidation more easily than on the real mark,
+which is the pessimistic side. Funding is applied at its timestamp to the positions open at that moment, valued at
+the close of the minute that ends then, and paid from or received into the USD-M wallet. How Binance books funding
+on isolated positions is confirmed on testnet in Phase 4, with the ingestion of the mark price archives.
+
+**D-45. Simulated liquidation** (2026-11-08, accepted)
+The liquidation price uses an assumed maintenance margin rate, 1 % by default in `config/simulation.php`, more than
+Binance's first tier for the majors, until the account's brackets are read (they need a key). A position is
+liquidated when a minute opens beyond its liquidation price or its adverse extreme reaches it, and loses its whole
+isolated margin.
+
+**D-46. Protective orders on perpetuals** (2026-11-08, accepted)
+A reduce-only STOP_MARKET and an optional reduce-only TAKE_PROFIT_MARKET; the engine cancels the other when one
+fills, since Binance futures has no OCO. The stop is matched first within a minute. Exits, flattening and signal
+closes are reduce-only market orders.
+
+**D-47. USD-M fees** (2026-11-08, accepted)
+Regular (VIP 0) rates of D-28 until an account is read: 0.020 % maker, 0.050 % taker, in USDT on the notional.
+
+**D-48. Carry pairs are hedged, not directional** (2026-11-08, accepted by the operator with the Phase 2b plan)
+A funding carry (long spot, short perpetual, same quantity) has no stop; the hedge protects it. Each leg's notional
+is the template's maximum position (30 % in `docs/strategy/configurator.md`), never above the notional per instrument
+of the risk policy, within free cash and gross exposure (both legs count). The perpetual leg's leverage is the lower
+of the strategy's and the policy's, divided by one plus the margin buffer (50 % at least) and rounded down to a whole
+number, at least 1: with 2x and 50 % that is 1x, which puts liquidation about twice the price away. When one leg is
+gone the other is closed; a flatten closes the spot leg, then the hedge. Every other entry still needs a stop.
+
+**D-49. Wallets at the start of a run** (2026-11-08, accepted)
+A strategy that trades only spot starts with everything in the spot wallet; only perpetuals, everything in USD-M;
+both, a split from `config/simulation.php` (50/50 by default). Transfers between wallets come with Phase 4.
+Benchmarks run on the spot instrument of the same base, in their own accounts.
+
+**D-50. Short baselines** (2026-11-08, accepted)
+`ma-trend` and `donchian-breakout` take a `side` parameter, long or short; short only on perpetuals
+(`docs/strategy/configurator.md`). `funding-carry` implements the configurator's carry template. The benchmark profile
+on a perpetual sizes the position at 99 % of the free USD-M wallet at 1x, leaving room for slippage and fees.
+
 ## Open
 
 | Id | Question | Blocks |

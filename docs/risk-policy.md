@@ -23,8 +23,10 @@ takes effect at the next event; raising one needs re-authentication and waits 24
 A halt stops new entries and cancels working entry orders. Protective orders stay on the exchange. Positions are
 closed only by their own exits or by a flatten.
 
-Every entry under this policy carries a stop: risk per trade is the loss if the stop is hit, so an entry without
-one is rejected. A stop may be moved towards the price, never away from it. How the engine applies these limits,
+Every directional entry under this policy carries a stop: risk per trade is the loss if the stop is hit, so an
+entry without one is rejected. The one exception is a carry pair (long spot, short perpetual for the same quantity),
+whose protection is the hedge: it is sized by its template's maximum position, never above the notional per
+instrument, with both legs counted in gross exposure and the perpetual leg's extra margin (D-48). A stop may be moved towards the price, never away from it. How the engine applies these limits,
 in order, is in `docs/engine.md`, section 5. Backtests of benchmarks (buy and hold, the 50/200 trend rule) use a
 separate benchmark profile that this policy does not govern and that paper and live refuse (D-40).
 

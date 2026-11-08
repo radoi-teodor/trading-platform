@@ -51,7 +51,14 @@ live from the minute that opens at `t`.
 - **Fees (D-28, D-38).** Maker or taker by order type, at the rates read from the account; before an account
   exists, Regular (VIP 0) without the BNB discount: 0.100 % maker and taker on spot. On spot the fee is charged in
   the asset received.
-- **Funding.** Applied at each funding timestamp with the historical rate. Perpetuals come in Phase 2b (D-35).
+- **Funding.** Applied at each funding timestamp with the historical rate, to the positions open at that moment,
+  valued at the close of the minute that ends then (D-44).
+- **Perpetuals.** Stops and take-profits are market orders triggered on the minute's range, reduce-only, filled at
+  the trigger or at the open when the minute gapped through it, plus slippage; the stop is matched first (D-46). A
+  reduce-only order that would open or increase a position expires. Fees are 0.020 % maker and 0.050 % taker on the
+  notional, in USDT (D-47). The mark price is the last price (D-44). A position is liquidated when the minute opens
+  beyond its liquidation price, or its adverse extreme reaches it after the orders of that minute; the whole
+  isolated margin is lost (D-45).
 - **Filters.** Lot step, tick size and minimum notional applied by the same order manager live trading uses, with
   the filters valid at the time (`docs/engine.md`, section 4).
 
