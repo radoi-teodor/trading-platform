@@ -79,3 +79,29 @@ Check the budget screen; raise a budget only on purpose.
 1. CI green on the pull request; merge to `main`.
 2. Halt live engines (`engine:halt`), deploy, run migrations, `sources:sync`.
 3. Start processes; check `platform:health`; resume engines (operator action).
+
+## 8. Market data
+
+| Task | Command |
+|------|---------|
+| Load or refresh instruments and filters | `php artisan market:instruments all` |
+| Fill history | `php artisan market:backfill --universe --from=YYYY-MM [--to=...] --funding` |
+| Keep candles current | `php artisan market:stream spot` and `php artisan market:stream perp`, under the supervisor |
+| Look for gaps and bad rows | `php artisan market:check --universe --from=... --to=...` (`--strict` fails on warnings) |
+| Compare with the exchange | `php artisan market:verify --universe --from=... --to=... --sample=500 [--against=daily-archive]` |
+| Read the real public endpoints in tests | `composer test:network` |
+
+Everything is idempotent: rerunning a backfill only fills what is missing or replaces lower-ranked data.
+
+**First run on the operator's machine.** The rebuild was developed from a location Binance refuses (451 on
+`api.binance.com` and `fapi.binance.com`; `fstream.binance.com` sends only pings), so three things were checked
+only through Binance's public-data hosts and archives and should be confirmed once from Romania:
+
+1. `composer test:network`: the real USD-M exchangeInfo, klines and funding endpoints parse.
+2. `php artisan market:instruments perp`, then `php artisan market:backfill --universe --from=2026-10 --to=2026-10`:
+   the `rest gap` steps should now fill 2026-10-28 for the perpetuals, which Binance's archives do not have;
+   `php artisan market:check --universe --from=2026-10 --to=2026-10` should then report no gap.
+3. `php artisan market:stream perp` for a few minutes: closed candles appear with source 1 (stream).
+
+**Health.** Each stream writes a row in `heartbeats` (`market:stream spot`, `market:stream perp`) at least every
+30 seconds, with the result of its last gap repair. A heartbeat older than 2 minutes means the process is down.
