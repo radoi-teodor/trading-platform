@@ -697,9 +697,9 @@
     "semantic_hash": "e478d6aa1ae593d61941b5a34c341837"
   },
   "app/Simulation/Console/RunBacktest.php": {
-    "mtime": 1794167005.676245,
-    "seen": 1794167168.5570438,
-    "ast_hash": "54813c0f254e590c2dcca81a31c725a4",
+    "mtime": 1794167600.1283543,
+    "seen": 1794167704.816126,
+    "ast_hash": "ca3f9c37043d92fa4074b52a8e6c98ed",
     "semantic_hash": ""
   },
   "app/Simulation/Data/BacktestResult.php": {
@@ -733,10 +733,10 @@
     "semantic_hash": "b66f982dcf6588941d577bd014f0475c"
   },
   "app/Simulation/Metrics/Performance.php": {
-    "mtime": 1794160934.0830767,
-    "seen": 1794165296.7208486,
-    "ast_hash": "cb37633860caa13888bad71e95187da0",
-    "semantic_hash": "cb37633860caa13888bad71e95187da0"
+    "mtime": 1794167282.1990335,
+    "seen": 1794167704.816209,
+    "ast_hash": "0acab8079721825910df079028bac16c",
+    "semantic_hash": ""
   },
   "app/Simulation/Metrics/PerformanceMetrics.php": {
     "mtime": 1794156065.712801,
@@ -1448,9 +1448,9 @@
     "semantic_hash": "27836203d1bf0c6ea54c3c7de5d1c4e8"
   },
   "tests/Feature/Simulation/RunBacktestCommandTest.php": {
-    "mtime": 1794167034.002692,
-    "seen": 1794167168.5612662,
-    "ast_hash": "ae42dfce73b4d47ac0f197acc0476235",
+    "mtime": 1794167559.5881848,
+    "seen": 1794167704.8191829,
+    "ast_hash": "3c452c48c7dcbe56027db8c385755fd7",
     "semantic_hash": ""
   },
   "tests/Feature/Support/ClockBindingTest.php": {
@@ -1909,9 +1909,9 @@
     "semantic_hash": ""
   },
   "docs/runbook.md": {
-    "mtime": 1794167133.8840075,
-    "seen": 1794167168.5632288,
-    "ast_hash": "34c7de005719b235b2923dd63d8af0e0",
+    "mtime": 1794167653.5909274,
+    "seen": 1794167704.8204856,
+    "ast_hash": "5084ed6dffb46134c0e18eaceb569941",
     "semantic_hash": ""
   },
   "docs/security.md": {
@@ -1921,9 +1921,9 @@
     "semantic_hash": ""
   },
   "docs/simulation.md": {
-    "mtime": 1794164994.2651172,
-    "seen": 1794165432.5193007,
-    "ast_hash": "3e0a854d7696ccea7fc7115f660de3a7",
+    "mtime": 1794167653.5913062,
+    "seen": 1794167704.8205,
+    "ast_hash": "5bf77f4eb06149d32cc5c6ef17b219f7",
     "semantic_hash": ""
   },
   "docs/sources.md": {
@@ -2356,6 +2356,66 @@
     "mtime": 1794167070.00618,
     "seen": 1794167168.5601923,
     "ast_hash": "1aa79fb74ef054f8fa617831bb8f453d",
+    "semantic_hash": ""
+  },
+  "app/Simulation/Console/GridBacktest.php": {
+    "mtime": 1794167613.9270356,
+    "seen": 1794167704.816122,
+    "ast_hash": "874d47ed8b03642d1f3bd375a652eb0c",
+    "semantic_hash": ""
+  },
+  "app/Simulation/Console/PreparesBacktests.php": {
+    "mtime": 1794167599.8556986,
+    "seen": 1794167704.8161244,
+    "ast_hash": "b90ff59bc391da2e9efe0caf14d9afc9",
+    "semantic_hash": ""
+  },
+  "app/Simulation/Models/StrategyTrial.php": {
+    "mtime": 1794167446.5599706,
+    "seen": 1794167704.816274,
+    "ast_hash": "9e5fe16dae8570ae607de1a02087d07f",
+    "semantic_hash": ""
+  },
+  "app/Simulation/Validation/Cscv.php": {
+    "mtime": 1794167399.2715433,
+    "seen": 1794167704.816322,
+    "ast_hash": "0caaf447b81e28352234a0305c634050",
+    "semantic_hash": ""
+  },
+  "app/Simulation/Validation/DeflatedSharpe.php": {
+    "mtime": 1794167323.1500938,
+    "seen": 1794167704.8163238,
+    "ast_hash": "7b11878aeadb66481dab724514a106ea",
+    "semantic_hash": ""
+  },
+  "app/Simulation/Validation/Normal.php": {
+    "mtime": 1794167286.1705735,
+    "seen": 1794167704.8163252,
+    "ast_hash": "0e9ad55dd26413af602dc3f7f8ab07db",
+    "semantic_hash": ""
+  },
+  "database/migrations/2026_11_08_000003_create_strategy_trials_table.php": {
+    "mtime": 1794167446.558001,
+    "seen": 1794167704.8187075,
+    "ast_hash": "9d7f7e638f4cd45777ce2dc856ebdb23",
+    "semantic_hash": ""
+  },
+  "tests/Fixtures/validation/generate.py": {
+    "mtime": 1794167351.3633363,
+    "seen": 1794167704.8193228,
+    "ast_hash": "efef0b4a2d496a7a23278df0bb878e61",
+    "semantic_hash": ""
+  },
+  "tests/Fixtures/validation/reference.json": {
+    "mtime": 1794167362.90333,
+    "seen": 1794167704.819324,
+    "ast_hash": "a03f5cc06ffa6cf6ea61c98663d536c1",
+    "semantic_hash": ""
+  },
+  "tests/Unit/Simulation/ValidationStatisticsTest.php": {
+    "mtime": 1794167399.2717295,
+    "seen": 1794167704.8199885,
+    "ast_hash": "1f2b330744a5d1e8959031d7bebc580b",
     "semantic_hash": ""
   },
   "package-lock.json": {
