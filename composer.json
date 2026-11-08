@@ -67,6 +67,10 @@
             "@putenv TRADING_LLM=1",
             "pest --group=llm"
         ],
+        "mutate": [
+            "Composer\\Config::disableProcessTimeout",
+            "pest tests/Unit --mutate"
+        ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
             "@php artisan package:discover --ansi"
@@ -100,6 +104,7 @@
         "analyse": "Run PHPStan through Larastan at the project level.",
         "test": "Run the default suite: no network, no exchange, no LLM.",
         "test:testnet": "Run the Binance testnet suite (opt-in).",
-        "test:llm": "Run the suite that calls the Claude API (opt-in, costs money)."
+        "test:llm": "Run the suite that calls the Claude API (opt-in, costs money).",
+        "mutate": "Run Pest mutation testing on the domain unit tests (D-34)."
     }
 }
