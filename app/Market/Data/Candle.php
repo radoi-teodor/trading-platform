@@ -56,6 +56,13 @@ final readonly class Candle
         );
     }
 
+    /** The moment the candle is complete and known: its open time plus its timeframe (docs/market-data.md, section 2). */
+    public function endsAt(): CarbonImmutable
+    {
+        return $this->timeframe->nextOpen($this->openTime);
+    }
+
+    /** Binance's close time: one millisecond before endsAt(). */
     public function closesAt(): CarbonImmutable
     {
         return $this->timeframe->closeTime($this->openTime);

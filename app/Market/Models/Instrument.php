@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace App\Market\Models;
 
+use App\Market\Data\InstrumentRules;
 use App\Market\Data\InstrumentStatus;
 use App\Market\Data\MarketType;
+use App\Market\Data\RulesHistory;
+use App\Support\Number\Decimal;
 use App\Support\Symbol;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
@@ -63,6 +66,21 @@ final class Instrument extends Model
     public function filters(): HasMany
     {
         return $this->hasMany(InstrumentFilter::class);
+    }
+
+    /** The filters this instrument had over time, oldest first (docs/engine.md, section 4). */
+    public function rulesHistory(): RulesHistory
+    {
+        $rules = $this->filters()->orderBy('valid_from')->get()->map(fn (InstrumentFilter $filter): InstrumentRules => new InstrumentRules(
+            $filter->valid_from,
+            Decimal::of($filter->tick_size),
+            Decimal::of($filter->step_size),
+            Decimal::of($filter->min_qty),
+            $filter->max_qty === null ? null : Decimal::of($filter->max_qty),
+            $filter->min_notional === null ? null : Decimal::of($filter->min_notional),
+        ));
+
+        return new RulesHistory($this->unifiedSymbol(), array_values($rules->all()));
     }
 
     /** @return array<string, string> */

@@ -184,7 +184,7 @@ final readonly class CandleRepository
         return $existing;
     }
 
-    private static function candleFromRow(object $row): Candle
+    public static function candleFromRow(object $row): Candle
     {
         return Candle::fromStrings(
             Rows::time($row, 'open_time'),
