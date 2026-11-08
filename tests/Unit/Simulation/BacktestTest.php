@@ -72,8 +72,9 @@ it('runs the strategy and its benchmarks over the same candles, trading only ins
         ->and(array_map(fn ($d) => $d->intents[0]->rejection, $decisions))->toBe(['warmup', 'warmup', null, null])
         ->and($trip->exitReason)->toBe(ExitReason::Signal)
         ->and($trip->openedAt->format('H:i'))->toBe('01:30')
-        // The sell fills in the minute from 02:10; the remainder under the lot step is written off at the next event.
-        ->and($trip->closedAt->format('H:i'))->toBe('02:11')
+        // The sell fills in the minute from 02:10; the remainder under the lot step is written off at the next event,
+        // and the round trip ends at the sell.
+        ->and($trip->closedAt->format('H:i'))->toBe('02:10')
         ->and($trip->dust->isPositive())->toBeTrue()
         ->and($result->main->equity->start->format('H:i'))->toBe('01:00')
         ->and($result->main->equity->end()->format('H:i'))->toBe('03:00')

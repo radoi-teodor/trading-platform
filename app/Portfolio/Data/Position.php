@@ -34,6 +34,7 @@ final readonly class Position
         public ?Price $highest,
         public ?Price $lowest,
         public ?ExitReason $exitReason,
+        public ?CarbonImmutable $lastSellAt = null,
     ) {}
 
     public static function open(Fill $entry): self
@@ -65,7 +66,7 @@ final readonly class Position
             $this->fees->plus($fill->feeValue),
             $this->slippage->plus($fill->slippage),
             $this->initialStop ?? $fill->initialStop,
-            $this->highest, $this->lowest, $this->exitReason,
+            $this->highest, $this->lowest, $this->exitReason, $this->lastSellAt,
         );
     }
 
@@ -83,6 +84,7 @@ final readonly class Position
             $this->slippage->plus($fill->slippage),
             $this->initialStop, $this->highest, $this->lowest,
             $fill->exitReason ?? $this->exitReason,
+            $fill->time,
         );
     }
 
@@ -95,6 +97,7 @@ final readonly class Position
             $this->highest === null || $high->value->isGreaterThan($this->highest->value) ? $high : $this->highest,
             $this->lowest === null || $low->value->isLessThan($this->lowest->value) ? $low : $this->lowest,
             $this->exitReason,
+            $this->lastSellAt,
         );
     }
 

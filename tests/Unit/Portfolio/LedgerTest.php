@@ -115,7 +115,7 @@ it('leaves dust when the lot step stops a full exit, and writes it off', functio
     expect((string) $ledger->position('breakout', Symbol::parse('BTC/USDT'))?->quantity)->toBe('0.0009')
         ->and($ledger->roundTrips())->toBe([]);
 
-    $ledger->writeOffDust('breakout', Symbol::parse('BTC/USDT'), CarbonImmutable::parse('2026-10-01 00:05:00', 'UTC'));
+    $ledger->writeOffDust('breakout', Symbol::parse('BTC/USDT'), CarbonImmutable::parse('2026-10-01 00:06:00', 'UTC'));
 
     $trip = $ledger->roundTrips()[0];
 
@@ -123,6 +123,7 @@ it('leaves dust when the lot step stops a full exit, and writes it off', functio
         ->and(balanceOf($ledger, 'BTC'))->toBe('0.0009')
         ->and((string) $ledger->dust(Asset::of('BTC')))->toBe('0.0009')
         ->and((string) $trip->dust)->toBe('0.0009')
+        ->and($trip->closedAt->format('H:i'))->toBe('00:05')
         ->and((string) $trip->netProfit)->toBe('-65.94')
         ->and($trip->exitReason)->toBe(ExitReason::Signal)
         ->and($trip->rMultiple)->toBeNull()
@@ -318,3 +319,12 @@ it('values only what is held and skips assets whose balance is zero', function (
 it('refuses a base fee larger than the quantity bought', function (): void {
     ledgerWith('1000 USDT')->apply(fill('1', Side::Buy, '0.1', '100', '0.2', 'BTC', '20'));
 })->throws(LedgerViolation::class, 'BTC');
+
+it('closes a position written off without any sell at the given time', function (): void {
+    $ledger = ledgerWith('10000 USDT');
+    $ledger->apply(fill('1', Side::Buy, '0.0004', '60000', '0', 'BTC', '0'));
+    $ledger->writeOffDust('breakout', Symbol::parse('BTC/USDT'), CarbonImmutable::parse('2026-10-01 00:09:00', 'UTC'));
+
+    expect($ledger->roundTrips()[0]->closedAt->format('H:i'))->toBe('00:09')
+        ->and($ledger->roundTrips()[0]->exitPrice)->toBeNull();
+});

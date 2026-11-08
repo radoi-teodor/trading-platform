@@ -106,14 +106,17 @@ final class Ledger
         }
     }
 
-    /** Closes a position whose remainder is below the lot step; the remainder stays in the account as dust. */
+    /**
+     * Closes a position whose remainder is below the lot step; the remainder stays in the account as dust. The round
+     * trip ends at the last sell, or at $at when nothing was sold.
+     */
     public function writeOffDust(string $strategy, Symbol $symbol, CarbonImmutable $at): void
     {
         $key = self::key($strategy, $symbol);
         $position = $this->positions[$key] ?? throw new LedgerViolation("Strategy {$strategy} holds no {$symbol}.");
         $asset = (string) $symbol->base;
         $this->dust[$asset] = ($this->dust[$asset] ?? Decimal::zero())->plus($position->quantity);
-        $this->close($key, $at);
+        $this->close($key, $position->lastSellAt ?? $at);
     }
 
     /** Records the range of a closed minute on the open positions of that instrument, for their excursions. */

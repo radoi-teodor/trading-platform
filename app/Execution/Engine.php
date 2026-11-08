@@ -84,6 +84,7 @@ final class Engine
         private readonly array $strategies,
         private readonly array $rules,
         private readonly CarbonImmutable $tradingFrom,
+        private readonly ?CarbonImmutable $decideFrom = null,
     ) {
         if ($policy->profile === RiskProfile::Benchmark && $mode !== EngineMode::Backtest) {
             throw new InvalidArgumentException("The benchmark risk profile is for backtests only (D-40); this engine runs {$mode->value}.");
@@ -243,6 +244,12 @@ final class Engine
                     $closed[$key] = $aggregator->push($minute);
                 }
             }
+        }
+
+        // Before its own warmup a strategy is not called, so a run that reads further back for a benchmark costs it
+        // nothing; its candles are still aggregated, so its periods stay aligned.
+        if ($this->decideFrom !== null && $event->closedAt <= $this->decideFrom) {
+            return;
         }
 
         foreach ($this->strategies as $strategy) {

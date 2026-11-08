@@ -46,7 +46,7 @@ final readonly class Backtest
             $venue = new SimulatedVenue($clock, $definition->fees, $definition->costs, $rules, [$definition->initialBalance]);
             $ledger = new Ledger($definition->initialBalance->asset, [$definition->initialBalance]);
             $log = new InMemoryDecisionLog;
-            $engine = new Engine(EngineMode::Backtest, $venue, $ledger, $participant->policy, $log, [$participant->strategy], $rules, $definition->from);
+            $engine = new Engine(EngineMode::Backtest, $venue, $ledger, $participant->policy, $log, [$participant->strategy], $rules, $definition->from, $participant->warmupFrom);
 
             return [$participant, $venue, $engine, $log, new EquityTracker($definition->initialBalance->amount, $definition->from)];
         }, $participants);

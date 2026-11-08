@@ -67,7 +67,7 @@ final class ReportBuilder
                 'daily' => self::series($main->equity->daily()),
                 'hourly' => self::series($main->equity->hourly()),
             ],
-            'decisions' => self::decisions($main->log->decisions),
+            'decisions' => self::decisions($main->log->decisions, $main->log->quietDecisions),
             'events' => array_map(fn (EngineRecord $event): array => [
                 'time' => $event->time, 'kind' => $event->kind, 'detail' => $event->detail,
             ], $main->log->events),
@@ -125,7 +125,7 @@ final class ReportBuilder
      * @param  list<DecisionRecord>  $decisions
      * @return array<string, mixed>
      */
-    private static function decisions(array $decisions): array
+    private static function decisions(array $decisions, int $quiet): array
     {
         $intents = 0;
         $approved = 0;
@@ -143,6 +143,8 @@ final class ReportBuilder
             }
         }
 
-        return ['count' => count($decisions), 'intents' => $intents, 'approved' => $approved, 'rejected' => $rejected];
+        ksort($rejected, SORT_STRING);
+
+        return ['count' => count($decisions) + $quiet, 'intents' => $intents, 'approved' => $approved, 'rejected' => $rejected];
     }
 }

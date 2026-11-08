@@ -11,3 +11,10 @@ Where each file comes from. Tests never call the network; `composer test:network
 | `perp-exchange-info.hand-written.json` | Written by hand from the field structure documented for `GET /fapi/v1/exchangeInfo`; values are plausible, not captured. Includes a quarterly contract and a settling symbol to test filtering. Replace with a real capture when one is made from the operator's machine |
 | `archive/*.zip` and `archive/*.zip.CHECKSUM` | Real archives and their published checksums from `data.binance.vision`: spot and USD-M BTCUSDT 1m for 2026-11-06, USD-M BTCUSDT funding for 2026-09 |
 | `spot-stream-kline-btcusdt.jsonl` | Two real messages from `wss://data-stream.binance.vision/stream?streams=btcusdt@kline_1m`, captured 2026-11-08: one update of an open candle (`x: false`), then the same candle closed (`x: true`). No USD-M capture: `fstream.binance.com` accepts the connection from this environment but sends only pings |
+
+## golden/
+
+Binance's daily 1-minute spot archives of BTCUSDT and ETHUSDT for 2026-10-01 to 2026-10-10, downloaded from
+`https://data.binance.vision/data/spot/daily/klines/<SYMBOL>/1m/` on 2026-11-08 with their `.CHECKSUM` files; every
+zip matched its published SHA-256. The golden tests (`tests/Golden`) read them through the real archive parser.
+They are never edited: a new dataset is a new directory and new golden hashes.

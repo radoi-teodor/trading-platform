@@ -131,7 +131,7 @@ function policyWith(array $overrides = []): RiskPolicy
  * @param  Strategy|list<Strategy>  $strategies
  * @param  (Closure(SimulatedVenue): Venue)|null  $wrap
  */
-function engineHarness(Strategy|array $strategies, ?RiskPolicy $policy = null, string $step = '0.001', string $tradingFrom = ENGINE_START, ?Closure $wrap = null, string $minNotional = '5'): EngineHarness
+function engineHarness(Strategy|array $strategies, ?RiskPolicy $policy = null, string $step = '0.001', string $tradingFrom = ENGINE_START, ?Closure $wrap = null, string $minNotional = '5', ?string $decideFrom = null): EngineHarness
 {
     $clock = new SimClock(CarbonImmutable::parse(ENGINE_START, 'UTC'));
     $rules = ['BTC/USDT' => new RulesHistory(Symbol::parse('BTC/USDT'), [new InstrumentRules(
@@ -154,6 +154,7 @@ function engineHarness(Strategy|array $strategies, ?RiskPolicy $policy = null, s
         is_array($strategies) ? $strategies : [$strategies],
         $rules,
         CarbonImmutable::parse($tradingFrom, 'UTC'),
+        $decideFrom === null ? null : CarbonImmutable::parse($decideFrom, 'UTC'),
     );
 
     return new EngineHarness($clock, $venue, $engine, $log);
@@ -276,7 +277,9 @@ it('flattens the account at the hard drawdown and halts new entries', function (
     $h->minute('99', '99', '99', '99');
 
     expect($h->engine->ledger()->roundTrips()[0]->exitReason)->toBe(ExitReason::Flatten)
-        ->and($h->log->decisions[3]->intents[0]->rejection)->toBe('halted');
+        ->and($h->log->decisions[1]->time->format('H:i'))->toBe('00:04')
+        ->and($h->log->decisions[1]->intents[0]->rejection)->toBe('halted')
+        ->and($h->log->quietDecisions)->toBe(2);
 });
 
 it('refuses a second entry for the same instrument in one decision', function (): void {
@@ -502,4 +505,16 @@ it('writes off a position that is already too small to sell when the account is 
     expect($h->events())->toBe(['venue_rejected', 'drawdown_halt', 'drawdown_flatten', 'dust'])
         ->and($h->engine->ledger()->positions())->toBe([])
         ->and((string) $h->engine->ledger()->dust(Asset::of('BTC')))->toBe('0.4995');
+});
+
+it('does not call a strategy before its own warmup, yet keeps its candles aligned', function (): void {
+    $strategy = new ScriptedStrategy([], Timeframe::FiveMinutes);
+    $h = engineHarness($strategy, decideFrom: '2026-10-01 00:05:00');
+
+    foreach (range(1, 10) as $minute) {
+        $h->minute('100', '100', '100', '100');
+    }
+
+    expect(array_map(fn (StrategyContext $c): string => $c->time->format('H:i'), $strategy->seen))->toBe(['00:10'])
+        ->and($h->log->quietDecisions)->toBe(1);
 });

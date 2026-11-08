@@ -75,7 +75,10 @@ composer mutate          # Pest mutation testing on the domain modules (D-34); l
 - Tests are written first for domain logic and for every bug fix (the failing test proves the bug).
 - No network in the default suite: `Http::preventStrayRequests()`, a fake venue, a fake LLM client.
 - Golden tests: a fixed dataset, strategy version and seed produce a backtest report whose hash is committed. A
-  change in the hash must be explained in the commit message.
+  change in the hash must be explained in the commit message. They live in `tests/Golden`, read Binance's daily
+  archives committed under `tests/Fixtures/binance/golden`, and keep each report as indented JSON next to its hash,
+  so a change shows as a readable diff. To accept a change on purpose: `UPDATE_GOLDEN=1 vendor/bin/pest tests/Golden`,
+  review the diff, update the hashes.
 - Architecture tests guard the module rules in `docs/architecture.md` section 3, the float ban, the clock ban,
   and "no facade in the domain".
 - LLM tests assert on the platform's handling of a response (schema validation, journaling, limits), never on

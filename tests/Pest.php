@@ -7,7 +7,7 @@ use Tests\TestCase;
 
 pest()->extend(TestCase::class)
     ->beforeEach(fn () => Http::preventStrayRequests())
-    ->in('Feature');
+    ->in('Feature', 'Golden');
 
 /** A recorded Binance response from tests/Fixtures/binance (provenance in its README). */
 function binanceFixture(string $name): string
