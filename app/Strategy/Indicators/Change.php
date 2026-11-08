@@ -7,7 +7,7 @@ namespace App\Strategy\Indicators;
 use App\Support\Number\Decimal;
 
 /** The value minus the value n back. */
-final class Change
+final class Change implements ValueIndicator
 {
     private Window $window;
 

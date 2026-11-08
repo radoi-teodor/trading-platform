@@ -7,7 +7,7 @@ namespace App\Strategy\Indicators;
 use App\Support\Number\Decimal;
 
 /** Weighted moving average: weights 1 to n, the most recent value weighing n. */
-final class Wma
+final class Wma implements ValueIndicator
 {
     private Window $window;
 

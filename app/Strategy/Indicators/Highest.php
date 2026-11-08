@@ -7,7 +7,7 @@ namespace App\Strategy\Indicators;
 use App\Support\Number\Decimal;
 
 /** The highest of the last n values, the current one included. */
-final class Highest
+final class Highest implements ValueIndicator
 {
     private Window $window;
 

@@ -8,7 +8,7 @@ use App\Support\Number\Decimal;
 use InvalidArgumentException;
 
 /** Hull moving average: the WMA over floor(sqrt(n)) of 2 × WMA(n / 2) - WMA(n), n / 2 rounded down. */
-final class Hma
+final class Hma implements ValueIndicator
 {
     private Wma $half;
 

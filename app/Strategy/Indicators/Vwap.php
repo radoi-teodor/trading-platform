@@ -12,7 +12,7 @@ use App\Support\Timeframe;
  * Volume-weighted average of the typical price (high + low + close) / 3 since the start of the anchor period
  * (1d: since 00:00 UTC); no value while the period has traded nothing.
  */
-final class Vwap
+final class Vwap implements BarIndicator
 {
     private Decimal $weighted;
 

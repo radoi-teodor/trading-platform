@@ -7,7 +7,7 @@ namespace App\Strategy\Indicators;
 use App\Support\Number\Decimal;
 
 /** Simple moving average of the last n values, kept with a running sum. Divisions truncate at 18 decimals. */
-final class Sma
+final class Sma implements ValueIndicator
 {
     /** @var list<Decimal> */
     private array $window = [];

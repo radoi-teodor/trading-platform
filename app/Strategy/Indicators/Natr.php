@@ -8,7 +8,7 @@ use App\Market\Data\Candle;
 use App\Support\Number\Decimal;
 
 /** Normalized ATR: 100 × ATR(n) / close. */
-final class Natr
+final class Natr implements BarIndicator
 {
     private Atr $atr;
 

@@ -11,7 +11,7 @@ use App\Support\Number\Decimal;
  * Stochastic oscillator: %K = 100 × (close - lowest low) / (highest high - lowest low) over k candles, 50 when the
  * range is empty; %D = SMA(d) of %K.
  */
-final class Stochastic
+final class Stochastic implements BarIndicator
 {
     private Window $highs;
 

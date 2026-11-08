@@ -13,7 +13,7 @@ use App\Support\Number\Decimal;
  * then smoothed as sum - sum / n + value. DI = 100 × DM / TR; DX = 100 × |+DI - -DI| / (+DI + -DI); ADX is
  * Wilder's average of DX.
  */
-final class DirectionalMovement
+final class DirectionalMovement implements BarIndicator
 {
     private ?Candle $previous = null;
 

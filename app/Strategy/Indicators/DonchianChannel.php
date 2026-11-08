@@ -11,7 +11,7 @@ use App\Support\Number\Decimal;
  * The DSL's donchian(n): highest high and lowest low of the last n candles, the current one included, and their
  * midpoint. A breakout above the previous channel reads donchian(n).upper[1].
  */
-final class DonchianChannel
+final class DonchianChannel implements BarIndicator
 {
     private Window $highs;
 

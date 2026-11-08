@@ -7,7 +7,7 @@ namespace App\Strategy\Indicators;
 use App\Support\Number\Decimal;
 
 /** Exponential moving average with alpha 2 / (n + 1), seeded with the simple average of its first n values. */
-final class Ema
+final class Ema implements ValueIndicator
 {
     private Sma $seed;
 

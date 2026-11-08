@@ -11,7 +11,7 @@ use App\Support\Number\Decimal;
  * Average true range with Wilder's smoothing: the first value is the mean of the first n true ranges, then
  * (previous × (n - 1) + true range) / n. The first bar's true range is its high minus its low.
  */
-final class Atr
+final class Atr implements BarIndicator
 {
     private ?Decimal $previousClose = null;
 

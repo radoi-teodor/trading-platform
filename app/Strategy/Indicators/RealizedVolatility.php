@@ -13,7 +13,7 @@ use InvalidArgumentException;
  * Realized volatility: the sample standard deviation of the last n log returns, annualized with the square root of
  * the candles in a 365-day year (crypto trades every day).
  */
-final class RealizedVolatility
+final class RealizedVolatility implements ValueIndicator
 {
     private Window $returns;
 

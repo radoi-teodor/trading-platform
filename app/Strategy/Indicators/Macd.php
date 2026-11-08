@@ -8,7 +8,7 @@ use App\Support\Number\Decimal;
 use InvalidArgumentException;
 
 /** MACD: line = EMA(fast) - EMA(slow); signal = EMA(signal) of the line; hist = line - signal. */
-final class Macd
+final class Macd implements ValueIndicator
 {
     private Ema $fast;
 

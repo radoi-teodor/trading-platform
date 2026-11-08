@@ -7,7 +7,7 @@ namespace App\Strategy\Indicators;
 use App\Support\Number\Decimal;
 
 /** The lowest of the last n values, the current one included. */
-final class Lowest
+final class Lowest implements ValueIndicator
 {
     private Window $window;
 

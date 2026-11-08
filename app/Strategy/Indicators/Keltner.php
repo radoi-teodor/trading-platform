@@ -8,7 +8,7 @@ use App\Market\Data\Candle;
 use App\Support\Number\Decimal;
 
 /** Keltner channel: EMA(n) of the close ± k × ATR(n). */
-final class Keltner
+final class Keltner implements BarIndicator
 {
     private Ema $middle;
 

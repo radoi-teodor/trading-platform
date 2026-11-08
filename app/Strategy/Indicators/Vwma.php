@@ -8,7 +8,7 @@ use App\Market\Data\Candle;
 use App\Support\Number\Decimal;
 
 /** Volume-weighted average of the closes of the last n candles; no value when they traded nothing. */
-final class Vwma
+final class Vwma implements BarIndicator
 {
     private Window $weighted;
 

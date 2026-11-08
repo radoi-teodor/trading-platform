@@ -8,7 +8,7 @@ use App\Support\Number\Decimal;
 use App\Support\Number\DecimalMath;
 
 /** Population standard deviation of the last n values. */
-final class StandardDeviation
+final class StandardDeviation implements ValueIndicator
 {
     private Window $window;
 

@@ -10,7 +10,7 @@ use App\Support\Number\Decimal;
  * Relative strength index with Wilder's averages of gains and losses over n changes: 100 - 100 / (1 + gain / loss);
  * 100 when nothing was lost, 50 when nothing moved.
  */
-final class Rsi
+final class Rsi implements ValueIndicator
 {
     private Wilder $gains;
 

@@ -7,7 +7,7 @@ namespace App\Strategy\Indicators;
 use App\Support\Number\Decimal;
 
 /** Rate of change in percent: 100 × (value / value n back - 1). */
-final class Roc
+final class Roc implements ValueIndicator
 {
     private Window $window;
 

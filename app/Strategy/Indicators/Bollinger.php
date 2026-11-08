@@ -7,7 +7,7 @@ namespace App\Strategy\Indicators;
 use App\Support\Number\Decimal;
 
 /** Bollinger bands: the SMA(n) ± k population standard deviations; width = (upper - lower) / middle. */
-final class Bollinger
+final class Bollinger implements ValueIndicator
 {
     private Sma $middle;
 

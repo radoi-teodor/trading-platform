@@ -12,7 +12,7 @@ use App\Support\Number\Decimal;
  * previous close broke through them. Direction starts up (1) and turns down (-1) on a close under the lower band,
  * up again on a close above the upper one; the line is the lower band going up, the upper going down.
  */
-final class Supertrend
+final class Supertrend implements BarIndicator
 {
     private Atr $atr;
 
