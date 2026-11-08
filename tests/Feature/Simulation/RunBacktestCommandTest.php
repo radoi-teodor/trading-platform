@@ -11,6 +11,7 @@ use App\Market\Models\Instrument;
 use App\Market\Models\InstrumentFilter;
 use App\Simulation\Models\BacktestRun;
 use App\Simulation\Report\CanonicalJson;
+use App\Strategy\Baselines\FundingCarry;
 use App\Support\Clock\Clock;
 use App\Support\Clock\SimClock;
 use App\Support\Number\Decimal;
@@ -169,14 +170,16 @@ it('backtests a perpetual strategy from the futures wallet, with funding, agains
     expect(data_get($report, 'trades.0.funding'))->toMatch('/^\d+\.\d+$/');
 });
 
-it('splits the equity between the wallets when a strategy trades both markets', function (): void {
+it('splits the equity between the wallets when the strategy follows both markets, whichever symbol it was given', function (): void {
     backtestFixture();
     perpFixture();
+    config()->set('simulation.strategies.funding-carry', ['class' => FundingCarry::class, 'profile' => 'account']);
 
     expect(Artisan::call('backtest:run', [
-        'strategy' => 'enter-once', '--symbol' => ['BTC/USDT:USDT', 'BTC/USDT'], '--from' => '2026-10-02', '--to' => '2026-10-03',
-        '--no-benchmarks' => true,
+        'strategy' => 'funding-carry', '--symbol' => ['BTC/USDT:USDT'], '--from' => '2026-10-02', '--to' => '2026-10-03',
+        '--param' => ['entry_periods=1', 'exit_periods=1'], '--no-benchmarks' => true,
     ]))->toBe(0)
+        ->and(BacktestRun::query()->sole()->definition['symbols'])->toBe(['BTC/USDT', 'BTC/USDT:USDT'])
         ->and(BacktestRun::query()->sole()->definition['initial_balance'])->toEqual(['amount' => '5000', 'asset' => 'USDT'])
         ->and(BacktestRun::query()->sole()->definition['initial_futures_balance'])->toBe('5000');
 });

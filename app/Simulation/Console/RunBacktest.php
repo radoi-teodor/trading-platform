@@ -58,6 +58,8 @@ final class RunBacktest extends Command
             $from = $this->day('from');
             $to = $this->day('to');
             $strategy = $class::build($this->parameters($class::defaults()), $symbols);
+            // The run is over what the strategy follows: a carry given its perpetual also trades the spot (D-49).
+            $symbols = self::followed($strategy);
             $rules = $this->rules($symbols);
         } catch (InvalidArgumentException $failure) {
             $this->error($failure->getMessage());
@@ -352,6 +354,18 @@ final class RunBacktest extends Command
         return $to->getTimestamp() - $last->fundingTime->getTimestamp() > $last->intervalHours * 3600
             ? sprintf('funding missing after %s', $last->fundingTime->format('Y-m-d H:i'))
             : null;
+    }
+
+    /** @return list<Symbol> the instruments the strategy subscribes to, in subscription order */
+    private static function followed(Strategy $strategy): array
+    {
+        $symbols = [];
+
+        foreach ($strategy->subscriptions() as $subscription) {
+            $symbols[(string) $subscription->symbol] ??= $subscription->symbol;
+        }
+
+        return array_values($symbols);
     }
 
     private static function market(Symbol $symbol): MarketType

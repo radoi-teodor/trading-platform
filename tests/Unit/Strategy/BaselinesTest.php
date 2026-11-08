@@ -114,6 +114,8 @@ it('refuses parameters it cannot use', function (callable $build): void {
     'short on spot' => [fn () => DonchianBreakout::build([...DonchianBreakout::defaults(), 'side' => 'short'], [Symbol::parse('BTC/USDT')])],
     'carry rate not a number' => [fn () => FundingCarry::build([...FundingCarry::defaults(), 'exit' => 'zero'], [Symbol::parse('BTC/USDT:USDT')])],
     'carry leverage not a count' => [fn () => FundingCarry::build([...FundingCarry::defaults(), 'max_leverage' => '1.5'], [Symbol::parse('BTC/USDT:USDT')])],
+    'carry buffer not positive' => [fn () => FundingCarry::build([...FundingCarry::defaults(), 'margin_buffer' => '0'], [Symbol::parse('BTC/USDT:USDT')])],
+    'carry position not positive' => [fn () => FundingCarry::build([...FundingCarry::defaults(), 'max_position' => '-0.1'], [Symbol::parse('BTC/USDT:USDT')])],
     'carry exit above entry' => [fn () => FundingCarry::build([...FundingCarry::defaults(), 'exit' => '0.0002'], [Symbol::parse('BTC/USDT:USDT')])],
     'not positive' => [fn () => DonchianBreakout::build([...DonchianBreakout::defaults(), 'stop_atr' => '0'], [Symbol::parse('BTC/USDT')])],
 ])->throws(InvalidArgumentException::class);
@@ -208,3 +210,10 @@ it('decides nothing in an hour whose spot candle it has not seen', function (): 
     expect(carryDecisions($strategy, [['0', '0.0005', false, false], ['1', '0.0005', false, false]], skipSpotAt: 0))
         ->toBe(['', 'carry BTC/USDT BTC/USDT:USDT max=0.3 leverage=2 buffer=0.5']);
 });
+
+it('stays out while the close is inside the entry channel, on either side', function (string $side, string $symbol): void {
+    $strategy = DonchianBreakout::build([...DonchianBreakout::defaults(), 'entry' => '2', 'exit' => '2', 'atr' => '1', 'timeframe' => '1h', 'side' => $side], [Symbol::parse($symbol)]);
+
+    // The channel of the 2 bars before the third is 98 to 104; 101 breaks neither side.
+    expect(decide($strategy, [hourBar(0, '104', '99', '100'), hourBar(1, '102', '98', '101'), hourBar(2, '102', '100', '101')], symbol: $symbol))->toBe(['', '', '']);
+})->with([['long', 'BTC/USDT'], ['short', 'BTC/USDT:USDT']]);

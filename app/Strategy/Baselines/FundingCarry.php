@@ -38,7 +38,8 @@ final class FundingCarry implements BuildableStrategy
 
     private ?CarbonImmutable $spotSeenAt = null;
 
-    private bool $spotHeld = false;
+    /** Whether the spot leg was held at $spotSeenAt; read only once that is set. */
+    private bool $spotHeld;
 
     private readonly Decimal $entry;
 
