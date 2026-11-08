@@ -33,7 +33,7 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
-          extensions: bcmath, intl, pdo_pgsql, redis
+          extensions: bcmath, intl, pdo_pgsql, redis, zip
           coverage: none
       - run: composer install --no-interaction --prefer-dist
       - run: vendor/bin/phpstan analyse --memory-limit=1G --no-progress
@@ -66,7 +66,7 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
-          extensions: bcmath, intl, pdo_pgsql, redis
+          extensions: bcmath, intl, pdo_pgsql, redis, zip
           coverage: none
       - run: composer install --no-interaction --prefer-dist
       # The default suite only: no network, no exchange, no LLM (docs/conventions.md, section 6).

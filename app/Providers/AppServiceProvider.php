@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Market\Archive\BinanceArchive;
 use App\Market\Binance\BinanceEndpoints;
 use App\Market\Binance\Sleeper;
 use App\Market\Binance\SystemSleeper;
 use App\Support\Clock\Clock;
 use App\Support\Clock\WallClock;
+use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\ServiceProvider;
 
@@ -28,6 +30,12 @@ final class AppServiceProvider extends ServiceProvider
             perpStream: Config::string('exchanges.binance.perp.stream'),
             archive: Config::string('exchanges.binance.archive'),
             timeoutSeconds: Config::integer('exchanges.binance.timeout_seconds'),
+        ));
+        $this->app->bind(BinanceArchive::class, fn (): BinanceArchive => new BinanceArchive(
+            http: $this->app->make(HttpFactory::class),
+            baseUrl: Config::string('exchanges.binance.archive'),
+            cacheDirectory: Config::string('exchanges.binance.archive_cache'),
+            timeoutSeconds: 120,
         ));
     }
 

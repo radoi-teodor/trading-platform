@@ -14,6 +14,8 @@ return [
             'stream' => env('BINANCE_PERP_STREAM', 'wss://fstream.binance.com'),
         ],
         'archive' => env('BINANCE_ARCHIVE', 'https://data.binance.vision'),
+        // Verified archives are kept here and checked against their checksum again on reuse.
+        'archive_cache' => storage_path('app/binance-archive'),
         'timeout_seconds' => 15,
     ],
 ];

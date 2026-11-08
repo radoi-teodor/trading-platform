@@ -21,9 +21,11 @@ final class EpochTime
             throw new UnexpectedValueException("Not an epoch timestamp: '{$digits}'.");
         }
 
+        $number = (int) $digits;
+
         return match (strlen($digits)) {
-            13 => CarbonImmutable::createFromTimestampMsUTC((int) $digits),
-            16 => CarbonImmutable::createFromTimestampMsUTC(intdiv((int) $digits, 1000)),
+            13 => CarbonImmutable::createFromTimestampMsUTC($number),
+            16 => CarbonImmutable::createFromTimestampMsUTC(intdiv($number, 1000)),
             default => throw new UnexpectedValueException("Unknown epoch unit for '{$digits}': expected 13 digits (ms) or 16 (µs)."),
         };
     }
