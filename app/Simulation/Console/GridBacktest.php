@@ -52,7 +52,8 @@ final class GridBacktest extends Command
     private const int MAX_SETS = 400;
 
     protected $signature = 'backtest:grid
-        {--file= : A strategy document with declared parameters}
+        {strategy? : A saved version, such as ema-cross-scalp-long@v1}
+        {--file= : A strategy document with declared parameters, instead of a saved version}
         {--from= : First day of the window, YYYY-MM-DD}
         {--to= : Day after the last one, YYYY-MM-DD}
         {--grid=* : Values of a parameter, as fast=5,7,9 or slow=15..34:3 (default: its range and step)}
@@ -69,21 +70,18 @@ final class GridBacktest extends Command
     {
         try {
             $file = $this->option('file');
+            $label = $this->argument('strategy');
             $policyLimits = RiskPolicy::account($this->section($config, 'risk.account'));
-            $result = CompileStrategy::compile(is_string($file) ? $file : '', $policyLimits);
+            $loaded = $this->loadDocument($config, $clock, is_string($label) ? $label : null, is_string($file) ? $file : null);
 
-            if ($result->spec === null) {
-                foreach ($result->errors as $error) {
-                    $this->error((is_string($file) ? $file : '').":{$error->position->line}:{$error->position->column}: {$error->problem}");
-                }
-
+            if ($loaded === null) {
                 return self::FAILURE;
             }
 
-            $spec = $result->spec;
+            [$spec, $version] = $loaded;
             $sets = $this->sets($spec);
             $walk = $this->option('walk-forward') === true ? $this->walkOptions() : null;
-            $strategies = array_map(fn (array $set): Strategy => CompiledStrategy::fromSpec($spec, $set), $sets);
+            $strategies = array_map(fn (array $set): Strategy => CompiledStrategy::fromSpec($spec, $set, $version), $sets);
             $from = $this->day('from');
             $to = $this->day('to');
             $symbols = self::followed($strategies[0]);

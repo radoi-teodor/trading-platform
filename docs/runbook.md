@@ -112,6 +112,9 @@ only through Binance's public-data hosts and archives and should be confirmed on
 |------|---------|
 | Backtest a strategy | `php artisan backtest:run <strategy> --from=YYYY-MM-DD --to=YYYY-MM-DD [--symbol=BTC/USDT] [--param=key=value] [--equity=10000] [--no-benchmarks]` |
 | Check a strategy document | `php artisan strategy:compile catalog/strategies/<id>.strategy.yaml` |
+| Save documents as versions | `php artisan strategy:import [catalog/strategies or a file]`: an unchanged document keeps its version |
+| Write versions to the catalog | `php artisan strategy:export [catalog/strategies]`: `<id>.v<n>.strategy.yaml` |
+| Backtest a saved version | `php artisan backtest:run <id>@v<n> --from=YYYY-MM-DD --to=YYYY-MM-DD` (also `backtest:grid <id>@v<n>`) |
 | Backtest a strategy document | `php artisan backtest:run --file=catalog/strategies/<id>.strategy.yaml --from=YYYY-MM-DD --to=YYYY-MM-DD [--param=fast=12] [--no-benchmarks]` |
 | Search a document's parameters | `php artisan backtest:grid --file=catalog/strategies/<id>.strategy.yaml --from=YYYY-MM-DD --to=YYYY-MM-DD [--grid=fast=5..13:2] [--grid=slow=15,21,34]` |
 | Walk forward over a grid | `php artisan backtest:grid --file=... --from=... --to=... --walk-forward [--in=12m] [--out=3m] [--step=3m] [--min-trades=100]` |

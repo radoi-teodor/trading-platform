@@ -7,6 +7,7 @@ namespace App\Simulation\Console;
 use App\Market\Data\MarketType;
 use App\Market\Data\RulesHistory;
 use App\Market\FundingRateRepository;
+use App\Market\Instruments\StoredInstruments;
 use App\Market\Models\Instrument;
 use App\Market\Quality\QualityCheck;
 use App\Risk\RiskPolicy;
@@ -14,6 +15,11 @@ use App\Simulation\Backtest;
 use App\Simulation\Data\Participant;
 use App\Strategy\Contracts\BuildableStrategy;
 use App\Strategy\Contracts\Strategy;
+use App\Strategy\Dsl\Document\DocumentChecker;
+use App\Strategy\Dsl\Document\PolicyLimits;
+use App\Strategy\Dsl\Document\StrategySpec;
+use App\Strategy\Versions\StrategyRepository;
+use App\Support\Clock\Clock;
 use App\Support\Number\Decimal;
 use App\Support\Number\Money;
 use App\Support\Symbol;
@@ -301,5 +307,44 @@ trait PreparesBacktests
         $value = $section[$key] ?? null;
 
         return is_string($value) ? Decimal::of($value) : throw new InvalidArgumentException("Missing decimal setting '{$key}'.");
+    }
+
+    /** The saved strategy versions, checked against the stored instruments and the account policy (D-61). */
+    protected function versions(Repository $config, Clock $clock): StrategyRepository
+    {
+        $policy = RiskPolicy::account($this->section($config, 'risk.account'));
+
+        return new StrategyRepository($clock, new StoredInstruments, new PolicyLimits($policy->riskPerTrade, $policy->notionalPerInstrument, $policy->maxOpenPositions));
+    }
+
+    /**
+     * Reads a strategy document from a saved version (<id>@v<n>) or a file, checks it, prints its warnings and
+     * errors, and returns the checked spec with the document's version number (1 for a file), or null on errors.
+     *
+     * @return array{StrategySpec, int}|null
+     */
+    protected function loadDocument(Repository $config, Clock $clock, ?string $label, ?string $file): ?array
+    {
+        if ($label !== null) {
+            $version = $this->versions($config, $clock)->find($label)
+                ?? throw new InvalidArgumentException("{$label} is not a saved version. Save it with strategy:import first.");
+            [$text, $source, $number] = [$version->document, $label, $version->version];
+        } else {
+            $read = $file !== null && is_file($file) ? file_get_contents($file) : false;
+            [$text, $source, $number] = [$read === false ? throw new InvalidArgumentException("Cannot read {$file}.") : $read, (string) $file, 1];
+        }
+
+        $policy = RiskPolicy::account($this->section($config, 'risk.account'));
+        $result = DocumentChecker::check($text, new StoredInstruments, new PolicyLimits($policy->riskPerTrade, $policy->notionalPerInstrument, $policy->maxOpenPositions));
+
+        foreach ($result->warnings as $warning) {
+            $this->warn("warning: {$warning}");
+        }
+
+        foreach ($result->errors as $error) {
+            $this->error("{$source}:{$error->position->line}:{$error->position->column}: {$error->problem}");
+        }
+
+        return $result->spec === null ? null : [$result->spec, $number];
     }
 }

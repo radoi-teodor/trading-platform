@@ -336,3 +336,19 @@ it('walks forward over the grid\'s continuous runs', function (): void {
         ->and($output)->toContain('Out of sample:')
         ->and($output)->toContain('positive windows');
 });
+
+it('backtests a saved version, with the same report as its file and the version in its identity', function (): void {
+    backtestFixture();
+    $file = strategyFile(EMA_CROSS_DOCUMENT);
+    Artisan::call('strategy:import', ['path' => $file]);
+
+    Artisan::call('backtest:run', ['--file' => $file, '--from' => '2026-10-02', '--to' => '2026-10-03', '--no-benchmarks' => true]);
+    $exit = Artisan::call('backtest:run', ['strategy' => 'ema-cross-test@v1', '--from' => '2026-10-02', '--to' => '2026-10-03', '--no-benchmarks' => true]);
+    $runs = BacktestRun::query()->orderBy('id')->get();
+
+    expect($exit)->toBe(0)
+        ->and($runs)->toHaveCount(2)
+        ->and($runs->pluck('report_hash')->unique()->all())->toHaveCount(1)
+        ->and(Artisan::call('backtest:run', ['strategy' => 'ema-cross-test@v9', '--from' => '2026-10-02', '--to' => '2026-10-03']))->toBe(1)
+        ->and(Artisan::output())->toContain('ema-cross-test@v9 is not a saved version.');
+});

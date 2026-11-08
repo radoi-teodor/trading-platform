@@ -39,7 +39,7 @@ final class RunBacktest extends Command
     use PreparesBacktests;
 
     protected $signature = 'backtest:run
-        {strategy? : A strategy name from config/simulation.php}
+        {strategy? : A strategy name from config/simulation.php, or a saved version such as ema-cross-scalp-long@v1}
         {--file= : A strategy document (docs/strategy/configurator.md) instead of a name}
         {--symbol=* : Unified symbols, such as BTC/USDT (default BTC/USDT)}
         {--from= : First day of the window, YYYY-MM-DD}
@@ -56,9 +56,11 @@ final class RunBacktest extends Command
 
         try {
             $file = $this->option('file');
+            $label = str_contains($this->stringArgument('strategy'), '@v') ? $this->stringArgument('strategy') : null;
+            $fromDocument = is_string($file) || $label !== null;
 
-            if (is_string($file)) {
-                $loaded = $this->document($config, $file);
+            if ($fromDocument) {
+                $loaded = $this->document($config, $clock, $label, is_string($file) ? $file : null);
 
                 if ($loaded === null) {
                     return self::FAILURE;
@@ -155,7 +157,7 @@ final class RunBacktest extends Command
             'duration_ms' => (int) $started->diffInMilliseconds($finished),
         ]);
 
-        if (is_string($this->option('file'))) {
+        if ($fromDocument) {
             // Every backtest of a document is a trial of its family, for the deflated Sharpe ratio (D-58).
             $daily = Performance::dailyReturns($result->main->equity);
             $sharpe = count($daily) >= 2 ? DeflatedSharpe::sharpe($daily) : null;
@@ -214,27 +216,19 @@ final class RunBacktest extends Command
      *
      * @return array{string, Strategy, string}|null
      */
-    private function document(Repository $config, string $file): ?array
+    private function document(Repository $config, Clock $clock, ?string $label, ?string $file): ?array
     {
         if ($this->strings('symbol') !== []) {
             throw new InvalidArgumentException('A strategy document names its own instruments; leave out --symbol.');
         }
 
-        $result = CompileStrategy::compile($file, RiskPolicy::account($this->section($config, 'risk.account')));
+        $loaded = $this->loadDocument($config, $clock, $label, $file);
 
-        foreach ($result->warnings as $warning) {
-            $this->warn("warning: {$warning}");
-        }
-
-        if ($result->spec === null) {
-            foreach ($result->errors as $error) {
-                $this->error("{$file}:{$error->position->line}:{$error->position->column}: {$error->problem}");
-            }
-
+        if ($loaded === null) {
             return null;
         }
 
-        $spec = $result->spec;
+        [$spec, $version] = $loaded;
 
         $parameters = [];
 
@@ -243,6 +237,6 @@ final class RunBacktest extends Command
             $parameters[$key] = $value;
         }
 
-        return [$spec->id, CompiledStrategy::fromSpec($spec, $parameters), $spec->benchmark ? 'benchmark' : 'account'];
+        return [$spec->id, CompiledStrategy::fromSpec($spec, $parameters, $version), $spec->benchmark ? 'benchmark' : 'account'];
     }
 }
