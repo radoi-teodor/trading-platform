@@ -202,3 +202,71 @@ it('refuses a short on spot', function (): void {
     expect(Artisan::call('backtest:run', ['strategy' => 'enter-once', '--from' => '2026-10-02', '--to' => '2026-10-03', '--param' => ['side=short']]))->toBe(1)
         ->and(Artisan::output())->toContain('short');
 });
+
+/** Writes a strategy document for a command test and returns its path. */
+function strategyFile(string $yaml): string
+{
+    $path = storage_path('framework/testing/strategy-'.substr(hash('sha256', $yaml), 0, 8).'.yaml');
+    file_put_contents($path, $yaml);
+
+    return $path;
+}
+
+const EMA_CROSS_DOCUMENT = <<<'YAML'
+    strategy: ema-cross-test
+    title: EMA cross on 5m
+    family: trend
+    hypothesis: Short-term momentum continues after a cross.
+    fails_when: Chop.
+    params:
+      fast: { default: 9, range: [5, 13], step: 2 }
+      slow: { default: 21, range: [15, 30], step: 3 }
+    market: { exchange: binance, type: spot, instruments: [BTC/USDT] }
+    timeframe: 5m
+    entries:
+      long:
+        when: ema($fast) crosses_above ema($slow)
+    exits:
+      stop_loss: 1.5 * atr(14)
+      take_profit: 2R
+      when: ema($fast) crosses_below ema($slow)
+    YAML;
+
+it('backtests a strategy document', function (): void {
+    backtestFixture();
+
+    $exit = Artisan::call('backtest:run', ['--file' => strategyFile(EMA_CROSS_DOCUMENT), '--from' => '2026-10-02', '--to' => '2026-10-03', '--param' => ['fast=5']]);
+    $run = BacktestRun::query()->sole();
+    $report = storedReport($run);
+
+    expect($exit)->toBe(0)
+        ->and($run->strategy)->toBe('ema-cross-test@v1')
+        ->and($report)->toHaveKey('definition.strategy.parameters', ['fast' => '5', 'slow' => '21'])
+        ->and($report)->toHaveKey('benchmarks.buy-and-hold.strategy')
+        ->and($run->trades)->toBeGreaterThan(0);
+});
+
+it('refuses a document with errors and lists them with their places', function (): void {
+    backtestFixture();
+    $path = strategyFile(str_replace('stop_loss: 1.5 * atr(14)', 'stop_loss: close > 2%', EMA_CROSS_DOCUMENT));
+
+    expect(Artisan::call('backtest:run', ['--file' => $path, '--from' => '2026-10-02', '--to' => '2026-10-03']))->toBe(1)
+        ->and(Artisan::output())->toContain("{$path}:15:14: cannot compare a price series with a percent (close > 2%). Did you mean close > close[1] * 1.02 ?")
+        ->and(BacktestRun::query()->count())->toBe(0);
+});
+
+it('compiles a document and says what it found', function (): void {
+    backtestFixture();
+    $path = strategyFile(EMA_CROSS_DOCUMENT);
+
+    $exit = Artisan::call('strategy:compile', ['file' => $path]);
+    $output = Artisan::output();
+
+    expect($exit)->toBe(0)
+        ->and($output)->toContain('ema-cross-test compiles')
+        ->and($output)->toContain('BTC/USDT on 5m')
+        ->and($output)->toContain('Warmup: 22 candles')
+        ->and($output)->toContain('fast = 9, slow = 21');
+    expect(Artisan::call('strategy:compile', ['file' => strategyFile(str_replace('ema($fast)', 'emma($fast)', EMA_CROSS_DOCUMENT))]))->toBe(1)
+        ->and(Artisan::output())->toContain(':13:11: emma is not a function of the DSL. Did you mean ema?');
+});

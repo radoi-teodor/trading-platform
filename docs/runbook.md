@@ -111,8 +111,12 @@ only through Binance's public-data hosts and archives and should be confirmed on
 | Task | Command |
 |------|---------|
 | Backtest a strategy | `php artisan backtest:run <strategy> --from=YYYY-MM-DD --to=YYYY-MM-DD [--symbol=BTC/USDT] [--param=key=value] [--equity=10000] [--no-benchmarks]` |
+| Check a strategy document | `php artisan strategy:compile catalog/strategies/<id>.strategy.yaml` |
+| Backtest a strategy document | `php artisan backtest:run --file=catalog/strategies/<id>.strategy.yaml --from=YYYY-MM-DD --to=YYYY-MM-DD [--param=fast=12] [--no-benchmarks]` |
 
-Strategies and benchmarks are listed in `config/simulation.php`. A run refuses to start on history with gaps,
+Strategies written in the DSL (`docs/strategy/configurator.md`) live in `catalog/strategies/` and run with `--file`;
+their instruments and timeframe come from the document and `--param` overrides a declared parameter. Errors are printed
+as `file:line:column: problem`. Hand-coded strategies and benchmarks are listed in `config/simulation.php`. A run refuses to start on history with gaps,
 warmup included, and says where they are; backfill first. A perpetual is named with its settle asset
 (`--symbol=BTC/USDT:USDT`) and also needs funding without gaps. The equity starts in the USD-M wallet for a
 perpetual-only run, in the spot wallet for a spot-only run, and is split by `perpetual.spot_share_when_both` when a

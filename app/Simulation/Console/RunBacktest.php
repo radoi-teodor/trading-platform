@@ -22,6 +22,7 @@ use App\Simulation\Report\Report;
 use App\Simulation\Report\ReportBuilder;
 use App\Strategy\Contracts\BuildableStrategy;
 use App\Strategy\Contracts\Strategy;
+use App\Strategy\Dsl\Compiler\CompiledStrategy;
 use App\Support\Asset;
 use App\Support\Clock\Clock;
 use App\Support\Number\Decimal;
@@ -38,7 +39,8 @@ use RuntimeException;
 final class RunBacktest extends Command
 {
     protected $signature = 'backtest:run
-        {strategy : A strategy name from config/simulation.php}
+        {strategy? : A strategy name from config/simulation.php}
+        {--file= : A strategy document (docs/strategy/configurator.md) instead of a name}
         {--symbol=* : Unified symbols, such as BTC/USDT (default BTC/USDT)}
         {--from= : First day of the window, YYYY-MM-DD}
         {--to= : Day after the last one, YYYY-MM-DD}
@@ -53,11 +55,24 @@ final class RunBacktest extends Command
         $started = $clock->now();
 
         try {
-            [$name, $class, $profile] = $this->registered($config, $this->stringArgument('strategy'));
-            $symbols = array_map(fn (string $s): Symbol => Symbol::parse($s), $this->strings('symbol') ?: ['BTC/USDT']);
+            $file = $this->option('file');
+
+            if (is_string($file)) {
+                $loaded = $this->document($config, $file);
+
+                if ($loaded === null) {
+                    return self::FAILURE;
+                }
+
+                [$name, $strategy, $profile] = $loaded;
+            } else {
+                [$name, $class, $profile] = $this->registered($config, $this->stringArgument('strategy'));
+                $symbols = array_map(fn (string $s): Symbol => Symbol::parse($s), $this->strings('symbol') ?: ['BTC/USDT']);
+                $strategy = $class::build($this->parameters($class::defaults()), $symbols);
+            }
+
             $from = $this->day('from');
             $to = $this->day('to');
-            $strategy = $class::build($this->parameters($class::defaults()), $symbols);
             // The run is over what the strategy follows: a carry given its perpetual also trades the spot (D-49).
             $symbols = self::followed($strategy);
             $rules = $this->rules($symbols);
@@ -175,6 +190,47 @@ final class RunBacktest extends Command
         }
 
         $this->table(['Metric', 'Value'], $rows);
+    }
+
+    /**
+     * Compiles a strategy document with the --param values; prints its errors and returns null when it does not.
+     *
+     * @return array{string, Strategy, string}|null
+     */
+    private function document(Repository $config, string $file): ?array
+    {
+        if ($this->strings('symbol') !== []) {
+            throw new InvalidArgumentException('A strategy document names its own instruments; leave out --symbol.');
+        }
+
+        $result = CompileStrategy::compile($file, RiskPolicy::account($this->section($config, 'risk.account')));
+
+        foreach ($result->warnings as $warning) {
+            $this->warn("warning: {$warning}");
+        }
+
+        if ($result->spec === null) {
+            foreach ($result->errors as $error) {
+                $this->error("{$file}:{$error->position->line}:{$error->position->column}: {$error->problem}");
+            }
+
+            return null;
+        }
+
+        $spec = $result->spec;
+
+        if ($spec->riskPerTrade !== null || $spec->maxPosition !== null || $spec->maxOpenPositions !== null || $spec->maxTradesPerDay !== null || $spec->cooldownSeconds !== null) {
+            $this->warn('warning: this document\'s sizing and limits are not enforced yet (Phase 3, step 6); the account policy applies.');
+        }
+
+        $parameters = [];
+
+        foreach ($this->strings('param') as $pair) {
+            [$key, $value] = array_pad(explode('=', $pair, 2), 2, '');
+            $parameters[$key] = $value;
+        }
+
+        return [$spec->id, CompiledStrategy::fromSpec($spec, $parameters), $spec->benchmark ? 'benchmark' : 'account'];
     }
 
     /** @return array{string, class-string<BuildableStrategy>, string} */
