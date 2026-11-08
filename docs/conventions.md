@@ -46,7 +46,7 @@ composer mutate          # infection on Support, Strategy, Risk, Simulation, Por
   and `new DateTime()` are forbidden in domain modules.
 - Randomness: an injected `Random\Randomizer` with a seeded engine. Every backtest stores its seed.
 - Percentages are `Percent` objects holding the fraction (0.005 for 0.5 %). Displayed with a sign and a zero
-  form: `+0.50 %`, `-0.50 %`, `0.00 %`.
+  form: `+0.50%`, `-0.50%`, `0.00%` (`docs/brand.md`, A2).
 
 ## 4. Errors and logging
 
