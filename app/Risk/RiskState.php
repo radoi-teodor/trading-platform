@@ -9,7 +9,6 @@ use App\Risk\Data\RiskEventKind;
 use App\Risk\Data\RiskProfile;
 use App\Support\Number\Decimal;
 use Carbon\CarbonImmutable;
-use Carbon\CarbonInterface;
 
 /**
  * The loss limits over time (docs/engine.md, section 5): equity at 00:00 UTC and on Monday 00:00 UTC, the equity
@@ -17,11 +16,12 @@ use Carbon\CarbonInterface;
  */
 final class RiskState
 {
-    private ?CarbonImmutable $day = null;
+    /** Days and weeks since the epoch, compared as integers on every minute; weeks start on Monday 00:00 UTC. */
+    private ?int $day = null;
 
     private Decimal $dayStart;
 
-    private ?CarbonImmutable $week = null;
+    private ?int $week = null;
 
     private Decimal $weekStart;
 
@@ -47,15 +47,17 @@ final class RiskState
             return [];
         }
 
-        $day = $time->startOfDay();
-        $week = $time->startOfWeek(CarbonInterface::MONDAY);
+        $timestamp = $time->getTimestamp();
+        $day = intdiv($timestamp, 86_400);
+        // 1970-01-05 was the first Monday.
+        $week = intdiv($timestamp - 4 * 86_400, 7 * 86_400);
 
-        if ($this->day === null || ! $this->day->equalTo($day)) {
+        if ($this->day !== $day) {
             $this->day = $day;
             $this->dayStart = $equity;
         }
 
-        if ($this->week === null || ! $this->week->equalTo($week)) {
+        if ($this->week !== $week) {
             $this->week = $week;
             $this->weekStart = $equity;
         }
@@ -64,7 +66,7 @@ final class RiskState
         $events = [];
 
         if ($this->dailyHaltUntil === null && self::fell($equity, $this->dayStart, $this->policy->dailyLoss)) {
-            $this->dailyHaltUntil = $day->addDay();
+            $this->dailyHaltUntil = CarbonImmutable::createFromTimestampUTC(($day + 1) * 86_400);
             $events[] = new RiskEvent(RiskEventKind::DailyLossHalt, $time, $equity);
         }
 

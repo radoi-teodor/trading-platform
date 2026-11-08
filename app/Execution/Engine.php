@@ -38,7 +38,6 @@ use App\Strategy\Data\MoveStop;
 use App\Strategy\Data\OpenLong;
 use App\Strategy\Data\PositionView;
 use App\Strategy\Data\StrategyContext;
-use App\Support\Asset;
 use App\Support\Number\Decimal;
 use App\Support\Number\Price;
 use App\Support\Symbol;
@@ -70,6 +69,9 @@ final class Engine
 
     /** @var array<string, CandleAggregator> by symbol and timeframe */
     private array $aggregators = [];
+
+    /** @var array<string, Symbol> parsed once */
+    private array $symbols = [];
 
     /**
      * @param  list<Strategy>  $strategies
@@ -110,8 +112,9 @@ final class Engine
         $this->reconcile();
 
         foreach ($event->candles as $symbol => $candle) {
-            $this->marks = $this->marks->with(Symbol::parse($symbol), $candle->close);
-            $this->ledger->observe(Symbol::parse($symbol), $candle->high, $candle->low);
+            $parsed = $this->symbols[$symbol] ??= Symbol::parse($symbol);
+            $this->marks = $this->marks->with($parsed, $candle->close);
+            $this->ledger->observe($parsed, $candle->high, $candle->low);
         }
 
         $equity = $this->ledger->equity($this->marks);
@@ -145,11 +148,11 @@ final class Engine
         }
 
         $venueBalances = $this->venue->balances();
-        $assets = array_unique([...array_keys($venueBalances), ...array_keys($this->ledger->balances())]);
+        $ledgerBalances = $this->ledger->balances();
 
-        foreach ($assets as $asset) {
+        foreach (array_unique([...array_keys($venueBalances), ...array_keys($ledgerBalances)]) as $asset) {
             $code = (string) $asset;
-            $ours = $this->ledger->balance(Asset::of($code));
+            $ours = $ledgerBalances[$code] ?? Decimal::zero();
             $theirs = isset($venueBalances[$code]) ? $venueBalances[$code]->total() : Decimal::zero();
 
             if (! $ours->equals($theirs)) {

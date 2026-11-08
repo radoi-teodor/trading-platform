@@ -16,16 +16,20 @@ final class OrderBook
     /** @var array<string, TrackedOrder> */
     private array $orders = [];
 
+    /** @var array<string, TrackedOrder> the orders last known to be working, in the order they were placed */
+    private array $open = [];
+
     public function track(TrackedOrder $order): void
     {
         $this->orders[$order->id->value] = $order;
+        $this->open[$order->id->value] = $order;
     }
 
     public function apply(OrderUpdate $update): TrackedOrder
     {
         $order = $this->orders[$update->clientOrderId->value]
             ?? throw new ReconciliationMismatch("The venue reports order {$update->clientOrderId}, which the engine never placed.");
-        $order->status = $update->status;
+        $this->setStatus($order, $update->status);
 
         if ($update->fill !== null) {
             $order->filled = $order->filled->plus($update->fill->quantity);
@@ -41,7 +45,7 @@ final class OrderBook
 
         foreach ([$order, $order?->ocoWith === null ? null : ($this->orders[$order->ocoWith->value] ?? null)] as $leg) {
             if ($leg !== null && $leg->status->isWorking()) {
-                $leg->status = OrderStatus::Cancelled;
+                $this->setStatus($leg, OrderStatus::Cancelled);
             }
         }
     }
@@ -49,7 +53,18 @@ final class OrderBook
     /** @return list<TrackedOrder> */
     public function working(): array
     {
-        return array_values(array_filter($this->orders, fn (TrackedOrder $order): bool => $order->status->isWorking()));
+        return array_values(array_filter($this->open, fn (TrackedOrder $order): bool => $order->status->isWorking()));
+    }
+
+    private function setStatus(TrackedOrder $order, OrderStatus $status): void
+    {
+        $order->status = $status;
+
+        if ($status->isWorking()) {
+            $this->open[$order->id->value] = $order;
+        } else {
+            unset($this->open[$order->id->value]);
+        }
     }
 
     /** @return list<TrackedOrder> */

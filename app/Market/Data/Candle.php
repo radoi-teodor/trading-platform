@@ -8,7 +8,6 @@ use App\Support\Number\Decimal;
 use App\Support\Number\Price;
 use App\Support\Timeframe;
 use Carbon\CarbonImmutable;
-use InvalidArgumentException;
 
 /** One OHLCV candle. Refuses values the exchange could not have produced. */
 final readonly class Candle
@@ -59,7 +58,7 @@ final readonly class Candle
     /** The moment the candle is complete and known: its open time plus its timeframe (docs/market-data.md, section 2). */
     public function endsAt(): CarbonImmutable
     {
-        return $this->timeframe->nextOpen($this->openTime);
+        return CarbonImmutable::createFromTimestampUTC($this->openTime->getTimestamp() + $this->timeframe->seconds());
     }
 
     /** Binance's close time: one millisecond before endsAt(). */
@@ -82,10 +81,8 @@ final readonly class Candle
 
     private function assertAligned(): void
     {
-        try {
-            $this->timeframe->nextOpen($this->openTime);
-        } catch (InvalidArgumentException $notAligned) {
-            throw new InvalidCandle($notAligned->getMessage(), previous: $notAligned);
+        if (! $this->timeframe->isOpenTime($this->openTime->getTimestamp()) || $this->openTime->microsecond !== 0) {
+            throw new InvalidCandle("{$this->openTime->toIso8601String()} is not a {$this->timeframe->value} open time.");
         }
     }
 

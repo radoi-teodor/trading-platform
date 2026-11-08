@@ -53,6 +53,7 @@ final readonly class Backtest
 
         $fingerprint = hash_init('sha256');
         $candles = 0;
+        $symbols = [];
 
         foreach ($this->feed->minutes($definition->market, $definition->symbols, $feedFrom, $definition->to) as $minute) {
             $clock->advanceTo($minute->closedAt);
@@ -67,7 +68,7 @@ final readonly class Backtest
 
             foreach ($runs as [, $venue, $engine, , $tracker]) {
                 foreach ($minute->candles as $symbol => $candle) {
-                    $venue->match(Symbol::parse($symbol), $candle);
+                    $venue->match($symbols[$symbol] ??= Symbol::parse($symbol), $candle);
                 }
 
                 $equity = $engine->handle($minute);

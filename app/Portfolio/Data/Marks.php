@@ -21,6 +21,11 @@ final readonly class Marks
 
     public function priceOf(Asset $asset): ?Price
     {
-        return $this->prices["{$asset}/{$this->quote}"] ?? null;
+        return $this->priceOfCode($asset->code);
+    }
+
+    public function priceOfCode(string $asset): ?Price
+    {
+        return $this->prices["{$asset}/{$this->quote->code}"] ?? null;
     }
 }

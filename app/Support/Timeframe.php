@@ -56,9 +56,17 @@ enum Timeframe: string
         return $this->nextOpen($open)->subMillisecond();
     }
 
+    /** Whether a Unix timestamp is the open time of a candle of this timeframe; integer arithmetic, no date object. */
+    public function isOpenTime(int $timestamp): bool
+    {
+        $origin = $this === self::OneWeek ? self::FIRST_MONDAY : 0;
+
+        return ($timestamp - $origin) % $this->seconds() === 0;
+    }
+
     private function assertAligned(CarbonImmutable $open): void
     {
-        if (! $this->openTimeContaining($open)->equalTo($open)) {
+        if (! $this->isOpenTime($open->getTimestamp()) || $open->microsecond !== 0) {
             throw new InvalidArgumentException("{$open->toIso8601String()} is not a {$this->value} open time.");
         }
     }

@@ -49,6 +49,9 @@ final class SimulatedVenue implements Venue
     /** @var array<string, SimulatedOrder> by client order id, in submission order */
     private array $orders = [];
 
+    /** @var array<string, SimulatedOrder> the orders still working, in submission order */
+    private array $open = [];
+
     /** @var list<OrderUpdate> */
     private array $updates = [];
 
@@ -56,6 +59,9 @@ final class SimulatedVenue implements Venue
     private array $lastMinute = [];
 
     private int $fills = 0;
+
+    /** @var array<string, Asset> */
+    private array $assets = [];
 
     /**
      * @param  array<string, RulesHistory>  $rules  by unified symbol
@@ -138,15 +144,7 @@ final class SimulatedVenue implements Venue
 
     public function openOrders(): array
     {
-        $open = [];
-
-        foreach ($this->orders as $order) {
-            if ($order->status->isWorking()) {
-                $open[] = $order->snapshot();
-            }
-        }
-
-        return $open;
+        return array_values(array_map(fn (SimulatedOrder $order) => $order->snapshot(), $this->open));
     }
 
     public function balances(): array
@@ -155,7 +153,7 @@ final class SimulatedVenue implements Venue
 
         foreach (array_keys($this->free + $this->locked) as $asset) {
             $code = (string) $asset;
-            $balances[$code] = new Balance(Asset::of($code), $this->free[$code] ?? Decimal::zero(), $this->locked[$code] ?? Decimal::zero());
+            $balances[$code] = new Balance($this->assets[$code] ??= Asset::of($code), $this->free[$code] ?? Decimal::zero(), $this->locked[$code] ?? Decimal::zero());
         }
 
         ksort($balances, SORT_STRING);
@@ -166,10 +164,7 @@ final class SimulatedVenue implements Venue
     /** Matches the working orders of $symbol against one closed 1-minute candle. */
     public function match(Symbol $symbol, Candle $minute): void
     {
-        $working = array_filter(
-            $this->orders,
-            fn (SimulatedOrder $order): bool => $order->status->isWorking() && $order->request->symbol->equals($symbol),
-        );
+        $working = array_filter($this->open, fn (SimulatedOrder $order): bool => $order->request->symbol->equals($symbol));
 
         foreach ([OrderType::Market, OrderType::StopMarket, OrderType::Limit] as $type) {
             foreach ($working as $order) {
@@ -364,6 +359,7 @@ final class SimulatedVenue implements Venue
 
         if (! $status->isWorking()) {
             $this->unlock($order, $order->locked);
+            unset($this->open[$order->request->clientOrderId->value]);
         }
 
         $this->record($order, $fill);
@@ -374,6 +370,7 @@ final class SimulatedVenue implements Venue
         $this->free[$order->lockAsset] = ($this->free[$order->lockAsset] ?? Decimal::zero())->minus($order->locked);
         $this->locked[$order->lockAsset] = ($this->locked[$order->lockAsset] ?? Decimal::zero())->plus($order->locked);
         $this->orders[$order->request->clientOrderId->value] = $order;
+        $this->open[$order->request->clientOrderId->value] = $order;
         $this->record($order);
     }
 

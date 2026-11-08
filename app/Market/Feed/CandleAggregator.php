@@ -19,7 +19,10 @@ final class CandleAggregator
 {
     private ?CarbonImmutable $periodOpen = null;
 
-    private ?CarbonImmutable $expected = null;
+    /** Timestamps, compared as integers on every minute. */
+    private ?int $periodEnd = null;
+
+    private ?int $expected = null;
 
     private ?Price $open = null;
 
@@ -53,7 +56,7 @@ final class CandleAggregator
 
         $this->accept($minute);
 
-        if (! $minute->endsAt()->equalTo($this->timeframe->nextOpen($this->periodOpen()))) {
+        if ($minute->openTime->getTimestamp() + 60 !== $this->periodEnd) {
             return null;
         }
 
@@ -70,21 +73,24 @@ final class CandleAggregator
             $this->takerBuyVolume,
         );
         $this->periodOpen = null;
+        $this->periodEnd = null;
 
         return $candle;
     }
 
     private function accept(Candle $minute): void
     {
-        if ($this->expected !== null && ! $minute->openTime->equalTo($this->expected)) {
+        $opens = $minute->openTime->getTimestamp();
+
+        if ($this->expected !== null && $opens !== $this->expected) {
             throw new CandleSequenceBroken(sprintf(
                 'Expected the minute opening at %s, got %s.',
-                $this->expected->format('Y-m-d H:i'),
+                CarbonImmutable::createFromTimestampUTC($this->expected)->format('Y-m-d H:i'),
                 $minute->openTime->format('Y-m-d H:i'),
             ));
         }
 
-        $this->expected = $minute->endsAt();
+        $this->expected = $opens + 60;
 
         if ($this->periodOpen === null) {
             $this->start($minute);
@@ -108,9 +114,9 @@ final class CandleAggregator
 
     private function start(Candle $minute): void
     {
-        $periodOpen = $this->timeframe->openTimeContaining($minute->openTime);
+        if (! $this->timeframe->isOpenTime($minute->openTime->getTimestamp())) {
+            $periodOpen = $this->timeframe->openTimeContaining($minute->openTime);
 
-        if (! $periodOpen->equalTo($minute->openTime)) {
             throw new CandleSequenceBroken(sprintf(
                 'The %s candle opening at %s starts inside the minutes: the first minute given opens at %s.',
                 $this->timeframe->value,
@@ -119,7 +125,8 @@ final class CandleAggregator
             ));
         }
 
-        $this->periodOpen = $periodOpen;
+        $this->periodOpen = $minute->openTime;
+        $this->periodEnd = $minute->openTime->getTimestamp() + $this->timeframe->seconds();
         $this->open = $minute->open;
         $this->high = $minute->high;
         $this->low = $minute->low;

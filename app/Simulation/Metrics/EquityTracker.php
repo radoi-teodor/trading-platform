@@ -61,11 +61,14 @@ final class EquityTracker
             $this->maxDrawdown = $fall->isGreaterThan($this->maxDrawdown) ? $fall : $this->maxDrawdown;
         }
 
-        if ($time->minute === 0 && $time->second === 0) {
-            $this->hourly[$time->format('Y-m-d H:i')] = $equity;
+        $timestamp = $time->getTimestamp();
 
-            if ($time->hour === 0) {
-                $this->daily[$time->format('Y-m-d H:i')] = $equity;
+        if ($timestamp % 3_600 === 0) {
+            $key = $time->format('Y-m-d H:i');
+            $this->hourly[$key] = $equity;
+
+            if ($timestamp % 86_400 === 0) {
+                $this->daily[$key] = $equity;
             }
         }
     }

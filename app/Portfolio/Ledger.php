@@ -187,7 +187,7 @@ final class Ledger
                 continue;
             }
 
-            $price = $marks->priceOf(Asset::of($asset)) ?? throw new LedgerViolation("No price to value {$balance} {$asset}.");
+            $price = $marks->priceOfCode((string) $asset) ?? throw new LedgerViolation("No price to value {$balance} {$asset}.");
             $equity = $equity->plus($balance->times($price->value));
         }
 
