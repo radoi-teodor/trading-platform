@@ -176,6 +176,28 @@ the assistant and recorded here as D-numbers instead of being asked. Always stil
 risks money (risk limits, sizing, live stages), exchange keys and secrets, paid services and LLM budgets, deleting
 data, and the plan approval that `feature-work` requires before code.
 
+**D-30. Public market data through our own Binance client** (2026-11-08, accepted)
+Instruments, filters, candles and funding come from Binance's public endpoints through a small client of our
+own, not ccxt: few simple endpoints, native filters that are more precise than a normalized copy, and Binance's
+public-data hosts (`*.binance.vision`), which ccxt does not know. History comes from the checksummed archives,
+the recent tail from REST, live candles from WebSocket (`docs/market-data.md`). Every endpoint is configurable.
+D-2 still holds for trading; whether trading goes through ccxt is decided in Phase 4.
+
+**D-31. Plain PostgreSQL for market data** (2026-11-08, accepted)
+No TimescaleDB for now: the first universe makes about 430,000 candle rows a month, which plain tables with
+unique keys handle. Revisited at 50 million rows. Settles the question left open in D-13 and D-27.
+
+**D-32. The ledger moves to Phase 2** (2026-11-08, accepted)
+The ledger is built where its first fills appear, with the simulated venue, instead of in Phase 1 without a user.
+
+**D-33. First universe** (2026-11-08, accepted)
+BTC, ETH, SOL, BNB and XRP against USDT, on spot and as USD-M perpetuals: the most liquid pairs, enough to test
+every code path. Kept in `config/market.php`.
+
+**D-34. Mutation testing with Pest** (2026-11-08, accepted)
+Pest 5 ships mutation testing (`pest --mutate`), so Infection is not added. `composer mutate` runs it on the
+domain modules.
+
 ## Open
 
 | Id | Question | Blocks |

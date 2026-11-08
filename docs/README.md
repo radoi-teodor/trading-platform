@@ -17,6 +17,7 @@ in git at commit `e0ec48b` (D-25).
 | `strategy/agents.md` | Agent roles, their authority, and how the system stays profitable |
 | `strategy/configurator.md` | The strategy DSL and the natural-language configurator |
 | `risk-policy.md` | Hard limits, sizing, circuit breakers, the promotion ladder |
+| `market-data.md` | Exchange data: sources, storage, history, live stream, quality checks |
 | `simulation.md` | Backtests, walk-forward, Monte Carlo, paper trading, replay, promotion gates |
 | `sources.md` | Where agents get information and how a source is added |
 | `security.md` | Secrets, keys, access, threat model |
@@ -34,8 +35,8 @@ Each phase ends with its tests green, its docs updated and its screens built in 
 | Phase | Scope | Done when | Status |
 |-------|-------|-----------|--------|
 | 0. Hygiene | Delete the old code and the committed database (D-25), new Laravel skeleton, CI (Pint, PHPStan, Pest, arch tests), docs | CI green on an empty skeleton; this documentation merged | Done: CI green on 2026-11-08 (Pint, PHPStan max, Pest on PHP 8.4 and 8.5, Vite build, audits, secret scan) |
-| 1. Foundations | Value objects, clock, ledger; Binance instruments and filters; candle backfill (REST) and live stream (WebSocket); data quality checks | A month of 1m candles for 5 pairs, gap-free, matches the exchange | Planned |
-| 2. Simulation | Simulated venue, engine loop, fill and cost model, metrics, reports; three baseline strategies coded by hand | Baselines reproduce known results; golden tests in place | Planned |
+| 1. Foundations | Value objects and clock; Binance instruments and filters; candle and funding history from archives and REST, live stream (WebSocket); data quality checks (`market-data.md`) | A month of 1m candles for 5 pairs, gap-free, matches the exchange | Planned |
+| 2. Simulation | Ledger (D-32), simulated venue, engine loop, fill and cost model, metrics, reports; three baseline strategies coded by hand | Baselines reproduce known results; golden tests in place | Planned |
 | 3. Strategy DSL | Parser, type checker, indicator library, compiler, read-back, walk-forward, Monte Carlo, promotion gates | The baselines rewritten in the DSL give identical reports | Planned |
 | 4. Paper and execution | Live feed into the simulated venue, Binance testnet venue, risk engine, order manager, reconciliation, kill switch, notifications | 30 days of paper trading without a reconciliation mismatch | Planned |
 | 5. Sources and agents | Source catalog and connectors, event extraction, MCP tools, Analyst, Strategy Author (natural-language configurator), Reviewer, decision journal, cost tracking | A strategy described in plain words reaches paper through the gates | Planned |

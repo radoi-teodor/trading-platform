@@ -19,9 +19,10 @@ named so nobody "simplifies" the rule away.
 composer format          # pint
 composer analyse         # phpstan
 composer test            # pest, no network, fakes for the exchange and the LLM
+composer test:network    # TRADING_NETWORK=1, real public market data endpoints, opt-in, no keys
 composer test:testnet    # TRADING_TESTNET=1, Binance testnet, opt-in
 composer test:llm        # TRADING_LLM=1, real Claude calls, opt-in, costs money: ask first
-composer mutate          # from Phase 1: infection on Support, Strategy, Risk, Simulation, Portfolio; long, ask first
+composer mutate          # Pest mutation testing on the domain modules (D-34); long, ask first
 ```
 
 ## 2. Code style

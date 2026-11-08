@@ -156,6 +156,13 @@ Add to the list when a fix reveals a new one.
   `now()`. Give every negated arch expectation one subject and put the list in the target:
   `expect('App\Risk')->not->toUse(['now', 'time'])`. Prove a new arch rule with a temporary violating class
   before trusting it. Search: `expect\(\[` followed by `->not->` in `tests/Arch`.
+- **Binance archive time units.** Spot kline archives switched from milliseconds to microseconds on
+  2025-01-01 and have no header; USD-M archives are in milliseconds with a header line; funding `calc_time`
+  carries millisecond jitter. A parser that assumes one unit puts candles in the year 57,000 or in 1970.
+  Recognize the unit by digit count and fail on anything else (`docs/market-data.md`, section 3). Search:
+  `/ 1000`, `* 1000`, `createFromTimestampMs` in `app/Market`.
+- **`api.binance.com` answers 451 from restricted locations** (cloud sandboxes, some regions). It is not an
+  outage; use the configured public-data hosts (`*.binance.vision`) or run from the operator's machine.
 - **Packages that bring their own `App\` namespace.** `laravel/pint` maps `App\` to its own internal app, which
   merged into ours. Such tools live in `tools/<name>` with their own composer project. Search:
   `grep "'App\\\\\\\\'" vendor/composer/autoload_psr4.php` must list only `app/`.

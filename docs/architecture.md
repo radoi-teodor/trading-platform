@@ -8,7 +8,7 @@ The target design. Status of each part is in `docs/README.md`; the reasons are D
                  catalog/sources.yaml          Operator (browser, Livewire)
                           |                            |  commands
                           v                            v
-  Binance (ccxt) --> [market-data daemon] --> PostgreSQL <-- [web: Livewire, MCP server]
+  Binance (public) -> [market-data daemons] -> PostgreSQL <-- [web: Livewire, MCP server]
         ^   WebSocket + REST     |               ^   ^                |
         |                        | ticks (Redis) |   |                | jobs
         |                        v               |   |                v
@@ -27,7 +27,7 @@ database between two codebases.
 |---------|---------|------|-------|
 | web | `php artisan serve` / PHP-FPM | HTTP, Livewire UI, MCP endpoint | Never waits on the engine or the network; reads state, writes commands |
 | reverb | `php artisan reverb:start` | WebSockets to the browser | Throttled broadcasts (prices at most 4 per second per instrument) |
-| market-data | `php artisan market:stream` | Exchange WebSocket subscriptions, candle building, backfill | ReactPHP loop; writes candles, trades, funding, open interest; publishes ticks to a Redis stream |
+| market-data | `php artisan market:stream spot` and `market:stream perp` | One combined WebSocket stream per market | Blocking client, one process per market; stores closed candles, repairs gaps on reconnect (`docs/market-data.md`); later publishes ticks to a Redis stream |
 | engine | `php artisan engine:run {account} --mode=paper\|live` | Orders, positions, ledger of one account | The only writer of trading state for that account |
 | horizon | `php artisan horizon` | Queued jobs | Queues: `sources`, `agents`, `simulation` (CPU-heavy), `notifications`, `default` |
 | scheduler | `php artisan schedule:work` | Timed jobs | Source polling, agent runs, reconciliation sweep, daily reports |
