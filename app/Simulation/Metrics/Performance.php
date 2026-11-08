@@ -78,6 +78,12 @@ final class Performance
         );
     }
 
+    /** @return list<Decimal> the daily returns of a run, from equity at 00:00 UTC (docs/simulation.md, section 6) */
+    public static function dailyReturns(EquityTracker $equity): array
+    {
+        return self::returns($equity->daily(), $equity);
+    }
+
     /**
      * Returns between consecutive 00:00 UTC marks, starting from the initial equity.
      *
