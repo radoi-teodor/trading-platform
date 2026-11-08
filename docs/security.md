@@ -32,7 +32,11 @@ public repository. This document lists what is protected, from whom, and how.
   exchange keys, enabling perpetuals, flattening an account.
 - The web process is not exposed on `0.0.0.0` without TLS and a reverse proxy. Production runs with
   `APP_DEBUG=false`.
-- The MCP endpoint is read-only, authenticated with a token, and off by default.
+- The MCP endpoint (D-63) is off by default and authenticated with a bearer token stored only as a SHA-256 hash,
+  revocable, limited to 60 calls a minute and two queued simulation runs, every call recorded without the token.
+  It reads everything an agent may read and writes only draft strategy versions and simulation runs: it has no tool
+  that places, changes or cancels orders, changes a limit or moves a strategy's stage. It serves the operator's own
+  network; exposed beyond it, it sits behind TLS and the reverse proxy like the web process.
 
 ## 4. Agents
 

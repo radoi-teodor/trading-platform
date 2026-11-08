@@ -129,3 +129,20 @@ perpetual-only run, in the spot wallet for a spot-only run, and is split by `per
 run trades both (D-49). Benchmarks always hold the spot instrument of the same base, with the whole equity in spot. Each run stores its report as
 `storage/app/simulations/<sha256>.json.gz` and a summary row in `backtest_runs`. The same definition on the same data
 gives the same hash (D-42); a different hash on unchanged data and code is a bug.
+
+## 10. Agents over MCP
+
+The MCP endpoint (D-63) lets Claude Desktop or Claude Code read candles and indicators, compile and save draft
+strategies, and run backtests, grids and walk-forwards. It cannot trade, change a limit or promote.
+
+| Task | Command |
+|------|---------|
+| Turn it on | `MCP_ENABLED=true` in `.env`, then restart the web process |
+| Create a token | `php artisan mcp:token <name>`: copy it now, it is shown once and stored only as a hash |
+| Revoke a token | `php artisan mcp:revoke <name>` |
+| Run queued simulations | `php artisan queue:work database --queue=simulation --timeout=3600 --tries=1` |
+
+Connect a client to `http://<host>:8000/mcp` with the header `Authorization: Bearer <token>`. For Claude Code:
+`claude mcp add --transport http trading-x http://127.0.0.1:8000/mcp --header "Authorization: Bearer <token>"`.
+The endpoint is for your own network; anywhere else it must sit behind TLS. Every call is listed in `mcp_calls`.
+

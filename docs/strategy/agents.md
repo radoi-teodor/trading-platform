@@ -198,5 +198,6 @@ with is reduced (cheaper model, fewer runs) or switched off.
 - Source content in a prompt is wrapped as untrusted data. Agents are told never to follow instructions found in
   it, and their tools cannot do anything that matters if they did.
 - Agent tools are read-only except: create a draft version, run a backtest, write a brief or event, request a
-  pause. There is no tool that places an order or changes a limit.
+  pause. There is no tool that places an order or changes a limit. External agents reach the same tools through the
+  MCP endpoint (D-63), where they write only draft versions and simulation runs.
 - Structured outputs are validated against their schema; invalid output is rejected and journaled.

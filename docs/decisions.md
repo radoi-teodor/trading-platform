@@ -359,7 +359,29 @@ mode badge and the Halt button come first. This is the exception to "each phase 
 A carry trades rarely and holds long. Its trade-count gate is at least 12 months out of sample and 10 closed
 cycles instead of 100 trades; every other gate of `docs/simulation.md`, section 7, applies unchanged.
 
-## Open
+**D-61. Strategy versions in the database** (2026-11-08, accepted with the runtime-strategies plan)
+A strategy is a sequence of immutable versions in `strategy_versions`: id, version number, the document's text, its
+SHA-256, the author (`operator` or `agent:<token name>`), the parent version and the time; `strategy_stages` holds
+each version's stage history, starting at Draft. Only a document that compiles is saved. Saving a document identical
+to the latest version returns that version; a different one becomes the next version. `strategy:import` and
+`strategy:export` move versions between the database and `catalog/strategies/`, and backtests name a version as
+`<id>@v<n>` (docs/strategy/configurator.md, section 6).
+
+**D-62. Simulation runs in the background** (2026-11-08, accepted with the runtime-strategies plan)
+Backtests, grids and walk-forwards asked for by an agent (and later the UI) are rows of `simulation_jobs` run by a
+worker on the `simulation` queue: kind, parameters, status (queued, running, done, failed), summary, error and
+author. The queue uses the `database` connection until Redis is installed, with a two-hour retry window, a one-hour
+timeout and a single try, so that a long grid is never started twice. Commands, jobs and the UI share one
+`BacktestService`, so a job's report is the command's report (D-42).
+
+**D-63. MCP over HTTP with hashed tokens** (2026-11-08, accepted by the operator with the runtime-strategies plan)
+External agents (Claude Desktop, Claude Code) reach the platform through `/mcp`, built with `laravel/mcp` and off
+unless `MCP_ENABLED=true`. A token is created by `php artisan mcp:token <name>`, shown once and stored only as its
+SHA-256, compared in constant time; `mcp:revoke` ends it. Every call is recorded in `mcp_calls` (tool, token name,
+hash of the arguments, duration, outcome), never the token. Each token gets 60 calls a minute and at most two queued
+simulation runs. The tools read market data, indicators, strategies and results, and write only draft versions and
+simulation runs (D-7): none places an order, changes a limit or moves a stage. The endpoint is meant for the
+operator's own network; beyond it, TLS in front is required (docs/security.md).
 
 | Id | Question | Blocks |
 |----|----------|--------|
