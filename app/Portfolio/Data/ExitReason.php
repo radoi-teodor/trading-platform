@@ -11,4 +11,5 @@ enum ExitReason: string
     case Stop = 'stop';
     case Target = 'target';
     case Flatten = 'flatten';
+    case Liquidation = 'liquidation';
 }

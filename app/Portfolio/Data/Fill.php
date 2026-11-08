@@ -14,7 +14,7 @@ use InvalidArgumentException;
 
 /**
  * A fill as the ledger books it: what the venue reported, attributed to the strategy whose order it was.
- * $feeValue is the fee valued in the quote asset at fill time; $slippage is the cost against the reference price,
+ * $leverage is the leverage of a perpetual entry. $feeValue is the fee valued in the quote asset at fill time; $slippage is the cost against the reference price,
  * in quote. $initialStop is the planned stop of an entry; $exitReason the role of an exit.
  */
 final readonly class Fill
@@ -32,6 +32,7 @@ final readonly class Fill
         public Decimal $slippage,
         public ?Price $initialStop = null,
         public ?ExitReason $exitReason = null,
+        public ?int $leverage = null,
     ) {
         if (! $quantity->isPositive()) {
             throw new InvalidArgumentException("A fill needs a positive quantity, got {$quantity} in fill {$id}.");

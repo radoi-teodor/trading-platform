@@ -24,6 +24,12 @@ final readonly class Marks
         return $this->priceOfCode($asset->code);
     }
 
+    /** The last price of an instrument itself, such as a perpetual. */
+    public function priceOfSymbol(Symbol $symbol): ?Price
+    {
+        return $this->prices[(string) $symbol] ?? null;
+    }
+
     public function priceOfCode(string $asset): ?Price
     {
         return $this->prices["{$asset}/{$this->quote->code}"] ?? null;

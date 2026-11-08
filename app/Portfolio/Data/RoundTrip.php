@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Portfolio\Data;
 
 use App\Support\Number\Decimal;
+use App\Support\Side;
 use App\Support\Symbol;
 use Carbon\CarbonImmutable;
 
@@ -33,5 +34,7 @@ final readonly class RoundTrip
         public Decimal $maximumFavourableExcursion,
         public ?ExitReason $exitReason,
         public Decimal $dust,
+        public Side $side = Side::Buy,
+        public ?Decimal $funding = null,
     ) {}
 }
