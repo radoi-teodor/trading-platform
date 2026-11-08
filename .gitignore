@@ -28,3 +28,13 @@
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Local tooling from the Laravel skeleton
+.phpactor.json
+/.codex
+/.cursor/
+/.nova
+/.zed
+/auth.json
+_ide_helper.php
+/public/fonts-manifest.dev.json
