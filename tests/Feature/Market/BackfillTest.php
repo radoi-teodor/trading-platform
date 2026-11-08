@@ -83,16 +83,19 @@ it('only keeps candles inside the asked range', function (): void {
 });
 
 it('falls back from a missing monthly archive to the daily archives of that month', function (): void {
-    Http::fake(function (Request $request) {
+    // Each day's archive is built once: a zip records file times, so building it twice can change its bytes.
+    $archives = [];
+    Http::fake(function (Request $request) use (&$archives) {
         if (str_contains($request->url(), '/monthly/')) {
             return Http::response('Not found', 404);
         }
 
         preg_match('/BTCUSDT-1m-(\d{4}-\d{2}-\d{2})\.zip/', $request->url(), $match);
-        $day = CarbonImmutable::parse($match[1] ?? '2026-10-01', 'UTC');
-        $archive = ArchiveFactory::make("BTCUSDT-1m-{$day->format('Y-m-d')}.zip", [ArchiveFactory::spotLine($day->getTimestamp() * 1000)]);
+        $label = $match[1] ?? '2026-10-01';
+        $day = CarbonImmutable::parse($label, 'UTC');
+        $archives[$label] ??= ArchiveFactory::make("BTCUSDT-1m-{$label}.zip", [ArchiveFactory::spotLine($day->getTimestamp() * 1000)]);
 
-        return Http::response(str_ends_with($request->url(), '.CHECKSUM') ? $archive['checksum'] : $archive['zip']);
+        return Http::response(str_ends_with($request->url(), '.CHECKSUM') ? $archives[$label]['checksum'] : $archives[$label]['zip']);
     });
     app()->instance(Clock::class, new SimClock(CarbonImmutable::parse('2026-11-03 12:00:00', 'UTC')));
     $instrument = Instrument::register('binance', MarketType::Spot, Symbol::parse('BTC/USDT'), CarbonImmutable::parse('2026-11-03', 'UTC'));

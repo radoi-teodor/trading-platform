@@ -7,12 +7,12 @@ namespace App\Market\Console;
 use App\Market\Backfill\Backfill;
 use App\Market\Backfill\BackfillReport;
 use App\Market\Data\MarketType;
+use App\Market\Instruments\Universe;
 use App\Market\Models\Instrument;
 use App\Support\Clock\Clock;
 use App\Support\Symbol;
 use Carbon\CarbonImmutable;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Config;
 use InvalidArgumentException;
 
 final class BackfillMarketData extends Command
@@ -26,10 +26,10 @@ final class BackfillMarketData extends Command
 
     protected $description = 'Fill candle history from Binance archives, then REST (docs/market-data.md)';
 
-    public function handle(Backfill $backfill, Clock $clock): int
+    public function handle(Backfill $backfill, Universe $universe, Clock $clock): int
     {
         try {
-            $symbols = $this->symbols();
+            $symbols = $this->symbols($universe);
             $from = $this->moment((string) $this->option('from'), 'from');
             $to = $this->option('to') === null ? $clock->now() : $this->moment((string) $this->option('to'), 'to');
         } catch (InvalidArgumentException $invalid) {
@@ -41,7 +41,7 @@ final class BackfillMarketData extends Command
         $failed = false;
 
         foreach ($symbols as $symbol) {
-            $instrument = $this->instrument($symbol, $clock);
+            $instrument = $universe->instrument($symbol);
             $failed = $this->print($instrument, $backfill->candles($instrument, $from, $to)) || $failed;
 
             if ($this->option('funding') && $instrument->market === MarketType::Perp) {
@@ -53,20 +53,10 @@ final class BackfillMarketData extends Command
     }
 
     /** @return list<Symbol> */
-    private function symbols(): array
+    private function symbols(Universe $universe): array
     {
         if ($this->option('universe')) {
-            $symbols = [];
-
-            foreach ([...Config::array('market.universe.spot'), ...Config::array('market.universe.perp')] as $symbol) {
-                if (! is_string($symbol)) {
-                    throw new InvalidArgumentException('config/market.php: every universe entry must be a symbol.');
-                }
-
-                $symbols[] = Symbol::parse($symbol);
-            }
-
-            return $symbols;
+            return [...$universe->symbols(MarketType::Spot), ...$universe->symbols(MarketType::Perp)];
         }
 
         $symbol = $this->argument('symbol');
@@ -92,24 +82,6 @@ final class BackfillMarketData extends Command
             $name === 'to' && strlen($value) === 10 => $moment->endOfDay()->startOfMinute(),
             default => $moment,
         };
-    }
-
-    /** Uses the instrument loaded by market:instruments; registers it from the symbol when that was not possible. */
-    private function instrument(Symbol $symbol, Clock $clock): Instrument
-    {
-        $market = $symbol->isPerpetual() ? MarketType::Perp : MarketType::Spot;
-        $instrument = Instrument::query()
-            ->where('exchange', 'binance')
-            ->where('market', $market)
-            ->where('symbol', (string) $symbol)
-            ->first();
-
-        if ($instrument === null) {
-            $this->warn("{$symbol} is not loaded from exchangeInfo; registering it without filters. Run market:instruments when the exchange is reachable.");
-            $instrument = Instrument::register('binance', $market, $symbol, $clock->now());
-        }
-
-        return $instrument;
     }
 
     private function print(Instrument $instrument, BackfillReport $report): bool

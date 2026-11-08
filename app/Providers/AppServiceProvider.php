@@ -8,6 +8,8 @@ use App\Market\Archive\BinanceArchive;
 use App\Market\Binance\BinanceEndpoints;
 use App\Market\Binance\Sleeper;
 use App\Market\Binance\SystemSleeper;
+use App\Market\Stream\PhrityTransport;
+use App\Market\Stream\StreamTransport;
 use App\Support\Clock\Clock;
 use App\Support\Clock\WallClock;
 use Illuminate\Http\Client\Factory as HttpFactory;
@@ -23,6 +25,7 @@ final class AppServiceProvider extends ServiceProvider
     {
         $this->app->singleton(Clock::class, WallClock::class);
         $this->app->singleton(Sleeper::class, SystemSleeper::class);
+        $this->app->bind(StreamTransport::class, PhrityTransport::class);
         $this->app->singleton(BinanceEndpoints::class, fn (): BinanceEndpoints => new BinanceEndpoints(
             spotRest: Config::string('exchanges.binance.spot.rest'),
             perpRest: Config::string('exchanges.binance.perp.rest'),
