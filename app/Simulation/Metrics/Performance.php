@@ -57,6 +57,7 @@ final class Performance
         $gross = Statistics::sum(array_map(fn (RoundTrip $trip): Decimal => $trip->grossProfit, $trips));
         $costs = Statistics::sum(array_map(fn (RoundTrip $trip): Decimal => $trip->fees->plus($trip->slippage), $trips));
         $lost = Statistics::sum($losses)->abs();
+        $funding = array_values(array_filter(array_map(fn (RoundTrip $trip): ?Decimal => $trip->funding, $trips)));
 
         return new TradeStatistics(
             count: count($trips),
@@ -73,6 +74,7 @@ final class Performance
             fees: Statistics::sum(array_map(fn (RoundTrip $trip): Decimal => $trip->fees, $trips)),
             slippage: Statistics::sum(array_map(fn (RoundTrip $trip): Decimal => $trip->slippage, $trips)),
             costsShareOfGrossProfit: $gross->isPositive() ? $costs->dividedBy($gross, Statistics::SCALE) : null,
+            funding: $funding === [] ? null : Statistics::sum($funding),
         );
     }
 

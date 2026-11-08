@@ -9,6 +9,7 @@ use App\Execution\Venues\CostModel;
 use App\Market\Data\MarketType;
 use App\Market\Data\RulesHistory;
 use App\Market\Feed\DatabaseCandleFeed;
+use App\Market\FundingRateRepository;
 use App\Market\Models\Instrument;
 use App\Market\Quality\QualityCheck;
 use App\Risk\RiskPolicy;
@@ -47,7 +48,7 @@ final class RunBacktest extends Command
 
     protected $description = 'Backtest a strategy on stored 1-minute candles and store its report';
 
-    public function handle(Repository $config, QualityCheck $quality, Clock $clock, ConnectionInterface $db): int
+    public function handle(Repository $config, QualityCheck $quality, FundingRateRepository $funding, Clock $clock, ConnectionInterface $db): int
     {
         $started = $clock->now();
 
@@ -73,7 +74,7 @@ final class RunBacktest extends Command
         $warmupFrom = self::warmupFrom($strategy, $from);
 
         foreach ($symbols as $symbol) {
-            $problem = $this->coverage($quality, $symbol, $warmupFrom, $to);
+            $problem = $this->coverage($quality, $symbol, $warmupFrom, $to) ?? $this->fundingCoverage($funding, $symbol, $warmupFrom, $to);
 
             if ($problem !== null) {
                 $this->error("{$symbol}: {$problem}. Backfill it before backtesting (market:backfill).");
@@ -83,22 +84,31 @@ final class RunBacktest extends Command
         }
 
         $policy = $profile === 'benchmark' ? RiskPolicy::benchmark() : RiskPolicy::account($this->section($config, 'risk.account'));
-        [$benchmarks, $missing] = $this->option('no-benchmarks') ? [[], []] : $this->benchmarks($config, $quality, $symbols, $from, $to);
         $quote = Asset::of($this->text($config, 'simulation.quote'));
+        $equity = Money::of(is_string($this->option('equity')) ? $this->option('equity') : $this->text($config, 'simulation.initial_equity'), $quote);
+        [$spotBalance, $futuresBalance] = $this->wallets($config, $symbols, $equity);
+        [$benchmarks, $missing] = $this->option('no-benchmarks')
+            ? [[], []]
+            : $this->benchmarks($config, $quality, $symbols, $from, $to, $rules, $futuresBalance === null ? null : $equity);
         $costs = $this->section($config, 'simulation.cost_model');
         $fees = $this->section($config, 'simulation.fees');
+        $perpetual = $this->section($config, 'simulation.perpetual');
+        $perpetualFees = is_array($perpetual['fees'] ?? null) ? $perpetual['fees'] : [];
         $definition = new RunDefinition(
             strategy: $strategy->identity(),
-            market: MarketType::Spot,
+            market: $futuresBalance === null ? MarketType::Spot : MarketType::Perp,
             symbols: $symbols,
             from: $from,
             to: $to,
             warmupFrom: $warmupFrom,
-            initialBalance: Money::of(is_string($this->option('equity')) ? $this->option('equity') : $this->text($config, 'simulation.initial_equity'), $quote),
+            initialBalance: $spotBalance,
             fees: new FeeSchedule(self::decimal($fees, 'maker'), self::decimal($fees, 'taker')),
             costs: new CostModel(is_int($costs['version'] ?? null) ? $costs['version'] : 0, self::decimal($costs, 'half_spread'), self::decimal($costs, 'impact'), self::decimal($costs, 'limit_volume_share')),
             policy: $policy,
             benchmarks: [...array_map(fn (Participant $p): string => $p->label, $benchmarks), ...array_keys($missing)],
+            futuresBalance: $futuresBalance,
+            perpetualFees: $futuresBalance === null ? null : new FeeSchedule(self::decimal($perpetualFees, 'maker'), self::decimal($perpetualFees, 'taker')),
+            maintenanceRate: $futuresBalance === null ? null : self::decimal($perpetual, 'maintenance_margin_rate'),
         );
 
         $this->info("Backtesting {$strategy->identity()->label()} ({$name}) on ".implode(', ', array_map('strval', $symbols))." from {$from->toDateString()} to {$to->toDateString()}...");
@@ -152,6 +162,7 @@ final class RunBacktest extends Command
             ['Profit factor', $number($metrics->trades->profitFactor)],
             ['Expectancy per trade', $number($metrics->trades->expectancy)],
             ['Fees', $number($metrics->trades->fees)],
+            ...($metrics->trades->funding === null ? [] : [['Funding', $number($metrics->trades->funding)]]),
         ];
         $benchmarks = $report->content['benchmarks'] ?? [];
 
@@ -209,8 +220,9 @@ final class RunBacktest extends Command
         $rules = [];
 
         foreach ($symbols as $symbol) {
-            $instrument = Instrument::query()->where('market', MarketType::Spot)->where('symbol', (string) $symbol)->first()
-                ?? throw new InvalidArgumentException("{$symbol} is not a known spot instrument; run market:instruments first.");
+            $market = self::market($symbol);
+            $instrument = self::instrument($symbol)
+                ?? throw new InvalidArgumentException("{$symbol} is not a known {$market->value} instrument; run market:instruments first.");
             $rules[(string) $symbol] = $instrument->rulesHistory();
         }
 
@@ -218,13 +230,43 @@ final class RunBacktest extends Command
     }
 
     /**
+     * The starting balances (D-49): everything in the spot wallet when only spot is traded, everything in the USD-M
+     * wallet when only perpetuals are, and the configured split when both are. A null futures balance means a spot run.
+     *
      * @param  list<Symbol>  $symbols
+     * @return array{Money, ?Decimal}
+     */
+    private function wallets(Repository $config, array $symbols, Money $equity): array
+    {
+        $perpetuals = count(array_filter($symbols, fn (Symbol $symbol): bool => $symbol->isPerpetual()));
+
+        if ($perpetuals === 0) {
+            return [$equity, null];
+        }
+
+        if ($perpetuals === count($symbols)) {
+            return [Money::of('0', $equity->asset), $equity->amount];
+        }
+
+        $spot = $equity->amount->times(self::decimal($this->section($config, 'simulation.perpetual'), 'spot_share_when_both'));
+
+        return [Money::of((string) $spot, $equity->asset), $equity->amount->minus($spot)];
+    }
+
+    /**
+     * The comparisons, on the spot instrument of the first symbol's base, each in its own account with the whole
+     * equity in the spot wallet (D-49). Their rules join $rules.
+     *
+     * @param  list<Symbol>  $symbols
+     * @param  array<string, RulesHistory>  $rules
+     * @param  Money|null  $equity  the whole equity when the strategy's own split differs
      * @return array{list<Participant>, array<string, string>}
      */
-    private function benchmarks(Repository $config, QualityCheck $quality, array $symbols, CarbonImmutable $from, CarbonImmutable $to): array
+    private function benchmarks(Repository $config, QualityCheck $quality, array $symbols, CarbonImmutable $from, CarbonImmutable $to, array &$rules, ?Money $equity): array
     {
         $participants = [];
         $missing = [];
+        $symbol = Symbol::parse("{$symbols[0]->base}/{$symbols[0]->quote}");
 
         foreach ($this->section($config, 'simulation.benchmarks') as $label => $entry) {
             $label = (string) $label;
@@ -236,14 +278,15 @@ final class RunBacktest extends Command
                 $parameters[(string) $key] = is_scalar($value) ? (string) $value : '';
             }
 
-            $strategy = $class::build($parameters, [$symbols[0]]);
+            $strategy = $class::build($parameters, [$symbol]);
             $warmupFrom = self::warmupFrom($strategy, $from);
-            $problem = $this->coverage($quality, $symbols[0], $warmupFrom, $to);
+            $problem = $this->coverage($quality, $symbol, $warmupFrom, $to);
 
             if ($problem === null) {
-                $participants[] = new Participant($label, $strategy, RiskPolicy::benchmark(), $warmupFrom);
+                $rules[(string) $symbol] ??= $this->rules([$symbol])[(string) $symbol];
+                $participants[] = new Participant($label, $strategy, RiskPolicy::benchmark(), $warmupFrom, $equity, $equity === null ? null : Decimal::zero());
             } else {
-                $missing[$label] = "needs complete history of {$symbols[0]} from {$warmupFrom->toDateString()}: {$problem}";
+                $missing[$label] = "needs complete history of {$symbol} from {$warmupFrom->toDateString()}: {$problem}";
             }
         }
 
@@ -253,7 +296,7 @@ final class RunBacktest extends Command
     /** Why the stored candles cannot carry a run over [$from, $to), or null. */
     private function coverage(QualityCheck $quality, Symbol $symbol, CarbonImmutable $from, CarbonImmutable $to): ?string
     {
-        $instrument = Instrument::query()->where('market', MarketType::Spot)->where('symbol', (string) $symbol)->first();
+        $instrument = self::instrument($symbol);
 
         if ($instrument === null) {
             return 'unknown instrument';
@@ -274,6 +317,51 @@ final class RunBacktest extends Command
         }
 
         return $report->ohlcViolations > 0 ? "{$report->ohlcViolations} candles break high and low" : null;
+    }
+
+    /**
+     * Why the stored funding cannot carry a perpetual over [$from, $to], or null: no stored rate may follow the one
+     * before it, or the start, by more than its own interval.
+     */
+    private function fundingCoverage(FundingRateRepository $funding, Symbol $symbol, CarbonImmutable $from, CarbonImmutable $to): ?string
+    {
+        $instrument = $symbol->isPerpetual() ? self::instrument($symbol) : null;
+
+        if ($instrument === null) {
+            return null;
+        }
+
+        $rates = $funding->range($instrument, $from, $to);
+
+        if ($rates === []) {
+            return sprintf('no funding stored between %s and %s', $from->format('Y-m-d H:i'), $to->format('Y-m-d H:i'));
+        }
+
+        $previous = $from;
+
+        foreach ($rates as $rate) {
+            if ($rate->fundingTime->getTimestamp() - $previous->getTimestamp() > $rate->intervalHours * 3600) {
+                return sprintf('funding missing between %s and %s', $previous->format('Y-m-d H:i'), $rate->fundingTime->format('Y-m-d H:i'));
+            }
+
+            $previous = $rate->fundingTime;
+        }
+
+        $last = $rates[count($rates) - 1];
+
+        return $to->getTimestamp() - $last->fundingTime->getTimestamp() > $last->intervalHours * 3600
+            ? sprintf('funding missing after %s', $last->fundingTime->format('Y-m-d H:i'))
+            : null;
+    }
+
+    private static function market(Symbol $symbol): MarketType
+    {
+        return $symbol->isPerpetual() ? MarketType::Perp : MarketType::Spot;
+    }
+
+    private static function instrument(Symbol $symbol): ?Instrument
+    {
+        return Instrument::query()->where('market', self::market($symbol))->where('symbol', (string) $symbol)->first();
     }
 
     /** The start of the warmup: as many candles of the strategy's longest timeframe as it needs, from a midnight. */

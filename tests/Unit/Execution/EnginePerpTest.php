@@ -23,6 +23,7 @@ use App\Portfolio\Ledger;
 use App\Risk\RiskPolicy;
 use App\Strategy\Contracts\Strategy;
 use App\Strategy\Data\Close;
+use App\Strategy\Data\Intent;
 use App\Strategy\Data\OpenCarry;
 use App\Strategy\Data\OpenShort;
 use App\Support\Asset;
@@ -122,7 +123,7 @@ function perpShort(string $stop = '102', ?string $target = '94'): OpenShort
     return new OpenShort(Symbol::parse('BTC/USDT:USDT'), $stop === '' ? null : Price::of($stop), $target === null ? null : Price::of($target), 'test short');
 }
 
-/** @param array<string, list<App\Strategy\Data\Intent>> $script */
+/** @param array<string, list<Intent>> $script */
 function perpOnly(array $script, string $name = 'scripted'): ScriptedStrategy
 {
     return new ScriptedStrategy($script, Timeframe::OneMinute, $name, [Symbol::parse('BTC/USDT:USDT')]);

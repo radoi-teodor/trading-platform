@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Execution\Data\FeeSchedule;
 use App\Execution\Venues\CostModel;
 use App\Market\Data\Candle;
+use App\Market\Data\FundingRate;
 use App\Market\Data\InstrumentRules;
 use App\Market\Data\MarketType;
 use App\Market\Data\RulesHistory;
@@ -17,10 +18,12 @@ use App\Simulation\Report\Report;
 use App\Simulation\Report\ReportBuilder;
 use App\Strategy\Data\Close;
 use App\Strategy\Data\OpenLong;
+use App\Strategy\Data\OpenShort;
 use App\Support\Asset;
 use App\Support\Number\Decimal;
 use App\Support\Number\Money;
 use App\Support\Number\Price;
+use App\Support\Side;
 use App\Support\Symbol;
 use Carbon\CarbonImmutable;
 use Tests\Support\CandleFactory;
@@ -122,4 +125,51 @@ it('reads from the earliest warmup and names filters it had to assume', function
     expect($result->feedFrom->toDateString())->toBe('2026-09-30')
         ->and(ReportBuilder::build($definition, $result, $known)->content)->toHaveKey('data.filters_assumed_before', [])
         ->and(ReportBuilder::build($definition, $result, $rules)->content)->toHaveKey('data.filters_assumed_before.BTC/USDT');
+});
+
+it('runs a perpetual strategy from the futures wallet, with funding, next to a spot benchmark of the same base', function (): void {
+    $spot = Symbol::parse('BTC/USDT');
+    $perp = Symbol::parse('BTC/USDT:USDT');
+    $rule = fn (Symbol $symbol, string $tick, string $notional): RulesHistory => new RulesHistory($symbol, [new InstrumentRules(
+        CarbonImmutable::parse('2026-01-01', 'UTC'), Decimal::of($tick), Decimal::of('0.001'), Decimal::of('0.001'), null, Decimal::of($notional),
+    )]);
+    $rules = ['BTC/USDT' => $rule($spot, '0.01', '5'), 'BTC/USDT:USDT' => $rule($perp, '0.1', '100')];
+    $candles = CandleFactory::walk('2026-10-01 00:00:00', 180, seed: 3);
+    $funding = [new FundingRate(CarbonImmutable::parse('2026-10-01 02:00', 'UTC'), Decimal::of('0.0001'), 8, null)];
+    $main = new ScriptedStrategy([
+        '01:30' => [new OpenShort($perp, Price::of('110'), null, 'entry')],
+        '02:10' => [new Close($perp, 'exit')],
+    ], name: 'short', symbols: [$perp]);
+    $from = CarbonImmutable::parse('2026-10-01 01:00', 'UTC');
+    $definition = new RunDefinition(
+        $main->identity(), MarketType::Perp, [$perp], $from, CarbonImmutable::parse('2026-10-01 03:00', 'UTC'), $from,
+        Money::of('0', Asset::of('USDT')),
+        new FeeSchedule(Decimal::of('0.001'), Decimal::of('0.001')),
+        new CostModel(1, Decimal::of('0.0002'), Decimal::of('0.1'), Decimal::of('0.1')),
+        Policies::account(), ['hold'],
+        futuresBalance: Decimal::of('10000'),
+        perpetualFees: new FeeSchedule(Decimal::of('0.0002'), Decimal::of('0.0005')),
+        maintenanceRate: Decimal::of('0.01'),
+    );
+    $benchmark = new Participant(
+        'hold', new ScriptedStrategy(['01:01' => [new OpenLong($spot, null, null, 'hold')]], name: 'hold'), RiskPolicy::benchmark(), $from,
+        spotBalance: Money::of('10000', Asset::of('USDT')), futuresBalance: Decimal::zero(),
+    );
+    $feed = new InMemoryCandleFeed(['BTC/USDT' => $candles, 'BTC/USDT:USDT' => $candles], ['BTC/USDT:USDT' => $funding]);
+    $result = (new Backtest($feed))->run($definition, new Participant('strategy', $main, Policies::account(), $from), $rules, [$benchmark]);
+    $trip = $result->main->ledger->roundTrips()[0];
+    // The minute that closes at 02:00 is the one that opened at 01:59.
+    $close = $candles[119]->close->value;
+    $report = ReportBuilder::build($definition, $result, $rules);
+
+    expect($result->candles)->toBe(240)
+        ->and($trip->side)->toBe(Side::Sell)
+        // A short receives a positive rate: Q × mark × rate.
+        ->and((string) $trip->funding)->toBe((string) $trip->quantity->times($close)->times(Decimal::of('0.0001')))
+        ->and((string) $result->main->equity->initial)->toBe('10000')
+        ->and((string) $result->main->equity->finalEquity())->toBe((string) $result->main->ledger->equity($result->main->marks))
+        ->and($result->benchmarks[0]->ledger->balance(Asset::of('BTC'))->isPositive())->toBeTrue()
+        ->and($report->content)->toHaveKey('definition.initial_futures_balance', Decimal::of('10000'))
+        ->and($report->content)->toHaveKey('trades.0.side', Side::Sell)
+        ->and($report->content)->toHaveKey('result.trades.funding', $trip->funding);
 });

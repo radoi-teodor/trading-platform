@@ -113,6 +113,9 @@ only through Binance's public-data hosts and archives and should be confirmed on
 | Backtest a strategy | `php artisan backtest:run <strategy> --from=YYYY-MM-DD --to=YYYY-MM-DD [--symbol=BTC/USDT] [--param=key=value] [--equity=10000] [--no-benchmarks]` |
 
 Strategies and benchmarks are listed in `config/simulation.php`. A run refuses to start on history with gaps,
-warmup included, and says where they are; backfill first. Each run stores its report as
+warmup included, and says where they are; backfill first. A perpetual is named with its settle asset
+(`--symbol=BTC/USDT:USDT`) and also needs funding without gaps. The equity starts in the USD-M wallet for a
+perpetual-only run, in the spot wallet for a spot-only run, and is split by `perpetual.spot_share_when_both` when a
+run trades both (D-49). Benchmarks always hold the spot instrument of the same base, with the whole equity in spot. Each run stores its report as
 `storage/app/simulations/<sha256>.json.gz` and a summary row in `backtest_runs`. The same definition on the same data
 gives the same hash (D-42); a different hash on unchanged data and code is a bug.

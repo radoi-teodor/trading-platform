@@ -28,6 +28,7 @@ final readonly class TradeStatistics
         public Decimal $fees,
         public Decimal $slippage,
         public ?Decimal $costsShareOfGrossProfit,
+        public ?Decimal $funding = null,
     ) {}
 
     /** @return array<string, mixed> */
@@ -48,6 +49,6 @@ final readonly class TradeStatistics
             'fees' => $this->fees,
             'slippage' => $this->slippage,
             'costs_share_of_gross_profit' => $this->costsShareOfGrossProfit,
-        ];
+        ] + ($this->funding === null ? [] : ['funding' => $this->funding]);
     }
 }

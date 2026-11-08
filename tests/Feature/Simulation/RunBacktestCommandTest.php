@@ -4,13 +4,16 @@ declare(strict_types=1);
 
 use App\Market\CandleRepository;
 use App\Market\Data\CandleSource;
+use App\Market\Data\FundingRate;
 use App\Market\Data\MarketType;
+use App\Market\FundingRateRepository;
 use App\Market\Models\Instrument;
 use App\Market\Models\InstrumentFilter;
 use App\Simulation\Models\BacktestRun;
 use App\Simulation\Report\CanonicalJson;
 use App\Support\Clock\Clock;
 use App\Support\Clock\SimClock;
+use App\Support\Number\Decimal;
 use App\Support\Symbol;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -63,7 +66,7 @@ it('backtests a strategy, stores its report by hash and records the run', functi
         ->and($json)->toBe(CanonicalJson::encode($report))
         ->and($run->trades)->toBe(1)
         ->and($run->window_from->toDateString())->toBe('2026-10-02')
-        ->and($report)->toHaveKey('definition.strategy.parameters', ['bars' => '60', 'stop' => '0.05', 'warmup' => '5'])
+        ->and($report)->toHaveKey('definition.strategy.parameters', ['bars' => '60', 'side' => 'long', 'stop' => '0.05', 'warmup' => '5'])
         ->and($report)->toHaveKey('benchmarks.buy-and-hold.strategy', 'hold|1|warmup_days=0')
         ->and($report)->toHaveKey('benchmarks.long-history.missing');
 });
@@ -109,4 +112,90 @@ it('runs a benchmark-profile strategy without comparisons when asked', function 
         ->and(BacktestRun::query()->sole()->definition['risk'])->toBe(['profile' => 'benchmark'])
         ->and(BacktestRun::query()->sole()->definition['initial_balance'])->toEqual(['amount' => '5000', 'asset' => 'USDT'])
         ->and(BacktestRun::query()->sole()->definition['benchmarks'])->toBe([]);
+});
+
+/** A BTC perpetual next to the spot fixture, with funding every 8 hours from 2026-10-01 00:00 for $days days. */
+function perpFixture(int $days = 2): Instrument
+{
+    $perp = Instrument::register('binance', MarketType::Perp, Symbol::parse('BTC/USDT:USDT'), CarbonImmutable::parse('2026-11-08 12:00:00', 'UTC'));
+    InstrumentFilter::query()->create([
+        'instrument_id' => $perp->id, 'valid_from' => '2026-11-08 12:00:00', 'tick_size' => '0.1', 'step_size' => '0.001',
+        'min_qty' => '0.001', 'max_qty' => '1000', 'min_notional' => '100', 'raw' => [], 'created_at' => '2026-11-08 12:00:00',
+    ]);
+    app(CandleRepository::class)->upsert($perp, CandleSource::Archive, CandleFactory::walk('2026-10-01 00:00:00', $days * 1440, seed: 17));
+    $rates = [];
+
+    for ($i = 0; $i <= $days * 3; $i++) {
+        $rates[] = new FundingRate(CarbonImmutable::parse('2026-10-01 00:00:00', 'UTC')->addHours(8 * $i), Decimal::of('0.0001'), 8, null);
+    }
+
+    app(FundingRateRepository::class)->upsert($perp, CandleSource::Archive, $rates);
+
+    return $perp;
+}
+
+/** @return array<array-key, mixed> the decoded canonical JSON */
+function storedReport(BacktestRun $run): array
+{
+    $compressed = file_get_contents($run->artifact);
+    $json = gzdecode($compressed === false ? '' : $compressed);
+
+    $report = json_decode($json === false ? '' : $json, true, flags: JSON_THROW_ON_ERROR);
+
+    return is_array($report) ? $report : throw new RuntimeException('The stored report is not an object.');
+}
+
+it('backtests a perpetual strategy from the futures wallet, with funding, against spot benchmarks of the same base', function (): void {
+    backtestFixture();
+    perpFixture();
+
+    $exit = Artisan::call('backtest:run', [
+        'strategy' => 'enter-once', '--symbol' => ['BTC/USDT:USDT'], '--from' => '2026-10-02', '--to' => '2026-10-03',
+        '--param' => ['side=short', 'bars=600'],
+    ]);
+    $run = BacktestRun::query()->sole();
+    $report = storedReport($run);
+
+    expect($exit)->toBe(0)
+        ->and($run->trades)->toBe(1)
+        ->and($report)->toHaveKey('definition.market', 'perp')
+        ->and($report)->toHaveKey('definition.initial_balance', ['amount' => '0', 'asset' => 'USDT'])
+        ->and($report)->toHaveKey('definition.initial_futures_balance', '10000')
+        ->and($report)->toHaveKey('definition.perpetual', ['fees' => ['maker' => '0.0002', 'taker' => '0.0005'], 'maintenance_margin_rate' => '0.01'])
+        ->and($report)->toHaveKey('trades.0.side', 'sell')
+        ->and($report)->toHaveKey('benchmarks.buy-and-hold.strategy', 'hold|1|warmup_days=0')
+        ->and(Artisan::output())->toContain('Funding');
+    // Two fundings while the short was open (08:00 and 16:00), both received: a positive amount.
+    expect(data_get($report, 'trades.0.funding'))->toMatch('/^\d+\.\d+$/');
+});
+
+it('splits the equity between the wallets when a strategy trades both markets', function (): void {
+    backtestFixture();
+    perpFixture();
+
+    expect(Artisan::call('backtest:run', [
+        'strategy' => 'enter-once', '--symbol' => ['BTC/USDT:USDT', 'BTC/USDT'], '--from' => '2026-10-02', '--to' => '2026-10-03',
+        '--no-benchmarks' => true,
+    ]))->toBe(0)
+        ->and(BacktestRun::query()->sole()->definition['initial_balance'])->toEqual(['amount' => '5000', 'asset' => 'USDT'])
+        ->and(BacktestRun::query()->sole()->definition['initial_futures_balance'])->toBe('5000');
+});
+
+it('refuses a perpetual run over missing funding, and says where it is missing', function (): void {
+    backtestFixture();
+    $perp = perpFixture();
+    DB::table('funding_rates')->where('instrument_id', $perp->id)->where('funding_time', '2026-10-02 08:00:00+00')->delete();
+
+    $exit = Artisan::call('backtest:run', ['strategy' => 'enter-once', '--symbol' => ['BTC/USDT:USDT'], '--from' => '2026-10-02', '--to' => '2026-10-03']);
+
+    expect($exit)->toBe(1)
+        ->and(Artisan::output())->toContain('BTC/USDT:USDT: funding missing between 2026-10-02 00:00 and 2026-10-02 16:00')
+        ->and(BacktestRun::query()->count())->toBe(0);
+});
+
+it('refuses a short on spot', function (): void {
+    backtestFixture();
+
+    expect(Artisan::call('backtest:run', ['strategy' => 'enter-once', '--from' => '2026-10-02', '--to' => '2026-10-03', '--param' => ['side=short']]))->toBe(1)
+        ->and(Artisan::output())->toContain('short');
 });

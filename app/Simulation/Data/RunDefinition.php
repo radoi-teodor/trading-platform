@@ -11,6 +11,7 @@ use App\Market\Data\MarketType;
 use App\Risk\RiskPolicy;
 use App\Simulation\Report\CanonicalJson;
 use App\Strategy\Data\StrategyIdentity;
+use App\Support\Number\Decimal;
 use App\Support\Number\Money;
 use App\Support\Symbol;
 use Carbon\CarbonImmutable;
@@ -38,6 +39,9 @@ final readonly class RunDefinition
         public RiskPolicy $policy,
         public array $benchmarks = [],
         public int $seed = 0,
+        public ?Decimal $futuresBalance = null,
+        public ?FeeSchedule $perpetualFees = null,
+        public ?Decimal $maintenanceRate = null,
     ) {}
 
     /** @return array<string, mixed> */
@@ -67,7 +71,14 @@ final readonly class RunDefinition
             'benchmarks' => $this->benchmarks,
             'seed' => $this->seed,
             'engine_version' => Engine::VERSION,
-        ];
+        ] + ($this->futuresBalance === null ? [] : [
+            // Present only when the run trades perpetuals, so that spot definitions keep their hash.
+            'initial_futures_balance' => $this->futuresBalance,
+            'perpetual' => [
+                'fees' => ['maker' => $this->perpetualFees?->maker, 'taker' => $this->perpetualFees?->taker],
+                'maintenance_margin_rate' => $this->maintenanceRate,
+            ],
+        ]);
     }
 
     public function hash(): string

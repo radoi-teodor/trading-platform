@@ -7,6 +7,7 @@ namespace App\Simulation\Report;
 use App\Execution\Data\DecisionRecord;
 use App\Execution\Data\EngineRecord;
 use App\Market\Data\RulesHistory;
+use App\Portfolio\Data\PerpPosition;
 use App\Portfolio\Data\Position;
 use App\Portfolio\Data\RoundTrip;
 use App\Simulation\Data\BacktestResult;
@@ -58,7 +59,7 @@ final class ReportBuilder
             ],
             'result' => $metrics->toArray(),
             'trades' => array_map(self::trip(...), $main->ledger->roundTrips()),
-            'open_positions' => array_map(self::position(...), $main->ledger->positions()),
+            'open_positions' => [...array_map(self::position(...), $main->ledger->positions()), ...array_map(self::perpetual(...), $main->ledger->perpPositions())],
             'dust' => array_filter(
                 array_combine(array_keys($main->ledger->balances()), array_map(fn (string $asset): Decimal => $main->ledger->dust(Asset::of($asset)), array_keys($main->ledger->balances()))),
                 fn (Decimal $amount): bool => ! $amount->isZero(),
@@ -100,7 +101,7 @@ final class ReportBuilder
             'net_profit' => $trip->netProfit, 'initial_risk' => $trip->initialRisk, 'r_multiple' => $trip->rMultiple,
             'mae' => $trip->maximumAdverseExcursion, 'mfe' => $trip->maximumFavourableExcursion,
             'exit_reason' => $trip->exitReason, 'dust' => $trip->dust,
-        ];
+        ] + ($trip->funding === null ? [] : ['side' => $trip->side, 'funding' => $trip->funding]);
     }
 
     /** @return array<string, mixed> */
@@ -109,6 +110,16 @@ final class ReportBuilder
         return [
             'symbol' => $position->symbol, 'opened_at' => $position->openedAt, 'quantity' => $position->quantity,
             'entry_price' => $position->entryPrice(), 'fees' => $position->fees,
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private static function perpetual(PerpPosition $position): array
+    {
+        return [
+            'symbol' => $position->symbol, 'opened_at' => $position->openedAt, 'side' => $position->side,
+            'quantity' => $position->quantity, 'entry_price' => $position->entryPrice, 'margin' => $position->margin,
+            'leverage' => $position->leverage, 'fees' => $position->fees, 'funding' => $position->funding,
         ];
     }
 
