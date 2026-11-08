@@ -1,12 +1,13 @@
 # Brand and visual identity
 
-Status: three candidate identities, choice open (D-24, O-2). Once the operator picks one, it is binding for every
-screen, component, chart, email and notification. Anything that does not comply is rebuilt until it does; "it
+Status: **Graphite is the chosen identity** (D-24), for the product Trading X (D-26). It is binding for every
+screen, component, chart, email and notification. Harbor and Voltage remain below only as the record of what was
+considered; their values are never used. Anything that does not comply is rebuilt until it does; "it
 was already like that" is not an exception.
 
-- **Part A** holds the rules every identity shares. They apply now, before the choice.
-- **Part B** describes the three identities: Graphite, Harbor, Voltage. These are codenames, not product names
-  (O-3).
+- **Part A** holds the rules every identity shares.
+- **Part B** describes the three identities that were considered: Graphite (chosen), Harbor and Voltage. These are
+  codenames, not product names.
 - **Part C** is the checklist every UI change passes.
 
 All color values below were checked by script: every text token meets WCAG 2.2 AA (4.5:1) on the surfaces it is
@@ -142,8 +143,8 @@ color alone, support for forced colors.
 
 ### A12. Mark
 
-Until the product is named (O-3), the mark is the product name set in the identity's display face. No logo
-work before the name.
+The product is Trading X (D-26), a working name. Until a logo is designed, the mark is "Trading X" set in the
+identity's display face (Graphite: IBM Plex Sans 600).
 
 ---
 

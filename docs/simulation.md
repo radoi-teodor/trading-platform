@@ -25,8 +25,8 @@ rejects, reconciliation), never profitability.
   median. A run on data with unresolved gaps refuses to start and says where the gaps are.
 - Delisted instruments stay in the database with their history, so a universe chosen "as of" a date is not
   biased by survivors.
-- Funding history for perpetuals, fee schedule by tier (O-5), exchange filters as they were (lot step, minimum
-  notional) are versioned by date.
+- Funding history for perpetuals, fee rates as read from the account (D-28) and exchange filters as they were
+  (lot step, minimum notional) are versioned by date.
 
 ## 3. Fill and cost model
 

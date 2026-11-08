@@ -36,7 +36,7 @@ sources:
     instruments: universe
     used_by: [market-data, strategies, analyst, simulation]
     status: planned
-    notes: Public data is useful to spot strategies too (funding, open interest). Trading perps waits on O-1.
+    notes: Public data is useful to spot strategies too (funding, open interest). Perps trading is in scope (D-4, O-1 closed), behind the per-account flag.
 
   - id: bybit
     kind: market

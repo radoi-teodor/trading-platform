@@ -29,7 +29,9 @@ the work (charts, keyboard shortcuts).
 **D-4. Markets in the first version** (2026-11-08, accepted)
 Crypto only. Binance first. Spot is first-class. USD-M perpetual futures are built behind a capability flag and
 enabled only once the operator has confirmed access from their jurisdiction (Open item O-1). A second exchange
-(Bybit) comes after the engine is proven on Binance.
+(Bybit) comes after the engine is proven on Binance. Update 2026-11-08: the operator confirmed USD-M futures
+access from Romania (O-1 closed). Perpetuals are in scope from the first engine phases, still behind the flag,
+which the operator turns on per account.
 
 **D-5. One operator** (2026-11-08, accepted)
 One human operator, several exchange accounts or sub-accounts. No public registration. The platform does not
@@ -131,21 +133,37 @@ Work happens on a short-lived branch (the one a session is given, otherwise `fea
 committed and pushed after every step. Changes reach `main` through a pull request with a green CI. Conventional
 Commits.
 
-**D-24. Visual identity** (2026-11-08, open)
-Three candidate identities in `docs/brand.md`: Graphite, Harbor, Voltage. Until one is chosen, UI work uses the
-shared rules and tokens only by name; the choice becomes binding for every screen.
+**D-24. Visual identity: Graphite** (2026-11-08, accepted)
+Three candidate identities were drawn up in `docs/brand.md`. The operator chose Graphite: dark graphite, ice-blue
+accent, amber kept for caution, IBM Plex Sans and Plex Mono, dense layout. It is binding for every screen,
+chart, notification and report. Harbor and Voltage stay in `docs/brand.md` as rejected alternatives for the
+record; nothing may use their values.
 
 **D-25. Legacy code deleted in Phase 0** (2026-11-08, accepted)
 The operator chose to delete the old Python agents, the old Laravel app, the wiki and the old scripts at once
 instead of keeping them under `legacy/` until parity. They remain readable in git at commit `e0ec48b`, which
 `assessment.md` cites file by file. Indicator oracles and other references point at that commit.
 
+**D-26. Product name: Trading X** (2026-11-08, accepted, working name)
+The product is called Trading X until the operator renames it. The mark is the name set in IBM Plex Sans 600
+(`docs/brand.md`, A12). "Graphite" stays a codename for the identity.
+
+**D-27. Hosting: local first** (2026-11-08, accepted)
+The platform runs on the operator's machine for now: Docker Compose for PostgreSQL and Redis, PHP processes
+under a local supervisor. Because the database runs in our own container, TimescaleDB is available; whether to
+use it is decided with the market data schema in Phase 1. Moving to a server is a new D-number, and it changes
+the exchange key IP restriction (`docs/security.md`, section 2).
+
+**D-28. Fees come from the account, not from assumptions** (2026-11-08, accepted)
+The engine reads the account's real commission rates from Binance when it connects and once a day: spot through
+`GET /api/v3/account/commission` (standard rates and the BNB discount multiplier), USD-M futures through the
+account's fee tier and commission endpoint. Fills record the fee actually charged and its asset. Backtests use
+the rates last read from the account; before any account is connected they use Regular (VIP 0) rates without
+the BNB discount, the pessimistic case: spot 0.100 % maker and taker (confirmed on Binance's fee page on
+2026-11-08), USD-M 0.020 % maker and 0.050 % taker (from secondary sources, to confirm against the account).
+
 ## Open
 
 | Id | Question | Blocks |
 |----|----------|--------|
-| O-1 | Does the operator's Binance account have access to USD-M perpetual futures from their jurisdiction? | Enabling perps (D-4) |
-| O-2 | Which visual identity (D-24)? | Phase 2 screens |
-| O-3 | Product name. The identity codenames are not product names. | Brand assets |
-| O-4 | Hosting: provider, region, and whether TimescaleDB is available. | Phase 1 deployment |
-| O-5 | Binance fee tier and whether fees are paid in BNB. | Cost model defaults in simulation |
+| O-6 | Pay Binance fees in BNB (25 % off spot)? Needs a small BNB balance whose price moves. | Live cost model (D-28 reads it from the account either way) |
