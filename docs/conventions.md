@@ -7,8 +7,9 @@ named so nobody "simplifies" the rule away.
 
 - PHP 8.4 or newer, current Laravel. `declare(strict_types=1);` in every PHP file.
 - Formatting: Laravel Pint, project preset. Formatting is not discussed in review; Pint decides.
-- Static analysis: PHPStan through Larastan at the highest level the codebase passes, raised, never lowered. No
-  new baseline entries.
+- Static analysis: PHPStan through Larastan at level `max`, with no baseline. `config/` is not analysed because
+  `env()` is untyped by design; code reads configuration through typed accessors (`Config::string()`,
+  `Config::integer()`), which are checked where they are used.
 - Tests: Pest, with the `arch()` plugin.
 - Commands (defined in `composer.json`):
 
