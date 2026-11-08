@@ -14,6 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withCommands([
+        __DIR__.'/../app/Agents/Console',
         __DIR__.'/../app/Market/Console',
         __DIR__.'/../app/Simulation/Console',
     ])

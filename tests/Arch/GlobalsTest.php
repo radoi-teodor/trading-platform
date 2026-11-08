@@ -2,6 +2,9 @@
 
 declare(strict_types=1);
 
+use App\Agents\Mcp\Tools\ChartTool;
+use App\Agents\Mcp\Tools\SimulationTool;
+use App\Agents\Mcp\TradingTool;
 use App\Http\Controllers\Controller;
 use App\Market\Binance\BinanceRequestFailed;
 use Pest\Preset;
@@ -28,5 +31,5 @@ arch('every file declares strict types', function (): void {
 
 arch('application classes are final unless built for extension', function (): void {
     // The ignored classes are the ones built for extension.
-    expect('App')->classes()->toBeFinal()->ignoring([Controller::class, BinanceRequestFailed::class]);
+    expect('App')->classes()->toBeFinal()->ignoring([Controller::class, BinanceRequestFailed::class, TradingTool::class, ChartTool::class, SimulationTool::class]);
 });
