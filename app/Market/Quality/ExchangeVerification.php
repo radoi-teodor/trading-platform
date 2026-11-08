@@ -31,13 +31,9 @@ final readonly class ExchangeVerification
 
     public function verify(Instrument $instrument, CarbonImmutable $from, CarbonImmutable $to, int $sample, VerificationSource $against, int $seed = 2026): VerificationReport
     {
-        $stored = [];
-
-        foreach ($this->candles->range($instrument, Timeframe::OneMinute, $from, $to) as $candle) {
-            $stored[$candle->openTime->getTimestamp()] = $candle;
-        }
-
-        $times = array_keys($stored);
+        // Only the timestamps of the whole window are read; candles are loaded for the sample alone, so a window of
+        // years fits in memory.
+        $times = $this->candles->openTimestamps($instrument, Timeframe::OneMinute, $from, $to);
 
         if ($times === []) {
             return new VerificationReport(0, [], []);
@@ -47,6 +43,7 @@ final readonly class ExchangeVerification
             ? $times
             : array_map(static fn (int $index): int => $times[$index], (new Randomizer(new Xoshiro256StarStar($seed)))->pickArrayKeys($times, max(1, $sample)));
         sort($picked);
+        $stored = $this->candles->at($instrument, Timeframe::OneMinute, $picked);
 
         $reference = match ($against) {
             VerificationSource::Rest => $this->fromRest($instrument, $picked, $to),
@@ -106,9 +103,14 @@ final readonly class ExchangeVerification
         $reference = [];
         $days = array_unique(array_map(static fn (int $time): string => CarbonImmutable::createFromTimestampUTC($time)->format('Y-m-d'), $times));
 
+        $wanted = array_flip($times);
+
         foreach ($days as $day) {
+            // Only the sampled minutes are kept; a day's archive is read and dropped.
             foreach ($this->archive->klines($instrument->market, $instrument->venue_symbol, ArchivePeriod::daily(CarbonImmutable::parse($day, 'UTC'))) as $candle) {
-                $reference[$candle->openTime->getTimestamp()] = $candle;
+                if (isset($wanted[$candle->openTime->getTimestamp()])) {
+                    $reference[$candle->openTime->getTimestamp()] = $candle;
+                }
             }
         }
 

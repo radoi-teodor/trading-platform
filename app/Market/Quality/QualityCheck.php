@@ -29,56 +29,136 @@ final readonly class QualityCheck
     {
         $from = Timeframe::OneMinute->openTimeContaining($from);
         $to = Timeframe::OneMinute->openTimeContaining($to);
-        $rows = $this->rows($instrument, $from, $to);
-        $expected = intdiv($to->getTimestamp() - $from->getTimestamp(), 60) + 1;
-        $gaps = $this->gaps($rows, $from, $to);
+        $first = $from->getTimestamp();
+        $last = $to->getTimestamp();
+
+        // One pass over the rows, a day at a time, so that any window fits in memory (two years are a million rows).
+        $stored = 0;
+        $gaps = $runs = $outliers = $window = [];
+        $expected = $first;
+        $runStart = $previous = null;
+        $evaluated = 0;
+
+        foreach ($this->rows($instrument, $first, $last) as [$time, $close, $zeroVolume]) {
+            $stored++;
+
+            if ($time > $expected) {
+                $gaps[] = self::range($expected, $time - 60);
+            }
+
+            $expected = $time + 60;
+
+            if ($runStart !== null && (! $zeroVolume || $previous + 60 !== $time)) {
+                $this->closeRun($runs, $runStart, $previous);
+                $runStart = null;
+            }
+
+            if ($zeroVolume && $runStart === null) {
+                $runStart = $time;
+            }
+
+            $previous = $time;
+            $window[] = [$time, $close];
+            $this->evaluateOutliers($window, $evaluated, $outliers, false);
+        }
+
+        if ($runStart !== null && $previous !== null) {
+            $this->closeRun($runs, $runStart, $previous);
+        }
+
+        $this->evaluateOutliers($window, $evaluated, $outliers, true);
+
+        if ($expected <= $last) {
+            $gaps[] = self::range($expected, $last);
+        }
+
+        $expectedMinutes = intdiv($last - $first, 60) + 1;
 
         return new QualityReport(
-            expectedMinutes: $expected,
-            storedMinutes: count($rows),
-            missingMinutes: $expected - count($rows),
+            expectedMinutes: $expectedMinutes,
+            storedMinutes: $stored,
+            missingMinutes: $expectedMinutes - $stored,
             gaps: $gaps,
             ohlcViolations: $this->ohlcViolations($instrument, $from, $to),
-            zeroVolumeRuns: $this->zeroVolumeRuns($rows),
-            outliers: $this->outliers($rows),
+            zeroVolumeRuns: $runs,
+            outliers: $outliers,
         );
     }
 
-    /** @return list<array{time: CarbonImmutable, close: Decimal, volume: Decimal}> */
-    private function rows(Instrument $instrument, CarbonImmutable $from, CarbonImmutable $to): array
+    /** @return iterable<array{int, Decimal, bool}> open time, close and whether volume is zero, oldest first */
+    private function rows(Instrument $instrument, int $first, int $last): iterable
     {
-        return array_values($this->db->table('candles')
-            ->where('instrument_id', $instrument->id)
-            ->where('timeframe', Timeframe::OneMinute->value)
-            ->whereBetween('open_time', [Rows::timestamp($from), Rows::timestamp($to)])
-            ->orderBy('open_time')
-            ->get(['open_time', 'close', 'volume'])
-            ->map(fn (object $row): array => [
-                'time' => Rows::time($row, 'open_time'),
-                'close' => Decimal::of(Rows::string($row, 'close')),
-                'volume' => Decimal::of(Rows::string($row, 'volume')),
-            ])
-            ->all());
+        for ($day = $first; $day <= $last; $day += 86_400) {
+            $rows = $this->db->table('candles')
+                ->where('instrument_id', $instrument->id)
+                ->where('timeframe', Timeframe::OneMinute->value)
+                ->whereBetween('open_time', [
+                    Rows::timestamp(CarbonImmutable::createFromTimestampUTC($day)),
+                    Rows::timestamp(CarbonImmutable::createFromTimestampUTC(min($day + 86_400 - 60, $last))),
+                ])
+                ->orderBy('open_time')
+                ->get(['open_time', 'close', 'volume']);
+
+            foreach ($rows as $row) {
+                yield [
+                    Rows::time($row, 'open_time')->getTimestamp(),
+                    Decimal::of(Rows::string($row, 'close')),
+                    Decimal::of(Rows::string($row, 'volume'))->isZero(),
+                ];
+            }
+        }
+    }
+
+    /** @return array{from: CarbonImmutable, to: CarbonImmutable} */
+    private static function range(int $from, int $to): array
+    {
+        return ['from' => CarbonImmutable::createFromTimestampUTC($from), 'to' => CarbonImmutable::createFromTimestampUTC($to)];
+    }
+
+    /** @param list<array{from: CarbonImmutable, to: CarbonImmutable}> $runs */
+    private function closeRun(array &$runs, int $start, int $end): void
+    {
+        if (intdiv($end - $start, 60) + 1 > self::ZERO_VOLUME_RUN_MINUTES) {
+            $runs[] = self::range($start, $end);
+        }
     }
 
     /**
-     * @param  list<array{time: CarbonImmutable, close: Decimal, volume: Decimal}>  $rows
-     * @return list<array{from: CarbonImmutable, to: CarbonImmutable}>
+     * Judges each close against the median of up to 7 closes on each side, as soon as the 7 after it have arrived
+     * (or at the end), then forgets what no later close needs.
+     *
+     * @param  list<array{int, Decimal}>  $window
+     * @param  list<CarbonImmutable>  $outliers
      */
-    private function gaps(array $rows, CarbonImmutable $from, CarbonImmutable $to): array
+    private function evaluateOutliers(array &$window, int &$evaluated, array &$outliers, bool $final): void
     {
-        $gaps = [];
-        $expected = $from;
+        $limit = Decimal::of(self::OUTLIER_FRACTION);
 
-        foreach ([...$rows, ['time' => $to->addMinute()]] as $row) {
-            if ($row['time']->greaterThan($expected)) {
-                $gaps[] = ['from' => $expected, 'to' => $row['time']->subMinute()];
+        while ($evaluated < count($window) && ($final || count($window) - 1 - $evaluated >= self::OUTLIER_NEIGHBOURS)) {
+            $neighbours = array_map(
+                static fn (array $row): Decimal => $row[1],
+                [
+                    ...array_slice($window, max(0, $evaluated - self::OUTLIER_NEIGHBOURS), min($evaluated, self::OUTLIER_NEIGHBOURS)),
+                    ...array_slice($window, $evaluated + 1, self::OUTLIER_NEIGHBOURS),
+                ],
+            );
+
+            if ($neighbours !== []) {
+                $median = self::median($neighbours);
+                [$time, $close] = $window[$evaluated];
+
+                if ($close->minus($median)->abs()->isGreaterThan($median->times($limit))) {
+                    $outliers[] = CarbonImmutable::createFromTimestampUTC($time);
+                }
             }
 
-            $expected = $row['time']->addMinute();
-        }
+            $evaluated++;
 
-        return $gaps;
+            if ($evaluated > self::OUTLIER_NEIGHBOURS) {
+                array_shift($window);
+                $evaluated--;
+            }
+        }
     }
 
     private function ohlcViolations(Instrument $instrument, CarbonImmutable $from, CarbonImmutable $to): int
@@ -89,70 +169,6 @@ final readonly class QualityCheck
             ->whereBetween('open_time', [Rows::timestamp($from), Rows::timestamp($to)])
             ->whereRaw('NOT (low > 0 AND low <= open AND low <= close AND low <= high AND high >= open AND high >= close AND volume >= 0)')
             ->count();
-    }
-
-    /**
-     * @param  list<array{time: CarbonImmutable, close: Decimal, volume: Decimal}>  $rows
-     * @return list<array{from: CarbonImmutable, to: CarbonImmutable}>
-     */
-    private function zeroVolumeRuns(array $rows): array
-    {
-        $runs = [];
-        $start = null;
-        $previous = null;
-
-        foreach ([...$rows, null] as $row) {
-            $continues = $row !== null && $row['volume']->isZero()
-                && ($previous === null || $previous['time']->addMinute()->equalTo($row['time']));
-
-            if ($start !== null && ! $continues) {
-                if ($previous !== null && $start->diffInMinutes($previous['time']) + 1 > self::ZERO_VOLUME_RUN_MINUTES) {
-                    $runs[] = ['from' => $start, 'to' => $previous['time']];
-                }
-
-                $start = null;
-            }
-
-            if ($row !== null && $row['volume']->isZero() && $start === null) {
-                $start = $row['time'];
-            }
-
-            $previous = $row;
-        }
-
-        return $runs;
-    }
-
-    /**
-     * @param  list<array{time: CarbonImmutable, close: Decimal, volume: Decimal}>  $rows
-     * @return list<CarbonImmutable>
-     */
-    private function outliers(array $rows): array
-    {
-        $outliers = [];
-        $limit = Decimal::of(self::OUTLIER_FRACTION);
-
-        foreach ($rows as $index => $row) {
-            $neighbours = array_map(
-                static fn (array $neighbour): Decimal => $neighbour['close'],
-                [
-                    ...array_slice($rows, max(0, $index - self::OUTLIER_NEIGHBOURS), min($index, self::OUTLIER_NEIGHBOURS)),
-                    ...array_slice($rows, $index + 1, self::OUTLIER_NEIGHBOURS),
-                ],
-            );
-
-            if ($neighbours === []) {
-                continue;
-            }
-
-            $median = self::median($neighbours);
-
-            if ($row['close']->minus($median)->abs()->isGreaterThan($median->times($limit))) {
-                $outliers[] = $row['time'];
-            }
-        }
-
-        return $outliers;
     }
 
     /** @param non-empty-list<Decimal> $values */

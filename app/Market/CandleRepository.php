@@ -14,6 +14,7 @@ use App\Support\Timeframe;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\ConnectionInterface;
 use Psr\Log\LoggerInterface;
+use UnexpectedValueException;
 
 /**
  * Stores and reads candles. Writes are idempotent; a higher-ranked source overwrites a lower one and any
@@ -73,16 +74,59 @@ final readonly class CandleRepository
     }
 
     /** @return list<CarbonImmutable> stored open times with $from <= open time <= $to, oldest first */
-    public function openTimes(Instrument $instrument, Timeframe $timeframe, CarbonImmutable $from, CarbonImmutable $to): array
+    /**
+     * Open times in [$from, $to] as Unix timestamps, oldest first: cheap enough for windows of years.
+     *
+     * @return list<int>
+     */
+    public function openTimestamps(Instrument $instrument, Timeframe $timeframe, CarbonImmutable $from, CarbonImmutable $to): array
     {
-        $times = $this->db->table('candles')
-            ->where('instrument_id', $instrument->id)
-            ->where('timeframe', $timeframe->value)
-            ->whereBetween('open_time', [Rows::timestamp($from), Rows::timestamp($to)])
-            ->orderBy('open_time')
-            ->pluck('open_time');
+        $timestamps = [];
+        $last = $to->getTimestamp();
 
-        return array_values($times->map(fn (mixed $time): CarbonImmutable => CarbonImmutable::parse(is_string($time) ? $time : '')->utc())->all());
+        // A day at a time: one query over years would hold every row in the driver's buffer at once.
+        for ($day = $from->getTimestamp(); $day <= $last; $day += 86_400) {
+            $epochs = $this->db->table('candles')
+                ->where('instrument_id', $instrument->id)
+                ->where('timeframe', $timeframe->value)
+                ->where('open_time', '>=', Rows::timestamp(CarbonImmutable::createFromTimestampUTC($day)))
+                ->where('open_time', '<=', Rows::timestamp(CarbonImmutable::createFromTimestampUTC(min($day + 86_399, $last))))
+                ->orderBy('open_time')
+                ->selectRaw('extract(epoch from open_time)::bigint as epoch')
+                ->pluck('epoch');
+
+            foreach ($epochs as $epoch) {
+                $timestamps[] = is_numeric($epoch) ? (int) $epoch : throw new UnexpectedValueException('Not an epoch.');
+            }
+        }
+
+        return $timestamps;
+    }
+
+    /**
+     * The candles opening at the given Unix timestamps, by timestamp; missing ones are absent.
+     *
+     * @param  list<int>  $timestamps
+     * @return array<int, Candle>
+     */
+    public function at(Instrument $instrument, Timeframe $timeframe, array $timestamps): array
+    {
+        $candles = [];
+
+        foreach (array_chunk($timestamps, 1000) as $chunk) {
+            $rows = $this->db->table('candles')
+                ->where('instrument_id', $instrument->id)
+                ->where('timeframe', $timeframe->value)
+                ->whereIn('open_time', array_map(fn (int $t): string => Rows::timestamp(CarbonImmutable::createFromTimestampUTC($t)), $chunk))
+                ->get();
+
+            foreach ($rows as $row) {
+                $candle = self::candleFromRow($row);
+                $candles[$candle->openTime->getTimestamp()] = $candle;
+            }
+        }
+
+        return $candles;
     }
 
     /** @param array<string, Candle> $batch */

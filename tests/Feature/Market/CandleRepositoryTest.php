@@ -122,3 +122,16 @@ it('refuses an inconsistent row even when it bypasses the model', function (): v
         'source' => CandleSource::Archive->value, 'received_at' => '2026-11-08 12:00:00+00',
     ]);
 })->throws(QueryException::class);
+
+it('lists open times as timestamps and loads only the candles asked for', function (): void {
+    [$repository, $instrument] = candleStore();
+    $repository->upsert($instrument, CandleSource::Archive, [minute(0), minute(1), minute(5)]);
+    $start = CarbonImmutable::parse('2026-10-01 00:00:00', 'UTC');
+
+    $times = $repository->openTimestamps($instrument, Timeframe::OneMinute, $start, $start->addMinutes(4));
+    $candles = $repository->at($instrument, Timeframe::OneMinute, [$start->getTimestamp() + 300, $start->getTimestamp() + 120]);
+
+    expect($times)->toBe([$start->getTimestamp(), $start->getTimestamp() + 60])
+        ->and(array_keys($candles))->toBe([$start->getTimestamp() + 300])
+        ->and((string) $candles[$start->getTimestamp() + 300]->close)->toBe('76050.12345678');
+});

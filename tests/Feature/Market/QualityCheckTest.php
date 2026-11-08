@@ -27,6 +27,12 @@ function storeMinutes(Instrument $instrument, array $minutes): void
     app(CandleRepository::class)->upsert($instrument, CandleSource::Archive, array_map(fn (int $m) => CandleFactory::at($m), $minutes));
 }
 
+/** @param array{from: CarbonImmutable, to: CarbonImmutable} $range */
+function qualityRange(array $range): string
+{
+    return $range['from']->format('m-d H:i').' '.$range['to']->format('m-d H:i');
+}
+
 it('reports missing minutes as ranges', function (): void {
     $btc = qualityInstrument();
     storeMinutes($btc, [0, 1, 2, 5, 6, 9]);
@@ -89,4 +95,26 @@ it('exits with an error code when a gap is found', function (): void {
 
     expect(Artisan::call('market:check', ['symbol' => 'BTC/USDT', '--from' => '2026-10-01', '--to' => '2026-10-01 00:02']))->toBe(1)
         ->and(Artisan::output())->toContain('1 missing')->toContain('00:01');
+});
+
+it('finds gaps, zero-volume runs and outliers across the days it reads one at a time', function (): void {
+    $instrument = qualityInstrument();
+    $minutes = [];
+
+    foreach (range(0, 3 * 1440 - 1) as $minute) {
+        if ($minute >= 1438 && $minute <= 1441) {
+            continue; // a gap over the first midnight
+        }
+
+        $minutes[] = CandleFactory::at($minute, $minute === 2880 ? '200' : '100', $minute >= 2870 && $minute <= 2900 ? '0' : '1');
+    }
+
+    app(CandleRepository::class)->upsert($instrument, CandleSource::Archive, $minutes);
+    $report = app(QualityCheck::class)->run($instrument, CandleFactory::time(0), CandleFactory::time(3 * 1440 - 1));
+
+    expect($report->storedMinutes)->toBe(3 * 1440 - 4)
+        ->and($report->missingMinutes)->toBe(4)
+        ->and(array_map(qualityRange(...), $report->gaps))->toBe(['10-01 23:58 10-02 00:01'])
+        ->and(array_map(qualityRange(...), $report->zeroVolumeRuns))->toBe(['10-02 23:50 10-03 00:20'])
+        ->and(array_map(fn (CarbonImmutable $t): string => $t->format('m-d H:i'), $report->outliers))->toBe(['10-03 00:00']);
 });
