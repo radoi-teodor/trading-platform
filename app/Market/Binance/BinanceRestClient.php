@@ -117,9 +117,9 @@ final readonly class BinanceRestClient
 
                 yield new FundingRate(
                     $time,
-                    Decimal::of(Json::string($row, 'fundingRate')),
+                    Decimal::of(Json::number($row, 'fundingRate')),
                     $reference === null ? 8 : (int) round(abs($time->diffInHours($reference))),
-                    $markPrice === '' ? null : Price::of($markPrice),
+                    $markPrice === '' ? null : Price::of(ExchangeNumber::plain($markPrice)),
                 );
 
                 $previous = $time;
@@ -218,9 +218,9 @@ final readonly class BinanceRestClient
             $market,
             $symbol,
             $status,
-            Decimal::of(Json::string($filters['PRICE_FILTER'] ?? [], 'tickSize')),
-            Decimal::of(Json::string($lot, 'stepSize')),
-            Decimal::of(Json::string($lot, 'minQty')),
+            Decimal::of(Json::number($filters['PRICE_FILTER'] ?? [], 'tickSize')),
+            Decimal::of(Json::number($lot, 'stepSize')),
+            Decimal::of(Json::number($lot, 'minQty')),
             self::optionalDecimal($lot, 'maxQty'),
             $minNotional,
             $filters,
@@ -244,7 +244,7 @@ final readonly class BinanceRestClient
     {
         $value = $filter[$field] ?? null;
 
-        return is_string($value) ? Decimal::of($value) : null;
+        return is_string($value) ? Decimal::of(ExchangeNumber::plain($value)) : null;
     }
 
     /** @param array<array-key, mixed> $row */
@@ -253,14 +253,14 @@ final readonly class BinanceRestClient
         return Candle::fromStrings(
             EpochTime::parse(Json::int($row, 0)),
             $timeframe,
-            Json::string($row, 1),
-            Json::string($row, 2),
-            Json::string($row, 3),
-            Json::string($row, 4),
-            Json::string($row, 5),
-            Json::string($row, 7),
+            Json::number($row, 1),
+            Json::number($row, 2),
+            Json::number($row, 3),
+            Json::number($row, 4),
+            Json::number($row, 5),
+            Json::number($row, 7),
             Json::int($row, 8),
-            Json::string($row, 9),
+            Json::number($row, 9),
         );
     }
 

@@ -44,14 +44,14 @@ final readonly class KlineMessage
             Candle::fromStrings(
                 EpochTime::parse(Json::int($kline, 't')),
                 Timeframe::from(Json::string($kline, 'i')),
-                Json::string($kline, 'o'),
-                Json::string($kline, 'h'),
-                Json::string($kline, 'l'),
-                Json::string($kline, 'c'),
-                Json::string($kline, 'v'),
-                Json::string($kline, 'q'),
+                Json::number($kline, 'o'),
+                Json::number($kline, 'h'),
+                Json::number($kline, 'l'),
+                Json::number($kline, 'c'),
+                Json::number($kline, 'v'),
+                Json::number($kline, 'q'),
                 Json::int($kline, 'n'),
-                Json::string($kline, 'V'),
+                Json::number($kline, 'V'),
             ),
         );
     }

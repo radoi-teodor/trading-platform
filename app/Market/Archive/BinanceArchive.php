@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Market\Archive;
 
 use App\Market\Binance\EpochTime;
+use App\Market\Binance\ExchangeNumber;
 use App\Market\Binance\RequestFailed;
 use App\Market\Data\Candle;
 use App\Market\Data\FundingRate;
@@ -41,14 +42,14 @@ final readonly class BinanceArchive
             static fn (array $fields): Candle => Candle::fromStrings(
                 EpochTime::parse($fields[0]),
                 Timeframe::OneMinute,
-                $fields[1],
-                $fields[2],
-                $fields[3],
-                $fields[4],
-                $fields[5],
-                $fields[7],
+                ExchangeNumber::plain($fields[1]),
+                ExchangeNumber::plain($fields[2]),
+                ExchangeNumber::plain($fields[3]),
+                ExchangeNumber::plain($fields[4]),
+                ExchangeNumber::plain($fields[5]),
+                ExchangeNumber::plain($fields[7]),
                 self::integer($fields[8]),
-                $fields[9],
+                ExchangeNumber::plain($fields[9]),
             ),
             self::rows($this->csv($path), 12),
         );
@@ -64,7 +65,7 @@ final readonly class BinanceArchive
             // calc_time carries a few milliseconds of jitter; funding happens on the second.
             static fn (array $fields): FundingRate => new FundingRate(
                 EpochTime::parse($fields[0])->startOfSecond(),
-                Decimal::of($fields[2]),
+                Decimal::of(ExchangeNumber::plain($fields[2])),
                 self::integer($fields[1]),
                 null,
             ),

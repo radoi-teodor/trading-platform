@@ -10,6 +10,7 @@ use App\Market\Data\MarketType;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
+use Tests\Support\ArchiveFactory;
 
 function archiveBytes(string $name): string
 {
@@ -102,4 +103,22 @@ it('reuses a verified archive instead of downloading it again', function (): voi
     $archive->klines(MarketType::Spot, 'BTCUSDT', $period);
 
     Http::assertSentCount(3);
+});
+
+it('reads funding rates written in scientific notation, as Binance publishes small ones', function (): void {
+    useArchiveCache();
+    $archive = ArchiveFactory::make('ETHUSDT-fundingRate-2026-10.zip', [
+        'calc_time,funding_interval_hours,last_funding_rate',
+        '1791014400000,8,9.3E-7',
+        '1791043200002,8,-7E-8',
+        '1791072000000,8,0E-8',
+    ]);
+    Http::fake([
+        '*/monthly/fundingRate/ETHUSDT/ETHUSDT-fundingRate-2026-10.zip.CHECKSUM' => Http::response($archive['checksum']),
+        '*/monthly/fundingRate/ETHUSDT/ETHUSDT-fundingRate-2026-10.zip' => Http::response($archive['zip']),
+    ]);
+
+    $rates = app(BinanceArchive::class)->fundingRates('ETHUSDT', CarbonImmutable::parse('2026-10-01', 'UTC'));
+
+    expect(array_map(fn ($rate): string => (string) $rate->rate, $rates))->toBe(['0.00000093', '-0.00000007', '0']);
 });

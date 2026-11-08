@@ -20,6 +20,7 @@ use App\Market\Models\Instrument;
 use App\Support\Clock\Clock;
 use App\Support\Timeframe;
 use Carbon\CarbonImmutable;
+use InvalidArgumentException;
 use UnexpectedValueException;
 
 /**
@@ -51,7 +52,7 @@ final readonly class Backfill
 
                 if ($cursor->equalTo($month->start) && $month->end()->lessThanOrEqualTo($today) && $month->end()->subMinute()->lessThanOrEqualTo($to)) {
                     try {
-                        $steps[] = $this->storeArchive($instrument, $month, $from, $to);
+                        $this->storeArchive($instrument, $month, $from, $to, $steps);
                         $cursor = $month->end();
 
                         continue;
@@ -64,7 +65,7 @@ final readonly class Backfill
 
                 if ($day->end()->lessThanOrEqualTo($today)) {
                     try {
-                        $steps[] = $this->storeArchive($instrument, $day, $from, $to);
+                        $this->storeArchive($instrument, $day, $from, $to, $steps);
                         $cursor = $day->end();
 
                         continue;
@@ -77,7 +78,7 @@ final readonly class Backfill
 
                 break;
             }
-        } catch (BinanceRequestFailed|ChecksumMismatch|UnexpectedValueException $failure) {
+        } catch (BinanceRequestFailed|ChecksumMismatch|InvalidArgumentException|UnexpectedValueException $failure) {
             return new BackfillReport($steps, $failure->getMessage());
         }
 
@@ -105,21 +106,57 @@ final readonly class Backfill
 
                 break;
             }
-        } catch (BinanceRequestFailed|ChecksumMismatch|ArchiveMissing|UnexpectedValueException $failure) {
+        } catch (BinanceRequestFailed|ChecksumMismatch|ArchiveMissing|InvalidArgumentException|UnexpectedValueException $failure) {
             return new BackfillReport($steps, $failure->getMessage());
         }
 
         return new BackfillReport($steps, null);
     }
 
-    private function storeArchive(Instrument $instrument, ArchivePeriod $period, CarbonImmutable $from, CarbonImmutable $to): BackfillStep
+    /**
+     * Stores one archive, then fills through REST any minute of the asked range that the archive does not have:
+     * published archives can be incomplete (Binance's USD-M archives for October 2026 have no 2026-10-28).
+     * Steps are appended as they complete, so a failure still reports what was stored before it.
+     *
+     * @param  list<BackfillStep>  $steps
+     */
+    private function storeArchive(Instrument $instrument, ArchivePeriod $period, CarbonImmutable $from, CarbonImmutable $to, array &$steps): void
     {
-        $candles = array_filter(
+        $candles = array_values(array_filter(
             $this->archive->klines($instrument->market, $instrument->venue_symbol, $period),
             static fn (Candle $candle): bool => $candle->openTime->betweenIncluded($from, $to),
-        );
+        ));
+        $steps[] = new BackfillStep("{$period->folder()} {$period->label()}", $this->candles->upsert($instrument, CandleSource::Archive, $candles));
 
-        return new BackfillStep("{$period->folder()} {$period->label()}", $this->candles->upsert($instrument, CandleSource::Archive, $candles));
+        $windowStart = $period->start->max(Timeframe::OneMinute->openTimeContaining($from));
+        $windowEnd = $period->end()->subMinute()->min($to);
+
+        foreach (self::missingRanges($candles, $windowStart, $windowEnd) as [$gapFrom, $gapTo]) {
+            $steps[] = new BackfillStep(
+                "rest gap {$gapFrom->format('Y-m-d H:i')}",
+                $this->candles->upsert($instrument, CandleSource::Rest, $this->rest->klines($instrument->market, $instrument->venue_symbol, $gapFrom, $gapTo)),
+            );
+        }
+    }
+
+    /**
+     * @param  list<Candle>  $candles  oldest first
+     * @return list<array{0: CarbonImmutable, 1: CarbonImmutable}>
+     */
+    private static function missingRanges(array $candles, CarbonImmutable $from, CarbonImmutable $to): array
+    {
+        $ranges = [];
+        $expected = $from;
+
+        foreach ([...array_map(static fn (Candle $c): CarbonImmutable => $c->openTime, $candles), $to->addMinute()] as $time) {
+            if ($time->greaterThan($expected)) {
+                $ranges[] = [$expected, $time->subMinute()];
+            }
+
+            $expected = $time->addMinute()->max($expected);
+        }
+
+        return $ranges;
     }
 
     private function storeRest(Instrument $instrument, CarbonImmutable $from, CarbonImmutable $to): BackfillStep

@@ -8,7 +8,6 @@ use App\Market\Backfill\Backfill;
 use App\Market\Backfill\BackfillReport;
 use App\Market\Data\MarketType;
 use App\Market\Instruments\Universe;
-use App\Market\Models\Instrument;
 use App\Support\Clock\Clock;
 use Illuminate\Console\Command;
 use InvalidArgumentException;
@@ -42,19 +41,19 @@ final class BackfillMarketData extends Command
 
         foreach ($symbols as $symbol) {
             $instrument = $universe->instrument($symbol);
-            $failed = $this->print($instrument, $backfill->candles($instrument, $from, $to)) || $failed;
+            $this->line("{$instrument->symbol} {$instrument->market->value}");
+            $failed = $this->print($backfill->candles($instrument, $from, $to)) || $failed;
 
             if ($this->option('funding') && $instrument->market === MarketType::Perp) {
-                $failed = $this->print($instrument, $backfill->funding($instrument, $from, $to)) || $failed;
+                $failed = $this->print($backfill->funding($instrument, $from, $to)) || $failed;
             }
         }
 
         return $failed ? self::FAILURE : self::SUCCESS;
     }
 
-    private function print(Instrument $instrument, BackfillReport $report): bool
+    private function print(BackfillReport $report): bool
     {
-        $this->line("{$instrument->symbol} {$instrument->market->value}");
 
         foreach ($report->steps as $step) {
             $this->line(sprintf('  %-24s +%d new, %d replaced, %d kept, %d discrepancies', $step->source, $step->result->inserted, $step->result->overwritten, $step->result->kept, $step->result->discrepancies));

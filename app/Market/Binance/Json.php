@@ -36,6 +36,12 @@ final class Json
         return $field;
     }
 
+    /** A numeric field as an exact plain decimal string, whatever notation Binance used. */
+    public static function number(mixed $value, string|int $key): string
+    {
+        return ExchangeNumber::plain(self::string($value, $key));
+    }
+
     public static function int(mixed $value, string|int $key): int
     {
         $field = self::array($value, 'object')[$key] ?? null;

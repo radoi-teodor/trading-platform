@@ -161,6 +161,13 @@ Add to the list when a fix reveals a new one.
   carries millisecond jitter. A parser that assumes one unit puts candles in the year 57,000 or in 1970.
   Recognize the unit by digit count and fail on anything else (`docs/market-data.md`, section 3). Search:
   `/ 1000`, `* 1000`, `createFromTimestampMs` in `app/Market`.
+- **Binance numbers in scientific notation.** Funding archives write small rates as `9.2E-7`, `-7E-8`, `0E-8`
+  (BNB: 57 of 94 rows in October 2026). `Decimal::of` refuses exponents on purpose; every Binance number goes
+  through `ExchangeNumber::plain` (or `Json::number`), which moves the decimal point in the text, never through
+  float. Search: `Decimal::of(` or `Price::of(` fed directly from a response or CSV field in `app/Market`.
+- **Binance archives can be incomplete.** The USD-M monthly archives for October 2026 have no 2026-10-28 for
+  any pair, and the daily archive for that day is not published (404). The backfill fills such holes through REST
+  after each archive, and `market:check` reports what stays missing. Never assume an archive is complete.
 - **Asset codes are not ASCII.** Binance spot lists `币安人生/USDT`; an `[A-Z0-9]` check made the whole
   instrument sync fail on one symbol (found by `composer test:network`, phase 1 step 4). Asset and Symbol accept
   letters and digits of any script (`\p{L}\p{N}`, `/u`). Search: `A-Z`, `strtoupper` in `app/`.

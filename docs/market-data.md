@@ -59,6 +59,14 @@ the same closed candle is logged as a discrepancy with both versions, because it
 Each archive is downloaded with its `.CHECKSUM`; the SHA-256 of the zip must match before anything is read. A
 mismatch stops the import of that file with an error; nothing partial is written.
 
+Published archives are not always complete: the USD-M monthly archives for October 2026 have no 2026-10-28 for
+any pair, and no daily archive exists for that day. After each archive the backfill looks for the minutes of the
+asked range that the archive did not have and requests them from REST (`rest gap` steps). What REST cannot
+provide stays missing and `market:check` reports it.
+
+Numbers can arrive in scientific notation (funding archives write `9.2E-7` or `0E-8`). Every number from Binance
+is rewritten as an exact plain decimal by moving the decimal point in the text, never through float.
+
 Archive formats differ and the parser checks them instead of guessing:
 
 | Archive | Header | Time unit |
