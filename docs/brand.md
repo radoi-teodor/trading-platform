@@ -298,8 +298,8 @@ placeholders, `border-strong` needs 3.0):
 `text`, `text-muted`, `accent`, `up`, `down`, `up-alt`, `down-alt`, `warn`, `info`, `live` and `agent` also meet
 4.5:1 on `surface-2` and `bg`. Series palettes, both modes: all slots inside the
 lightness band and above the chroma floor; worst adjacent pair under simulated deuteranopia ΔE 13.2 (dark) and
-16.3 (light), normal-vision floor 19.3 and 19.6. A Pest test will parse `tokens.css` and recheck these pairs on
-every build (Phase 0).
+16.3 (light), normal-vision floor 19.3 and 19.6. `tests/Brand/TokensTest.php` parses `resources/css/tokens.css`
+and rechecks these pairs, and the absence of color literals elsewhere, on every test run.
 
 ### B5. How to choose
 
