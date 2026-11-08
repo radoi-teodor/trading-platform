@@ -33,7 +33,6 @@ final readonly class Type
             Kind::Percent => 'a percent',
             Kind::Duration => 'a duration',
             Kind::RMultiple => 'an R multiple',
-            Kind::Text => 'a text',
             Kind::Condition => 'a condition',
             Kind::Stop => 'a stop level',
             Kind::Trail => 'a trailing stop',

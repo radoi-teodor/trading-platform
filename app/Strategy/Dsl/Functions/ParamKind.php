@@ -10,7 +10,6 @@ enum ParamKind: string
     case Number = 'a number';
     case Series = 'a series';
     case Anchor = 'a timeframe';
-    case Text = 'a quoted text';
     case Duration = 'a duration';
     case Percent = 'a percent';
 }

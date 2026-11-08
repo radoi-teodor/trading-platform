@@ -17,7 +17,7 @@ mutates(DocumentChecker::class);
 const CONFIGURATOR_EXAMPLE = <<<'YAML'
     strategy: btc-trend-4h                # id: lowercase, digits, hyphens
     title: BTC trend follower on 4h
-    family: trend                         # trend | mean_reversion | carry | volatility | event
+    family: trend                         # trend | mean_reversion | carry
     hypothesis: >
       Crypto trends persist after a moving-average cross on 4h when the daily trend agrees.
       Paid by late trend followers and by shorts forced to cover.
@@ -31,8 +31,8 @@ const CONFIGURATOR_EXAMPLE = <<<'YAML'
 
     filters:                              # all must be true for a new entry
       - adx(14) > 20
-      - regime() != "high_volatility"
-      - not event("delisting", within: 7d)
+      - natr(14) < 3                      # skip the most volatile days
+      - volume > sma(20, src: volume)     # only on busier candles
 
     entries:
       long:
@@ -55,9 +55,6 @@ const CONFIGURATOR_EXAMPLE = <<<'YAML'
       max_open_positions: 1
       max_trades_per_day: 2
       cooldown_after_loss: 8h
-
-    agents:
-      max_brief_age: 8h                   # older briefs count as missing: regime() returns unknown
     YAML;
 
 function checkDocument(string $yaml, string $riskPerTrade = '0.005'): CheckResult
@@ -85,7 +82,7 @@ it('compiles the example of docs/strategy/configurator.md', function (): void {
         ->and($spec?->hypothesis)->toStartWith('Crypto trends persist after a moving-average cross on 4h when the daily trend agrees. Paid by')
         ->and(array_map('strval', $spec->instruments ?? []))->toBe(['BTC/USDT'])
         ->and($spec?->timeframe)->toBe(Timeframe::FourHours)
-        ->and(array_map(fn ($filter): string => $filter->text, $spec->filters ?? []))->toBe(['adx(14) > 20', 'regime() != "high_volatility"', 'not event("delisting", within: 7d)'])
+        ->and(array_map(fn ($filter): string => $filter->text, $spec->filters ?? []))->toBe(['adx(14) > 20', 'natr(14) < 3', 'volume > sma(20, src: volume)'])
         ->and(array_keys($spec->entries ?? []))->toBe(['long'])
         ->and($spec?->entries['long']->side)->toBe(Side::Buy)
         ->and($spec?->entries['long']->order === null)->toBeTrue()
@@ -95,9 +92,9 @@ it('compiles the example of docs/strategy/configurator.md', function (): void {
         ->and($spec?->exits->timeStop?->text)->toBe('60 bars')
         ->and((string) $spec?->riskPerTrade)->toBe('0.005')
         ->and((string) $spec?->maxPosition)->toBe('0.2')
-        ->and([$spec?->maxOpenPositions, $spec?->maxTradesPerDay, $spec?->cooldownSeconds, $spec?->maxBriefAgeSeconds])->toBe([1, 2, 28800, 28800])
+        ->and([$spec?->maxOpenPositions, $spec?->maxTradesPerDay, $spec?->cooldownSeconds])->toBe([1, 2, 28800])
         ->and($spec?->benchmark)->toBeFalse()
-        ->and($result->warnings)->toHaveCount(2);
+        ->and($result->warnings)->toBe([]);
 });
 
 it('gives the errors of docs/strategy/configurator.md, section 7, with their places', function (): void {
@@ -120,10 +117,12 @@ it('refuses documents that break the rules, saying where and why', function (str
 
     expect($errors)->toContain($error);
 })->with([
-    'unknown key' => ['title: BTC', "colour: blue\ntitle: BTC", 'line 2, column 1: colour is not a key of a strategy document. Keys: strategy, title, family, hypothesis, fails_when, profile, template, params, market, timeframe, filters, entries, exits, sizing, limits, agents.'],
+    'unknown key' => ['title: BTC', "colour: blue\ntitle: BTC", 'line 2, column 1: colour is not a key of a strategy document. Keys: strategy, title, family, hypothesis, fails_when, profile, template, params, market, timeframe, filters, entries, exits, sizing, limits.'],
     'bad id' => ['strategy: btc-trend-4h', 'strategy: BTC Trend', 'line 1, column 11: strategy must be lowercase letters, digits and hyphens, such as btc-trend-4h.'],
     'missing title' => ["title: BTC trend follower on 4h\n", '', 'line 1, column 1: title is missing.'],
-    'unknown family' => ['family: trend', 'family: magic', 'line 3, column 9: family must be one of trend, mean_reversion, carry, volatility, event.'],
+    'unknown family' => ['family: trend', 'family: magic', 'line 3, column 9: family must be one of trend, mean_reversion, carry.'],
+    'dropped family (D-64)' => ['family: trend', 'family: event', 'line 3, column 9: family must be one of trend, mean_reversion, carry.'],
+    'agents section (D-64)' => ['cooldown_after_loss: 8h', "cooldown_after_loss: 8h\nagents:\n  max_brief_age: 8h", 'line 41, column 1: agents is not a key of a strategy document. Keys: strategy, title, family, hypothesis, fails_when, profile, template, params, market, timeframe, filters, entries, exits, sizing, limits.'],
     'unknown timeframe' => ['timeframe: 4h', 'timeframe: 3h', 'line 13, column 12: timeframe must be one of 1m, 5m, 15m, 1h, 4h, 1d, 1w.'],
     'unknown instrument' => ['instruments: [BTC/USDT]', 'instruments: [DOGE/USDT]', 'line 12, column 17: DOGE/USDT is not a tradable spot instrument on binance; run market:instruments if it is new.'],
     'perpetual on spot' => ['instruments: [BTC/USDT]', 'instruments: [BTC/USDT:USDT]', 'line 12, column 17: BTC/USDT:USDT is a perpetual; market.type is spot.'],
@@ -139,9 +138,9 @@ it('refuses documents that break the rules, saying where and why', function (str
     'not a whole count' => ['max_trades_per_day: 2', 'max_trades_per_day: 2.5', 'line 39, column 23: max_trades_per_day must be a whole number from 1.'],
     'cooldown in bars' => ['cooldown_after_loss: 8h', 'cooldown_after_loss: 3 bars', 'line 40, column 24: cooldown_after_loss must be a time, such as 8h, not candles.'],
     'syntax error inside' => ['adx(14) > 20', 'adx(14) >', 'line 16, column 14: expected a value after >, found the end of the expression.'],
-    'filters not a list' => ["filters:                              # all must be true for a new entry\n  - adx(14) > 20\n  - regime() != \"high_volatility\"\n  - not event(\"delisting\", within: 7d)\n", "filters: adx(14) > 20\n", 'line 15, column 10: filters must be a list, one condition per line.'],
+    'filters not a list' => ["filters:                              # all must be true for a new entry\n  - adx(14) > 20\n  - natr(14) < 3                      # skip the most volatile days\n  - volume > sma(20, src: volume)     # only on busier candles\n", "filters: adx(14) > 20\n", 'line 15, column 10: filters must be a list, one condition per line.'],
     'order elsewhere' => ['order: market', 'order: 2 * atr(14)', 'line 23, column 12: entries.long.order needs an order type, but 2 * atr(14) is a price series.'],
-    'no entries' => ["entries:\n  long:", "other_entries:\n  long:", 'line 20, column 1: other_entries is not a key of a strategy document. Keys: strategy, title, family, hypothesis, fails_when, profile, template, params, market, timeframe, filters, entries, exits, sizing, limits, agents.'],
+    'no entries' => ["entries:\n  long:", "other_entries:\n  long:", 'line 20, column 1: other_entries is not a key of a strategy document. Keys: strategy, title, family, hypothesis, fails_when, profile, template, params, market, timeframe, filters, entries, exits, sizing, limits.'],
 ]);
 
 it('declares parameters and checks their ranges', function (): void {

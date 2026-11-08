@@ -43,7 +43,7 @@ final class DocumentChecker
 {
     private const array KEYS = [
         'strategy', 'title', 'family', 'hypothesis', 'fails_when', 'profile', 'template', 'params', 'market', 'timeframe',
-        'filters', 'entries', 'exits', 'sizing', 'limits', 'agents',
+        'filters', 'entries', 'exits', 'sizing', 'limits',
     ];
 
     private const array SECTIONS = [
@@ -52,12 +52,11 @@ final class DocumentChecker
         'exits' => ['stop_loss', 'take_profit', 'trailing', 'time_stop', 'when'],
         'sizing' => ['risk_per_trade', 'max_position'],
         'limits' => ['max_open_positions', 'max_trades_per_day', 'cooldown_after_loss'],
-        'agents' => ['max_brief_age'],
         'funding_carry' => ['spot', 'perp', 'enter_when', 'exit_when', 'max_leverage_perp', 'margin_buffer'],
         'parameter' => ['default', 'range', 'step'],
     ];
 
-    private const array FAMILIES = ['trend', 'mean_reversion', 'carry', 'volatility', 'event'];
+    private const array FAMILIES = ['trend', 'mean_reversion', 'carry'];
 
     private const array SECONDS = ['m' => 60, 'h' => 3_600, 'd' => 86_400, 'w' => 604_800];
 
@@ -133,7 +132,7 @@ final class DocumentChecker
             return [new StrategySpec(
                 $id->text, $title->text, $family->text, trim($hypothesis->text), trim($failsWhen->text), false, $carry, [],
                 MarketType::Perp, [$carry->spot, $carry->perpetual], $carry->timeframe, [], [],
-                new ExitSpec(null, null, null, null, null), null, $carry->maxPosition, null, null, null, null,
+                new ExitSpec(null, null, null, null, null), null, $carry->maxPosition, null, null, null,
             ), []];
         }
 
@@ -154,8 +153,6 @@ final class DocumentChecker
         $maxOpenPositions = $this->count($limits, 'max_open_positions', $this->policy->maxOpenPositions);
         $maxTradesPerDay = $this->count($limits, 'max_trades_per_day', null);
         $cooldown = $this->seconds($limits, 'cooldown_after_loss', $scope);
-        $agents = $this->section($document, 'agents', 'agents');
-        $briefAge = $this->seconds($agents, 'max_brief_age', $scope);
 
         if ($this->errors !== [] || $id === null || $title === null || $family === null || $hypothesis === null || $failsWhen === null
             || $market === null || $timeframe === null || $exits === null) {
@@ -165,7 +162,7 @@ final class DocumentChecker
         return [new StrategySpec(
             $id->text, $title->text, $family->text, trim($hypothesis->text), trim($failsWhen->text), $benchmark, null, $params,
             $market, $instruments, $timeframe, $filters, $entries, $exits, $riskPerTrade, $maxPosition,
-            $maxOpenPositions, $maxTradesPerDay, $cooldown, $briefAge,
+            $maxOpenPositions, $maxTradesPerDay, $cooldown,
         ), $scope->warnings];
     }
 

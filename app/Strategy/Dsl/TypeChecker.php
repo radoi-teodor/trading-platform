@@ -16,7 +16,6 @@ use App\Strategy\Dsl\Ast\OnTimeframe;
 use App\Strategy\Dsl\Ast\Parameter;
 use App\Strategy\Dsl\Ast\PercentLiteral;
 use App\Strategy\Dsl\Ast\RMultipleLiteral;
-use App\Strategy\Dsl\Ast\TextLiteral;
 use App\Strategy\Dsl\Ast\Unary;
 use App\Strategy\Dsl\Functions\FunctionSpec;
 use App\Strategy\Dsl\Functions\Group;
@@ -65,7 +64,6 @@ final class TypeChecker
             $node instanceof PercentLiteral => Type::of(Kind::Percent),
             $node instanceof DurationLiteral => Type::of(Kind::Duration),
             $node instanceof RMultipleLiteral => Type::of(Kind::RMultiple),
-            $node instanceof TextLiteral => Type::of(Kind::Text),
             $node instanceof BoolLiteral => Type::of(Kind::Condition),
             $node instanceof Parameter => $scope->parameters[$node->name]
                 ?? throw new DslError($node->at, "\${$node->name} is not declared under params."),
@@ -213,8 +211,6 @@ final class TypeChecker
                 }
 
                 return Type::of(Kind::Duration);
-            case ParamKind::Text:
-                return $value instanceof TextLiteral ? Type::of(Kind::Text) : throw $wrong();
             default:
                 $type = $this->check($value, $scope);
                 $accepted = match ($param->kind) {
@@ -254,10 +250,6 @@ final class TypeChecker
 
         $left = $this->check($node->left, $scope);
         $right = $this->check($node->right, $scope);
-
-        if ($left->kind === Kind::Text || $right->kind === Kind::Text) {
-            return $this->textComparison($node, $left, $right);
-        }
 
         foreach ([[$node->left, $left], [$node->right, $right]] as [$operand, $type]) {
             if (! $type->isNumeric()) {
@@ -321,28 +313,6 @@ final class TypeChecker
         return $series ? Type::series($unit) : Type::of(Kind::Number);
     }
 
-    private function textComparison(Binary $node, Type $left, Type $right): Type
-    {
-        if ($node->operator !== '==' && $node->operator !== '!=') {
-            throw new DslError($node->at, "a text can only be compared with == or !=, not {$node->operator}.");
-        }
-
-        [$function, $literal] = $node->left instanceof TextLiteral ? [$node->right, $node->left] : [$node->left, $node->right];
-
-        if (! $literal instanceof TextLiteral || $left->kind !== $right->kind) {
-            throw new DslError($node->at, 'compare a text function with a quoted value, such as regime() != "high_volatility".');
-        }
-
-        $spec = $function instanceof Call ? Library::get($function->name) : null;
-        $values = $spec !== null ? $spec->values : [];
-
-        if ($values !== [] && ! in_array($literal->value, $values, true)) {
-            throw new DslError($literal->at, "\"{$literal->value}\" is not a value of ".DslWriter::write($function).'. Its values: '.implode(', ', $values).'.');
-        }
-
-        return Type::of(Kind::Condition);
-    }
-
     private function lookback(Lookback $node, Scope $scope): Type
     {
         $type = $this->check($node->series, $scope);
@@ -362,7 +332,7 @@ final class TypeChecker
 
         $type = $this->check($node->expression, $scope);
 
-        if ($type->kind !== Kind::Series && $type->kind !== Kind::Condition && $type->kind !== Kind::Text) {
+        if ($type->kind !== Kind::Series && $type->kind !== Kind::Condition) {
             throw new DslError($node->at, 'on applies to series and conditions; '.DslWriter::write($node->expression)." is {$type->describe()}.");
         }
 
@@ -398,10 +368,6 @@ final class TypeChecker
 
         if ($spec->group === Group::Perpetual && ! $scope->perpetual) {
             throw new DslError($node->position(), "{$name} exists only for perpetuals; this strategy trades spot.");
-        }
-
-        if ($spec->group === Group::Agent) {
-            $scope->warn("{$name}() returns its neutral value until the agents' journal exists (D-17, D-52): a strategy that needs it cannot pass the gates on old data.");
         }
 
         return $spec;

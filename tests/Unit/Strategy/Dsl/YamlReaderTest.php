@@ -37,7 +37,7 @@ it('reads the strategy document subset of YAML, keeping every scalar as written'
           fast: { default: 0.50, range: [0.30, 0.70], step: 0.05 }
         filters:
           - adx(14) > 20
-          - regime() != "high_volatility"
+          - natr(14) < 3
         entries:
           long:
             when: ema(20) crosses_above ema(50) and close > ema(200) on 1d
@@ -52,7 +52,7 @@ it('reads the strategy document subset of YAML, keeping every scalar as written'
         'notes' => "line one\nline two\n",
         'market' => ['type' => 'spot', 'instruments' => ['BTC/USDT', 'ETH/USDT']],
         'params' => ['fast' => ['default' => '0.50', 'range' => ['0.30', '0.70'], 'step' => '0.05']],
-        'filters' => ['adx(14) > 20', 'regime() != "high_volatility"'],
+        'filters' => ['adx(14) > 20', 'natr(14) < 3'],
         'entries' => ['long' => ['when' => 'ema(20) crosses_above ema(50) and close > ema(200) on 1d']],
         'quoted' => "it's # not a comment",
         'empty_list' => [],

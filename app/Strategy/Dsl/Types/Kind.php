@@ -13,7 +13,6 @@ enum Kind: string
     case Percent = 'percent';
     case Duration = 'duration';
     case RMultiple = 'R multiple';
-    case Text = 'text';
     case Stop = 'stop level';
     case Trail = 'trailing stop';
     case Order = 'order';

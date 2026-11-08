@@ -11,8 +11,6 @@ use App\Strategy\Dsl\Types\Unit;
 /** The functions and names of the DSL's first version (docs/strategy/configurator.md, section 2; D-52). */
 final class Library
 {
-    public const array REGIMES = ['trend', 'range', 'high_volatility', 'unknown'];
-
     /** @var array<string, FunctionSpec>|null */
     private static ?array $specs = null;
 
@@ -75,11 +73,6 @@ final class Library
         $specs[] = new FunctionSpec('oi_change', Group::Perpetual, $plain, [$count('n')], refused: $later('oi_change'));
         $specs[] = new FunctionSpec('basis', Group::Perpetual, $fraction, isCall: false, refused: $later('basis'));
         $specs[] = new FunctionSpec('mark_price', Group::Perpetual, $price, isCall: false, refused: $later('mark_price'));
-
-        $specs[] = new FunctionSpec('regime', Group::Agent, Type::of(Kind::Text), values: self::REGIMES);
-        $specs[] = new FunctionSpec('risk_flag', Group::Agent, $condition, [new ParamSpec('name', ParamKind::Text)]);
-        $specs[] = new FunctionSpec('event', Group::Agent, $condition, [new ParamSpec('type', ParamKind::Text), new ParamSpec('within', ParamKind::Duration)]);
-        $specs[] = new FunctionSpec('brief_confidence', Group::Agent, $plain);
 
         $specs[] = new FunctionSpec('in_position', Group::Position, $condition, isCall: false);
         $specs[] = new FunctionSpec('bars_in_trade', Group::Position, $plain, isCall: false);

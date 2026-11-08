@@ -60,7 +60,7 @@ final readonly class ChartSeries
             $node = Parser::parse($expression);
             $type = (new TypeChecker)->check($node, $scope);
 
-            if (! in_array($type->kind, [Kind::Series, Kind::Condition, Kind::Text], true)) {
+            if (! in_array($type->kind, [Kind::Series, Kind::Condition], true)) {
                 throw new DslError($node->position(), "{$expression} is {$type->describe()}; a chart shows series and conditions.");
             }
 

@@ -57,10 +57,9 @@ final class DslReference extends TradingTool
         $result = $spec->fields === []
             ? ($spec->result === null ? 'measures what its src measures' : $spec->result->describe())
             : 'fields '.implode(', ', array_map(fn (string $field): string => ".{$field}", array_keys($spec->fields)));
-        $values = $spec->values === [] ? '' : '; values '.implode(', ', $spec->values);
         $refused = $spec->refused === null ? '' : " NOT AVAILABLE: {$spec->refused}";
 
-        return "- {$call} [{$spec->group->name}] {$result}{$values}{$refused}";
+        return "- {$call} [{$spec->group->name}] {$result}{$refused}";
     }
 
     private static function read(string $path): string

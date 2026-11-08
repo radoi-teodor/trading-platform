@@ -61,14 +61,8 @@ final class Lexer
             return $this->number($rest, $at);
         }
 
-        if ($char === '"') {
-            $end = strpos($rest, '"', 1);
-
-            if ($end === false) {
-                throw new DslError($at, 'the text starting here has no closing quote.');
-            }
-
-            return $this->take(TokenKind::Text, substr($rest, 1, $end - 1), $end + 1, $at);
+        if ($char === '"' || $char === "'") {
+            throw new DslError($at, 'the language has no text in quotes; compare series and numbers, such as close > ema(20).');
         }
 
         if ($char === '$') {

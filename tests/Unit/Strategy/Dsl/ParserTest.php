@@ -35,11 +35,11 @@ it('parses the grammar of docs/strategy/configurator.md with its precedence', fu
     'comparisons' => ['a >= b or a <= b or a == b or a != b or a < b', '(or (or (or (or (>= a b) (<= a b)) (== a b)) (!= a b)) (< a b))'],
     'named arguments and a field' => ['macd(fast: 12, slow: 26).hist', '(macd fast:12 slow:26 .hist)'],
     'mixed arguments' => ['rsi(14, src: hl2)', '(rsi 14 src:hl2)'],
-    'no arguments' => ['regime() != "high_volatility"', '(!= (regime) "high_volatility")'],
+    'no arguments' => ['vwap() > close', '(> (vwap) close)'],
     'nested calls' => ['level(lowest(low, 10))', '(level (lowest low 10))'],
     'percent' => ['close > 2%', '(> close 2%)'],
     'negative percent' => ['limit(offset: -0.1%)', '(limit offset:(neg 0.1%))'],
-    'durations and bars' => ['event("delisting", within: 7d)', '(event "delisting" within:7d)'],
+    'durations and bars' => ['limit(offset: 0.1%, expiry: 2h)', '(limit offset:0.1% expiry:2h)'],
     'bars' => ['time_stop(60 bars)', '(time_stop 60bars)'],
     'r multiple' => ['3R', '3R'],
     'booleans' => ['true and not false', '(and true (not false))'],
@@ -76,7 +76,7 @@ it('reports errors with the line and column of the document', function (string $
     'index not whole' => ['close[a]', 'line 18, column 15: the index in [ ] must be a whole number of candles back, such as close[1].'],
     'unknown timeframe' => ['close on 2h', 'line 18, column 18: 2h is not a timeframe. Use one of 1m, 5m, 15m, 1h, 4h, 1d, 1w.'],
     'unknown character' => ['close @ 2', 'line 18, column 15: unexpected character @.'],
-    'unterminated string' => ['regime() == "range', 'line 18, column 21: the text starting here has no closing quote.'],
+    'text in quotes' => ['close == "range"', 'line 18, column 18: the language has no text in quotes; compare series and numbers, such as close > ema(20).'],
     'trailing input' => ['close close', 'line 18, column 15: expected the end of the expression or an operator, found close.'],
     'parameter without name' => ['ema($)', 'line 18, column 13: a parameter is written $name, such as $fast.'],
     'field on a non-call' => ['close.upper', 'line 18, column 14: a field such as .upper follows a call, such as bb(20).upper.'],
@@ -87,7 +87,6 @@ it('starts at line 1, column 1 by default and counts columns from there', functi
     $node = Parser::parse('  close > 2');
 
     expect([$node->position()->line, $node->position()->column])->toBe([1, 3])
-        ->and(AstPrinter::print(Parser::parse('"a b" == regime()')))->toBe('(== "a b" (regime))')
         ->and(AstPrinter::print(Parser::parse('2.5R + 1.5%')))->toBe('(+ 2.5R 1.5%)')
         ->and(AstPrinter::print(Parser::parse('12w')))->toBe('12w');
 });

@@ -38,6 +38,5 @@ final readonly class StrategySpec
         public ?int $maxOpenPositions,
         public ?int $maxTradesPerDay,
         public ?int $cooldownSeconds,
-        public ?int $maxBriefAgeSeconds,
     ) {}
 }

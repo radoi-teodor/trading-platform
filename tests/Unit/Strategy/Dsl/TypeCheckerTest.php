@@ -38,7 +38,7 @@ it('types expressions', function (string $source, string $type, bool $perpetual)
     'comparison' => ['close > ema(200) on 1d', 'a condition', false],
     'cross' => ['ema($fast) crosses_above ema(50)', 'a condition', false],
     'logic' => ['adx(14) > 20 and not in_position', 'a condition', false],
-    'regime' => ['regime() != "high_volatility"', 'a condition', false],
+    'call without arguments' => ['vwap() > close', 'a condition', false],
     'funding vs percent' => ['funding_rate_avg(9) > 0.01%', 'a condition', true],
     'stop level' => ['level(lowest(low, 10))', 'a stop level', false],
     'trail' => ['chandelier(22, 3)', 'a trailing stop', false],
@@ -69,10 +69,10 @@ it('refuses expressions without meaning, saying why', function (string $source, 
     'given twice' => ['rsi(14, n: 3)', 'line 22, column 23: n of rsi is given twice.'],
     'missing field' => ['bb(20) > close', 'line 22, column 15: bb(...) has several values: pick one with .upper, .middle, .lower, .width.'],
     'field on single' => ['ema(20).upper', 'line 22, column 15: ema(...) has a single value; remove .upper.'],
-    'function without parens' => ['regime == "range"', 'line 22, column 15: regime is a function: write regime().'],
+    'function without parens' => ['vwap > close', 'line 22, column 15: vwap is a function: write vwap(...).'],
     'name with parens' => ['close()', 'line 22, column 15: close takes no arguments: write close.'],
-    'unknown regime' => ['regime() == "bull"', 'line 22, column 27: "bull" is not a value of regime(). Its values: trend, range, high_volatility, unknown.'],
-    'text order' => ['regime() > "trend"', 'line 22, column 15: a text can only be compared with == or !=, not >.'],
+    'agent functions are gone (D-64)' => ['regime() > 0', 'line 22, column 15: regime is not a function of the DSL.'],
+    'risk flags are gone (D-64)' => ['risk_flag(1)', 'line 22, column 15: risk_flag is not a function of the DSL.'],
     'logic on numbers' => ['close and true', 'line 22, column 15: and needs a condition, but close is a price series.'],
     'undeclared parameter' => ['ema($slow)', 'line 22, column 19: $slow is not declared under params.'],
     'shorter timeframe' => ['close on 1h', 'line 22, column 15: on 1h reads a shorter timeframe than the strategy\'s 4h; use 4h or longer.'],
@@ -88,14 +88,6 @@ it('resolves arguments with their defaults for the compiler', function (): void 
 
     expect($node)->toBeInstanceOf(Call::class)
         ->and(array_map(DslWriter::write(...), $node instanceof Call ? $checker->arguments($node) : []))->toBe(['signal' => '5', 'fast' => '12', 'slow' => '26']);
-});
-
-it('warns when a strategy depends on agent outputs', function (): void {
-    $scope = dslScope();
-    (new TypeChecker)->check(Parser::parse('regime() == "trend" and brief_confidence() > 0.5'), $scope);
-
-    expect($scope->warnings)->toHaveCount(2)
-        ->and($scope->warnings[0])->toStartWith('regime() returns its neutral value');
 });
 
 it('writes expressions back as DSL with only the parentheses they need', function (string $source, string $written): void {

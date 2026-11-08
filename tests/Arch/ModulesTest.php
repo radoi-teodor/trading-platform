@@ -6,20 +6,19 @@ declare(strict_types=1);
 // everything else under App is forbidden. The rule that matters most is D-7: Agents never reach Execution.
 
 const MODULES = [
-    'Support', 'Market', 'Sources', 'Strategy', 'Risk', 'Portfolio',
+    'Support', 'Market', 'Strategy', 'Risk', 'Portfolio',
     'Execution', 'Simulation', 'Agents', 'Journal', 'Notifications', 'Web',
 ];
 
 const ALLOWED_DEPENDENCIES = [
     'Support' => [],
     'Market' => ['Support'],
-    'Sources' => ['Support', 'Market'],
     'Strategy' => ['Support', 'Market'],
     'Risk' => ['Support', 'Market', 'Strategy'],
     'Portfolio' => ['Support', 'Market'],
     'Execution' => ['Support', 'Market', 'Strategy', 'Risk', 'Portfolio'],
     'Simulation' => ['Support', 'Market', 'Strategy', 'Risk', 'Portfolio', 'Execution'],
-    'Agents' => ['Support', 'Market', 'Sources', 'Strategy', 'Simulation', 'Portfolio', 'Journal'],
+    'Agents' => ['Support', 'Market', 'Strategy', 'Simulation', 'Portfolio', 'Journal'],
     'Journal' => ['Support'],
     'Notifications' => ['Support', 'Journal'],
 ];

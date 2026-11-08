@@ -10,7 +10,6 @@ enum Group
     case Price;
     case Indicator;
     case Perpetual;
-    case Agent;
     case Position;
     case Time;
     case Exit;

@@ -17,7 +17,6 @@ use App\Strategy\Dsl\Ast\OnTimeframe;
 use App\Strategy\Dsl\Ast\Parameter;
 use App\Strategy\Dsl\Ast\PercentLiteral;
 use App\Strategy\Dsl\Ast\RMultipleLiteral;
-use App\Strategy\Dsl\Ast\TextLiteral;
 use App\Strategy\Dsl\Ast\Unary;
 use LogicException;
 
@@ -31,7 +30,6 @@ final class AstPrinter
             $node instanceof PercentLiteral => $node->text,
             $node instanceof RMultipleLiteral => "{$node->value}R",
             $node instanceof DurationLiteral => "{$node->amount}{$node->unit}",
-            $node instanceof TextLiteral => "\"{$node->value}\"",
             $node instanceof BoolLiteral => $node->value ? 'true' : 'false',
             $node instanceof Identifier => $node->name,
             $node instanceof Parameter => "\${$node->name}",

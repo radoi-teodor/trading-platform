@@ -17,7 +17,6 @@ use App\Strategy\Dsl\Ast\OnTimeframe;
 use App\Strategy\Dsl\Ast\Parameter;
 use App\Strategy\Dsl\Ast\PercentLiteral;
 use App\Strategy\Dsl\Ast\RMultipleLiteral;
-use App\Strategy\Dsl\Ast\TextLiteral;
 use App\Strategy\Dsl\Ast\Unary;
 use App\Support\Number\Decimal;
 use App\Support\Timeframe;
@@ -202,10 +201,6 @@ final class Parser
                 $unit = str_ends_with($token->text, 'bars') ? 'bars' : substr($token->text, -1);
 
                 return new DurationLiteral((int) substr($token->text, 0, -strlen($unit)), $unit, $token->position);
-            case TokenKind::Text:
-                $this->advance();
-
-                return new TextLiteral($token->text, $token->position);
             case TokenKind::Parameter:
                 $this->advance();
 

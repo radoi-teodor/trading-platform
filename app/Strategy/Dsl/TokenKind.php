@@ -10,7 +10,6 @@ enum TokenKind
     case Percent;
     case Duration;
     case RMultiple;
-    case Text;
     case Identifier;
     case Parameter;
     case Keyword;

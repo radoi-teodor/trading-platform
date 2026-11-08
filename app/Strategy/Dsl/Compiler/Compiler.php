@@ -15,7 +15,6 @@ use App\Strategy\Dsl\Ast\NumberLiteral;
 use App\Strategy\Dsl\Ast\OnTimeframe;
 use App\Strategy\Dsl\Ast\Parameter;
 use App\Strategy\Dsl\Ast\PercentLiteral;
-use App\Strategy\Dsl\Ast\TextLiteral;
 use App\Strategy\Dsl\Ast\Unary;
 use App\Strategy\Dsl\Functions\Group;
 use App\Strategy\Dsl\Scope;
@@ -90,7 +89,6 @@ final class Compiler
             $node instanceof NumberLiteral => fn (): Decimal => $node->value,
             $node instanceof PercentLiteral => fn (): Decimal => $node->fraction,
             $node instanceof BoolLiteral => fn (): bool => $node->value,
-            $node instanceof TextLiteral => fn (): string => $node->value,
             $node instanceof Parameter => fn (): Decimal => $this->value($node),
             $node instanceof Identifier => $this->identifier($node, $timeframe),
             $node instanceof Unary => $this->unary($node, $timeframe, $program),
@@ -311,9 +309,6 @@ final class Compiler
             'supertrend' => $onBar(new Supertrend($count('n'), $number('k'))),
             'adx', 'plus_di', 'minus_di' => $this->directional($node->name, $count('n')),
             'funding_rate_avg' => $this->fundingAverage($count('n')),
-            'regime' => fn (): string => 'unknown',
-            'risk_flag', 'event' => fn (): bool => false,
-            'brief_confidence' => fn (): Decimal => Decimal::zero(),
             'level' => $series('series'),
             'chandelier' => $this->chandelier($count('n'), $number('k')),
             'atr_trail' => $this->atrTrail($count('n'), $number('k')),

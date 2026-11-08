@@ -16,7 +16,6 @@ final readonly class FunctionSpec
     /**
      * @param  list<ParamSpec>  $params
      * @param  array<string, Type>  $fields
-     * @param  list<string>  $values  the values a text function can take
      */
     public function __construct(
         public string $name,
@@ -27,7 +26,6 @@ final readonly class FunctionSpec
         public bool $isCall = true,
         public bool $followsSource = false,
         public ?string $refused = null,
-        public array $values = [],
     ) {}
 
     public function param(string $name): ?ParamSpec
