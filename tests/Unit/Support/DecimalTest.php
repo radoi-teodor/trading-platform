@@ -72,3 +72,52 @@ it('rounds down and up to a multiple of a step', function (string $value, string
 it('requires a positive step', function (string $step): void {
     Decimal::of('1')->roundDownToMultipleOf(Decimal::of($step));
 })->with(['0', '-0.1'])->throws(InvalidNumber::class);
+
+it('rounds a decimal half away from zero to a scale', function (string $x, int $scale, string $expected): void {
+    expect((string) Decimal::of($x)->roundedTo($scale))->toBe($expected);
+})->with([
+    ['1.2345', 3, '1.235'],
+    ['-1.2345', 3, '-1.235'],
+    ['1.2344', 3, '1.234'],
+    ['2', 2, '2'],
+    ['0.5', 0, '1'],
+]);
+
+it('truncates a decimal towards zero to a scale', function (string $x, int $scale, string $expected): void {
+    expect((string) Decimal::of($x)->truncatedTo($scale))->toBe($expected);
+})->with([
+    ['1.2399', 2, '1.23'],
+    ['-1.2399', 2, '-1.23'],
+    ['5', 3, '5'],
+]);
+
+it('refuses a negative scale', function (callable $call): void {
+    $call();
+})->with([
+    'rounding' => [fn () => Decimal::of('1.5')->roundedTo(-1)],
+    'truncating' => [fn () => Decimal::of('1.5')->truncatedTo(-1)],
+    'square root' => [fn () => Decimal::of('2')->squareRoot(-1)],
+])->throws(InvalidNumber::class);
+
+it('raises to whole powers exactly', function (string $x, int $exponent, string $expected): void {
+    expect((string) Decimal::of($x)->toThePowerOf($exponent))->toBe($expected);
+})->with([
+    ['2', 10, '1024'],
+    ['1.5', 2, '2.25'],
+    ['0.5', 3, '0.125'],
+    ['7', 0, '1'],
+    ['0', 0, '1'],
+]);
+
+it('refuses a negative whole power', function (): void {
+    Decimal::of('2')->toThePowerOf(-1);
+})->throws(InvalidNumber::class);
+
+it('takes square roots truncated to a scale', function (): void {
+    expect((string) Decimal::of('2')->squareRoot(3))->toBe('1.414')
+        ->and((string) Decimal::of('0.0004')->squareRoot(2))->toBe('0.02');
+});
+
+it('refuses the square root of a negative number', function (): void {
+    Decimal::of('-4')->squareRoot(2);
+})->throws(InvalidNumber::class);

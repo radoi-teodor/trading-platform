@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Support\Number;
 
 use BcMath\Number;
+use RoundingMode;
 use Stringable;
 
 /**
@@ -65,6 +66,38 @@ final readonly class Decimal implements Stringable
     public function abs(): self
     {
         return $this->isNegative() ? $this->negate() : $this;
+    }
+
+    /** Rounded half away from zero to $scale decimals. */
+    public function roundedTo(int $scale): self
+    {
+        return new self($this->number->round(self::checkedScale($scale), RoundingMode::HalfAwayFromZero));
+    }
+
+    /** Truncated towards zero to $scale decimals. */
+    public function truncatedTo(int $scale): self
+    {
+        return new self($this->number->round(self::checkedScale($scale), RoundingMode::TowardsZero));
+    }
+
+    /** The square root, truncated to $scale decimals. */
+    public function squareRoot(int $scale): self
+    {
+        if ($this->isNegative()) {
+            throw new InvalidNumber("No real square root of '{$this}'.");
+        }
+
+        return new self($this->number->sqrt(self::checkedScale($scale)));
+    }
+
+    /** This number to a power that is a whole number, exactly. */
+    public function toThePowerOf(int $exponent): self
+    {
+        if ($exponent < 0) {
+            throw new InvalidNumber("Only whole powers are exact, got {$exponent}.");
+        }
+
+        return new self($this->number->pow($exponent));
     }
 
     /** -1, 0 or 1, comparing values whatever their scale. */
@@ -129,6 +162,15 @@ final readonly class Decimal implements Stringable
         }
 
         return $text === '-0' ? '0' : $text;
+    }
+
+    private static function checkedScale(int $scale): int
+    {
+        if ($scale < 0) {
+            throw new InvalidNumber("A scale cannot be negative, got {$scale}.");
+        }
+
+        return $scale;
     }
 
     private function truncatedMultipleOf(self $step): self
