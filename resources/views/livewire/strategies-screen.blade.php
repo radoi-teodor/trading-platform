@@ -42,8 +42,15 @@
         <div class="rounded-card border border-border bg-surface p-card">
             <h2 class="mb-2 text-2xs uppercase tracking-wider text-muted">Run {{ $selected ?? 'a saved version' }}</h2>
             <div class="mb-2 flex gap-2">
-                <input type="text" wire:model="from" placeholder="from YYYY-MM-DD" class="h-row w-full rounded-control border border-border bg-surface-2 px-2 font-mono text-xs">
-                <input type="text" wire:model="to" placeholder="to YYYY-MM-DD" class="h-row w-full rounded-control border border-border bg-surface-2 px-2 font-mono text-xs">
+                {{-- Date pickers; the value stays YYYY-MM-DD, in UTC days as the runs read it. --}}
+                <label class="flex w-full min-w-0 flex-col gap-1">
+                    <span class="text-2xs uppercase tracking-wider text-muted">From (UTC)</span>
+                    <input type="date" wire:model="from" max="{{ now()->utc()->format('Y-m-d') }}" placeholder="from YYYY-MM-DD" class="h-row w-full min-w-0 rounded-control border border-border bg-surface-2 px-1 font-mono text-xs">
+                </label>
+                <label class="flex w-full min-w-0 flex-col gap-1">
+                    <span class="text-2xs uppercase tracking-wider text-muted">To (UTC)</span>
+                    <input type="date" wire:model="to" max="{{ now()->utc()->format('Y-m-d') }}" placeholder="to YYYY-MM-DD" class="h-row w-full min-w-0 rounded-control border border-border bg-surface-2 px-1 font-mono text-xs">
+                </label>
             </div>
             <div class="flex flex-wrap gap-2">
                 <x-button variant="secondary" type="button" wire:click="run('backtest')" :disabled="$selected === null">Backtest</x-button>
