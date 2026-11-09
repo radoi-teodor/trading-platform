@@ -71,6 +71,9 @@ final class Engine
     /** Raised by hand with every change of behaviour (D-42). */
     public const int VERSION = 1;
 
+    /** How long before an instrument stops trading its positions are closed and entries refused (D-92). */
+    private const int DELISTING_LEAD_MINUTES = 60;
+
     private readonly RiskState $riskState;
 
     private readonly RiskEngine $risk;
@@ -116,6 +119,8 @@ final class Engine
         private readonly CarbonImmutable $tradingFrom,
         private readonly ?CarbonImmutable $decideFrom = null,
         ?Decimal $maintenanceRate = null,
+        /** @var array<string, CarbonImmutable> when an instrument stops trading, by unified symbol; one that goes on trading is absent */
+        private readonly array $delistings = [],
     ) {
         if ($policy->profile === RiskProfile::Benchmark && $mode !== EngineMode::Backtest) {
             throw new InvalidArgumentException("The benchmark risk profile is for backtests only (D-40); this engine runs {$mode->value}.");
@@ -137,7 +142,8 @@ final class Engine
             }
 
             foreach ($strategy->subscriptions() as $subscription) {
-                $this->aggregators[(string) $subscription->symbol][$subscription->timeframe->value] ??= new CandleAggregator($subscription->timeframe);
+                // A universe's instruments come and go with their membership and lifetime, so their candles may restart.
+                $this->aggregators[(string) $subscription->symbol][$subscription->timeframe->value] ??= new CandleAggregator($subscription->timeframe, $strategy instanceof CrossSectionalStrategy);
 
                 if ($strategy instanceof CrossSectionalStrategy) {
                     $this->followed[$strategy->identity()->key()]["{$subscription->symbol}|{$subscription->timeframe->value}"] = $subscription->symbol;
@@ -207,6 +213,7 @@ final class Engine
 
         $equity = $this->ledger->equity($this->marks);
         $this->applyRiskEvents($time, $equity);
+        $this->closeDelisted($time);
         $this->protectAll($time);
         $this->runStrategies($event);
 
@@ -466,6 +473,40 @@ final class Engine
     }
 
     /** Step 6: every position keeps its protective orders on the venue; remainders too small to sell become dust. */
+    /** Whether $symbol stops trading within the hour: nothing is opened in it and what is open is closed (D-92). */
+    private function leaving(Symbol $symbol, CarbonImmutable $time): bool
+    {
+        $delisting = $this->delistings[(string) $symbol] ?? null;
+
+        return $delisting !== null && $time >= $delisting->subMinutes(self::DELISTING_LEAD_MINUTES);
+    }
+
+    /**
+     * Closes what is held in an instrument that is about to stop trading, while it still has a price: after its
+     * last candle nothing could fill. An exit already working is left alone.
+     */
+    private function closeDelisted(CarbonImmutable $time): void
+    {
+        if ($this->delistings === []) {
+            return;
+        }
+
+        foreach ([...$this->ledger->positions(), ...$this->ledger->perpPositions()] as $position) {
+            if (! $this->leaving($position->symbol, $time)) {
+                continue;
+            }
+
+            foreach ($this->book->workingFor($position->strategy, $position->symbol) as $order) {
+                if (! $order->role->isProtective()) {
+                    continue 2;
+                }
+            }
+
+            $position instanceof PerpPosition ? $this->orders->exitPerpetual($position, OrderRole::Exit, $time) : $this->exit($position, OrderRole::Exit, $time);
+            $this->log->event(new EngineRecord($time, 'delisting_close', "{$position->symbol} of {$position->strategy} stops trading at {$this->delistings[(string) $position->symbol]->format('Y-m-d H:i')}"));
+        }
+    }
+
     private function protectAll(CarbonImmutable $time): void
     {
         foreach ($this->ledger->positions() as $position) {
@@ -714,6 +755,10 @@ final class Engine
             }
 
             $entered[(string) $symbol] = true;
+
+            if ($this->leaving($symbol, $time)) {
+                return $this->record($intent, Verdict::rejected(RejectionReason::Delisting));
+            }
 
             if ($this->breakers->block((string) $symbol, $time) !== null) {
                 return $this->record($intent, Verdict::rejected(RejectionReason::Breaker));

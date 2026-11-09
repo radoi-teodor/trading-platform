@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Execution\Data\DecisionRecord;
 use App\Execution\Data\EngineMode;
+use App\Execution\Data\EngineRecord;
 use App\Execution\Data\FeeSchedule;
 use App\Execution\Deployments\SizedStrategy;
 use App\Execution\Engine;
@@ -86,8 +87,11 @@ final class UniverseEngineHarness
     }
 }
 
-/** @param list<Strategy> $strategies */
-function universeEngine(array $strategies, ?RiskPolicy $policy = null): UniverseEngineHarness
+/**
+ * @param  list<Strategy>  $strategies
+ * @param  array<string, string>  $delistings  when an instrument stops trading, by base asset
+ */
+function universeEngine(array $strategies, ?RiskPolicy $policy = null, array $delistings = []): UniverseEngineHarness
 {
     $clock = new SimClock(CarbonImmutable::parse(UNIVERSE_START, 'UTC'));
     $rules = [];
@@ -118,6 +122,10 @@ function universeEngine(array $strategies, ?RiskPolicy $policy = null): Universe
         $strategies,
         $rules,
         CarbonImmutable::parse(UNIVERSE_START, 'UTC'),
+        delistings: array_combine(
+            array_map(fn (string $base): string => "{$base}/USDT:USDT", array_keys($delistings)),
+            array_map(fn (string $time): CarbonImmutable => CarbonImmutable::parse($time, 'UTC'), array_values($delistings)),
+        ),
     );
 
     return new UniverseEngineHarness($clock, $venue, $engine, $log);
@@ -230,4 +238,43 @@ it('keeps a sized universe strategy a universe strategy, with its limits scaled 
         ->and($inner->calls)->toHaveCount(1)
         ->and($h->decisions())->toBe(['00:01 AAA open_short ok'])
         ->and(SizedStrategy::of(new ScriptedStrategy([]), Decimal::of('0.5'), null, $policy))->not->toBeInstanceOf(CrossSectionalStrategy::class);
+});
+
+it('starts a universe instrument\'s candles again after a gap instead of stopping the run (D-92)', function (): void {
+    $strategy = new ScriptedUniverseStrategy([], array_map(Symbol::parse(...), UNIVERSE_SYMBOLS), Timeframe::FiveMinutes);
+    $h = universeEngine([$strategy]);
+
+    for ($i = 0; $i < 10; $i++) {
+        $h->minute($i === 2 ? ['CCC' => null] : []);
+    }
+
+    $seen = fn (int $call): array => array_map(fn (StrategyContext $c): string => (string) $c->symbol->base, $strategy->calls[$call]);
+
+    expect($strategy->calls)->toHaveCount(2)
+        ->and($seen(0))->toBe(['AAA', 'BBB'])
+        ->and($seen(1))->toBe(['AAA', 'BBB', 'CCC']);
+});
+
+it('closes a position in the hour before its instrument stops trading and takes no entry in it from then on (D-92)', function (): void {
+    $strategy = scriptedUniverse(['00:01' => [universeShort('AAA'), universeShort('BBB')], '00:07' => [universeShort('AAA')]]);
+    $h = universeEngine([$strategy], delistings: ['AAA' => '2026-10-01 01:05:00']);
+
+    for ($i = 0; $i < 4; $i++) {
+        $h->minute();
+    }
+
+    expect(array_keys($h->venue->positions()))->toBe(['AAA/USDT:USDT', 'BBB/USDT:USDT']);
+
+    for ($i = 0; $i < 4; $i++) {
+        $h->minute();
+    }
+
+    $closes = array_values(array_filter($h->log->events, fn (EngineRecord $r): bool => $r->kind === 'delisting_close'));
+
+    expect(array_keys($h->venue->positions()))->toBe(['BBB/USDT:USDT'])
+        ->and($closes)->toHaveCount(1)
+        ->and($closes[0]->time->format('H:i'))->toBe('00:05')
+        ->and($closes[0]->detail)->toContain('AAA/USDT:USDT')
+        ->and($h->decisions())->toBe(['00:01 AAA open_short ok', '00:01 BBB open_short ok', '00:07 AAA open_short delisting'])
+        ->and($h->engine->ledger()->roundTrips())->toHaveCount(1);
 });

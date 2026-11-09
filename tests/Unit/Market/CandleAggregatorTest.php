@@ -130,3 +130,54 @@ it('continues across periods without carrying values over', function (): void {
         ->and($second->tradeCount)->toBe(array_sum(array_map(fn (Candle $m): int => $m->tradeCount, array_slice($minutes, 5))))
         ->and($first->tradeCount)->toBe(array_sum(array_map(fn (Candle $m): int => $m->tradeCount, array_slice($minutes, 0, 5))));
 });
+
+/**
+ * @param  list<Candle>  $minutes
+ * @return list<string> the open times of the candles a restarting aggregator emits
+ */
+function aggregateRestarting(Timeframe $timeframe, array $minutes): array
+{
+    $aggregator = new CandleAggregator($timeframe, restarts: true);
+    $closed = [];
+
+    foreach ($minutes as $minute) {
+        $candle = $aggregator->push($minute);
+
+        if ($candle !== null) {
+            $closed[] = $candle->openTime->format('H:i');
+        }
+    }
+
+    return $closed;
+}
+
+it('drops the period a missing minute broke and starts again at the next one, when told to restart (D-92)', function (): void {
+    $minutes = CandleFactory::walk('2026-10-01 00:00:00', 15);
+    unset($minutes[7]);
+
+    expect(aggregateRestarting(Timeframe::FiveMinutes, array_values($minutes)))->toBe(['00:00', '00:10']);
+});
+
+it('waits for a period to open when a restarting aggregator starts inside one (D-92)', function (): void {
+    expect(aggregateRestarting(Timeframe::FiveMinutes, CandleFactory::walk('2026-10-01 00:02:00', 13)))->toBe(['00:05', '00:10']);
+});
+
+it('builds the same candles as a strict aggregator when no minute is missing (D-92)', function (): void {
+    $minutes = CandleFactory::walk('2026-10-01 00:00:00', 10);
+    $strict = aggregate(Timeframe::FiveMinutes, $minutes);
+    $restarting = new CandleAggregator(Timeframe::FiveMinutes, restarts: true);
+    $closed = array_values(array_filter(array_map(fn (Candle $minute): ?Candle => $restarting->push($minute), $minutes)));
+
+    expect($closed)->toHaveCount(2)
+        ->and($closed[0]->sameValuesAs($strict[0]))->toBeTrue()
+        ->and($closed[1]->sameValuesAs($strict[1]))->toBeTrue();
+});
+
+it('still refuses a minute that repeats when it restarts (D-92)', function (): void {
+    $minutes = CandleFactory::walk('2026-10-01 00:00:00', 3);
+    $aggregator = new CandleAggregator(Timeframe::FiveMinutes, restarts: true);
+    $aggregator->push($minutes[0]);
+    $aggregator->push($minutes[1]);
+
+    $aggregator->push($minutes[1]);
+})->throws(CandleSequenceBroken::class);

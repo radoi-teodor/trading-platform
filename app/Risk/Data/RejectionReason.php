@@ -30,4 +30,5 @@ enum RejectionReason: string
     case EntryWorking = 'entry_working';
     case Paused = 'paused';
     case Breaker = 'breaker';
+    case Delisting = 'delisting';
 }

@@ -38,7 +38,12 @@ final class CandleAggregator
 
     private int $tradeCount = 0;
 
-    public function __construct(public readonly Timeframe $timeframe)
+    /**
+     * @param  bool  $restarts  for an instrument of a universe (D-92), whose candles come and go with its membership
+     *                          and its lifetime: a missing minute drops the period it broke, and a start inside a
+     *                          period waits for the next one to open. A partial candle is still never emitted.
+     */
+    public function __construct(public readonly Timeframe $timeframe, private readonly bool $restarts = false)
     {
         $this->volume = $this->quoteVolume = $this->takerBuyVolume = Decimal::zero();
     }
@@ -83,11 +88,16 @@ final class CandleAggregator
         $opens = $minute->openTime->getTimestamp();
 
         if ($this->expected !== null && $opens !== $this->expected) {
-            throw new CandleSequenceBroken(sprintf(
-                'Expected the minute opening at %s, got %s.',
-                CarbonImmutable::createFromTimestampUTC($this->expected)->format('Y-m-d H:i'),
-                $minute->openTime->format('Y-m-d H:i'),
-            ));
+            if (! $this->restarts || $opens < $this->expected) {
+                throw new CandleSequenceBroken(sprintf(
+                    'Expected the minute opening at %s, got %s.',
+                    CarbonImmutable::createFromTimestampUTC($this->expected)->format('Y-m-d H:i'),
+                    $minute->openTime->format('Y-m-d H:i'),
+                ));
+            }
+
+            $this->periodOpen = null;
+            $this->periodEnd = null;
         }
 
         $this->expected = $opens + 60;
@@ -115,6 +125,10 @@ final class CandleAggregator
     private function start(Candle $minute): void
     {
         if (! $this->timeframe->isOpenTime($minute->openTime->getTimestamp())) {
+            if ($this->restarts) {
+                return;
+            }
+
             $periodOpen = $this->timeframe->openTimeContaining($minute->openTime);
 
             throw new CandleSequenceBroken(sprintf(
