@@ -20,7 +20,7 @@
         </div>
         @if ($message !== '')<p class="text-sm text-muted" role="status">{{ $message }}</p>@endif
 
-        <div class="grid gap-3 md:grid-cols-4">
+        <div class="grid grid-cols-1 gap-3 md:grid-cols-4">
             <div class="rounded-card border border-border bg-surface p-card">
                 <div class="text-2xs uppercase tracking-wider text-muted">Equity</div>
                 <div class="font-mono text-lg">{{ $p['equity'] ?? 'n/a' }} {{ $current->quote }}</div>
@@ -34,7 +34,7 @@
             </div>
         </div>
 
-        <div class="grid gap-3 lg:grid-cols-2">
+        <div class="grid grid-cols-1 gap-3 lg:grid-cols-2">
             <section class="rounded-card border border-border bg-surface" aria-label="Positions">
                 <h2 class="border-b border-border px-3 py-2 text-2xs uppercase tracking-wider text-muted">Positions</h2>
                 <table class="w-full font-mono text-xs">
@@ -65,14 +65,14 @@
             </section>
         </div>
 
-        <section class="rounded-card border border-border bg-surface" aria-label="Journal">
+        <section class="min-w-0 overflow-x-auto rounded-card border border-border bg-surface" aria-label="Journal">
             <h2 class="border-b border-border px-3 py-2 text-2xs uppercase tracking-wider text-muted">Journal</h2>
             <table class="w-full font-mono text-xs">
                 @foreach ($journal as $entry)
                     <tr class="border-b border-border align-top">
                         <td class="whitespace-nowrap px-3 py-1 text-muted">{{ $entry->event_at->format('Y-m-d H:i') }}</td>
                         <td class="px-2 py-1">{{ $entry->kind === 'decision' ? $entry->payload['strategy'] ?? '' : $entry->payload['kind'] ?? '' }}</td>
-                        <td class="px-2 py-1 text-muted">
+                        <td class="break-words px-2 py-1 text-muted [overflow-wrap:anywhere]">
                             @if ($entry->kind === 'decision')
                                 @foreach ($entry->payload['intents'] ?? [] as $intent){{ $intent['type'] ?? '' }} {{ ($intent['approved'] ?? false) ? 'approved' : 'rejected: '.($intent['rejection'] ?? '') }} @endforeach
                             @else

@@ -16,16 +16,16 @@
             <span class="text-2xs uppercase tracking-wider text-muted">Candles</span>
             <input type="number" min="20" max="1000" wire:model.live.debounce.600ms="candles" class="h-row w-24 rounded-control border border-border bg-surface-2 px-2 font-mono text-sm">
         </label>
-        <form wire:submit="add" class="flex items-end gap-2">
+        <form wire:submit="add" class="flex flex-wrap items-end gap-2">
             <label class="flex flex-col gap-1">
                 <span class="text-2xs uppercase tracking-wider text-muted">Function</span>
                 <select wire:model="function" class="h-row rounded-control border border-border bg-surface-2 px-2 font-mono text-sm">
                     @foreach ($functions as $name)<option value="{{ $name }}">{{ $name }}</option>@endforeach
                 </select>
             </label>
-            <label class="flex flex-col gap-1">
+            <label class="flex min-w-0 flex-1 flex-col gap-1 sm:flex-none">
                 <span class="text-2xs uppercase tracking-wider text-muted">Or an expression</span>
-                <input type="text" wire:model="expression" placeholder="ema(21) on 4h" class="h-row w-48 rounded-control border border-border bg-surface-2 px-2 font-mono text-sm">
+                <input type="text" wire:model="expression" placeholder="ema(21) on 4h" class="h-row w-full rounded-control sm:w-48 border border-border bg-surface-2 px-2 font-mono text-sm">
             </label>
             <x-button variant="secondary">Add layer</x-button>
         </form>
@@ -49,7 +49,7 @@
 
     <div wire:ignore x-data="priceChart(@js($payload))" class="relative rounded-card border border-border bg-surface p-card">
         <div x-ref="main" class="h-[420px] w-full"></div>
-        <div x-ref="profile" class="pointer-events-none absolute inset-y-3 right-16 w-32"></div>
+        <div x-ref="profile" class="pointer-events-none absolute inset-y-3 right-16 z-10 w-32" aria-hidden="true"></div>
         <div x-ref="panels" class="flex flex-col gap-2"></div>
     </div>
 

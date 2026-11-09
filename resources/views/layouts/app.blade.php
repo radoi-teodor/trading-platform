@@ -21,11 +21,12 @@
             @endforeach
         </nav>
         <div class="flex min-w-0 flex-1 flex-col">
-            <header class="flex h-12 items-center gap-3 border-b border-border bg-surface px-3">
-                <span class="font-semibold lg:hidden">Trading X</span>
+            <header class="flex min-h-12 flex-wrap items-center gap-x-3 gap-y-1 border-b border-border bg-surface px-3 py-1">
+                <span class="hidden font-semibold sm:inline lg:hidden">Trading X</span>
+                {{-- On a phone: the account, its alerts and Halt (docs/brand.md, A6). --}}
                 <nav class="flex gap-3 text-sm lg:hidden" aria-label="Main">
-                    <a href="{{ route('chart') }}" class="text-muted hover:text-text">Chart</a>
-                    <a href="{{ route('strategies') }}" class="text-muted hover:text-text">Strategies</a>
+                    <a href="{{ route('chart') }}" class="hidden text-muted hover:text-text sm:inline">Chart</a>
+                    <a href="{{ route('strategies') }}" class="hidden text-muted hover:text-text sm:inline">Strategies</a>
                     <a href="{{ route('account') }}" class="text-muted hover:text-text">Account</a>
                 </nav>
                 <livewire:mode-badge />
@@ -33,7 +34,7 @@
                     <livewire:halt-button />
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf
-                        <button type="submit" class="text-sm text-muted hover:text-text">Log out</button>
+                        <button type="submit" class="whitespace-nowrap text-sm text-muted hover:text-text">Log out</button>
                     </form>
                 </div>
             </header>

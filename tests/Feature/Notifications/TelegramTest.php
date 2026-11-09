@@ -6,6 +6,7 @@ use App\Execution\Data\EngineRecord;
 use App\Notifications\SendTelegram;
 use App\Notifications\TelegramNotifier;
 use Carbon\CarbonImmutable;
+use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Http\Client\Request;
 use Illuminate\Log\Events\MessageLogged;
 use Illuminate\Support\Facades\Bus;
@@ -59,4 +60,18 @@ it('keeps the message in the journal only when Telegram is not configured', func
 
     Http::assertNothingSent();
     expect($logged)->toBe(['warning: Telegram is not configured (TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID); the message stays in the journal only.']);
+});
+
+it('keeps the engine running when a message cannot be queued, and says so in the log', function (): void {
+    $dispatcher = Mockery::mock(Dispatcher::class);
+    $dispatcher->shouldReceive('dispatch')->andThrow(new RuntimeException('Connection refused'));
+    app()->instance(Dispatcher::class, $dispatcher);
+    $logged = [];
+    Log::listen(function (MessageLogged $message) use (&$logged): void {
+        $logged[] = "{$message->level}: {$message->message}";
+    });
+
+    app(TelegramNotifier::class)->engineEvent('paper', new EngineRecord(CarbonImmutable::parse('2026-11-09', 'UTC'), 'drawdown_halt', 'equity 9000'));
+
+    expect($logged)->toBe(['error: A notification could not be queued (Connection refused); it stays in the journal of paper.']);
 });

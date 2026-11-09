@@ -5,6 +5,9 @@ import { createChart, CandlestickSeries, HistogramSeries, LineSeries, createSeri
 
 const token = (name) => getComputedStyle(document.documentElement).getPropertyValue(`--${name}`).trim();
 const time = (iso) => Math.floor(Date.parse(iso) / 1000);
+// A token at reduced opacity, for the volume bars: an alpha suffix on the token's hex value, since the chart library
+// does not read color-mix().
+const faded = (name, alpha) => token(name) + Math.round(alpha * 255).toString(16).padStart(2, '0');
 const options = () => ({
     layout: { background: { color: token('surface') }, textColor: token('text-muted'), fontFamily: "'IBM Plex Mono', monospace", fontSize: 11 },
     grid: { vertLines: { color: token('border') }, horzLines: { color: token('border') } },
@@ -39,7 +42,7 @@ export function priceChart(initial) {
             candles.setData(payload.candles.map((c) => ({ time: time(c.time), open: +c.open, high: +c.high, low: +c.low, close: +c.close })));
             const volume = main.addSeries(HistogramSeries, { priceScaleId: 'volume', priceFormat: { type: 'volume' } });
             main.priceScale('volume').applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
-            volume.setData(payload.candles.map((c) => ({ time: time(c.time), value: +c.volume, color: `color-mix(in srgb, ${+c.close >= +c.open ? token('up') : token('down')} 35%, transparent)` })));
+            volume.setData(payload.candles.map((c) => ({ time: time(c.time), value: +c.volume, color: faded(+c.close >= +c.open ? 'up' : 'down', 0.35) })));
 
             const overlaySlots = ['series-1', 'series-3', 'series-4'];
             const panelSlots = ['series-1', 'series-2', 'series-3', 'series-4', 'series-5'];
@@ -86,7 +89,8 @@ export function priceChart(initial) {
 
             main.timeScale().fitContent();
             this.charts.slice(1).forEach((chart) => chart.timeScale().fitContent());
-            this.drawProfile(candles, payload.profile ?? []);
+            // The price scale has coordinates only once the chart has laid out.
+            requestAnimationFrame(() => requestAnimationFrame(() => this.drawProfile(candles, payload.profile ?? [])));
             main.timeScale().subscribeVisibleTimeRangeChange(() => this.drawProfile(candles, payload.profile ?? []));
         },
         drawProfile(series, bins) {
@@ -107,7 +111,7 @@ export function priceChart(initial) {
                 }
 
                 const bar = document.createElement('div');
-                bar.style.cssText = `position:absolute;right:0;top:${top}px;height:${Math.max(1, bottom - top - 1)}px;width:${(100 * +bin.volume) / largest}%;background:color-mix(in srgb, ${token('series-3')} 25%, transparent)`;
+                bar.style.cssText = `position:absolute;right:0;top:${top}px;height:${Math.max(1, bottom - top - 1)}px;width:${(100 * +bin.volume) / largest}%;background:${faded('series-3', 0.35)}`;
                 box.appendChild(bar);
             }
         },

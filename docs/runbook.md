@@ -15,7 +15,7 @@ created in the phase that needs it and this file is updated with it.
 |---------|-------|--------------|
 | market-data | `php artisan market:stream spot` and `php artisan market:stream perp` | Every enabled instrument has a candle less than 2 timeframes old |
 | engine | `php artisan engine:run <account>` (the account's mode: paper or testnet) | The account's snapshot is under 2 minutes old, no open reconciliation mismatch |
-| notifications | `php artisan queue:work --queue=notifications,default` | No failed jobs |
+| notifications | `php artisan queue:work database --queue=notifications` | No failed jobs |
 | simulation worker | `php artisan queue:work simulation --queue=simulation --timeout=3600 --tries=1` | Runs leave `queued` |
 | web | `php artisan serve` (or PHP-FPM behind a reverse proxy) | `/up` answers |
 

@@ -1,5 +1,5 @@
-<div class="grid gap-3 lg:grid-cols-12" wire:poll.5s>
-    <section class="rounded-card border border-border bg-surface lg:col-span-3" aria-label="Versions">
+<div class="grid grid-cols-1 gap-3 lg:grid-cols-12" wire:poll.5s>
+    <section class="min-w-0 overflow-x-auto rounded-card border border-border bg-surface lg:col-span-3" aria-label="Versions">
         <h2 class="border-b border-border px-3 py-2 text-2xs uppercase tracking-wider text-muted">Versions</h2>
         <table class="w-full text-xs">
             <tbody>
@@ -16,7 +16,7 @@
         </table>
     </section>
 
-    <section class="flex flex-col gap-3 lg:col-span-6" aria-label="Editor">
+    <section class="flex min-w-0 flex-col gap-3 lg:col-span-6" aria-label="Editor">
         <div wire:ignore x-data="dslEditor('document')" class="overflow-hidden rounded-card border border-border">
             <div x-ref="editor"></div>
         </div>
@@ -38,7 +38,7 @@
         @endif
     </section>
 
-    <section class="flex flex-col gap-3 lg:col-span-3" aria-label="Runs">
+    <section class="flex min-w-0 flex-col gap-3 lg:col-span-3" aria-label="Runs">
         <div class="rounded-card border border-border bg-surface p-card">
             <h2 class="mb-2 text-2xs uppercase tracking-wider text-muted">Run {{ $selected ?? 'a saved version' }}</h2>
             <div class="mb-2 flex gap-2">

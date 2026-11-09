@@ -2,6 +2,16 @@
 // and lists errors with their line and column; the editor keeps the text in sync with the component.
 import { EditorView, basicSetup } from 'codemirror';
 import { yaml } from '@codemirror/lang-yaml';
+import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
+import { tags } from '@lezer/highlight';
+
+// Syntax colors from the tokens: keys in the accent, comments subtle, values in the text color.
+const highlight = HighlightStyle.define([
+    { tag: [tags.propertyName, tags.definition(tags.propertyName)], color: 'var(--accent)' },
+    { tag: tags.comment, color: 'var(--text-subtle)' },
+    { tag: [tags.string, tags.number, tags.bool, tags.content], color: 'var(--text)' },
+    { tag: [tags.punctuation, tags.separator, tags.meta], color: 'var(--text-muted)' },
+]);
 
 export function dslEditor(property) {
     return {
@@ -16,7 +26,7 @@ export function dslEditor(property) {
             }, { dark: true });
             this.view = new EditorView({
                 doc: this.$wire.get(property) ?? '',
-                extensions: [basicSetup, yaml(), theme, EditorView.updateListener.of((update) => {
+                extensions: [basicSetup, yaml(), theme, syntaxHighlighting(highlight), EditorView.lineWrapping, EditorView.updateListener.of((update) => {
                     if (update.docChanged) {
                         clearTimeout(this.timer);
                         this.timer = setTimeout(() => this.$wire.set(property, this.view.state.doc.toString()), 400);
