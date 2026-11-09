@@ -15,6 +15,7 @@ use App\Market\Data\CandleSource;
 use App\Market\Data\FundingRate;
 use App\Market\Data\InstrumentStatus;
 use App\Market\Data\OpenInterest;
+use App\Market\Data\Positioning;
 use App\Market\Data\PriceMinute;
 use App\Market\Data\TradeFlow;
 use App\Market\Data\UpsertResult;
@@ -61,6 +62,7 @@ final readonly class Backfill
                 $jobs = array_filter([
                     'flow' => $flow ? fn (): UpsertResult => $this->scalping->upsertFlow($perp, CandleSource::Archive, array_filter($this->archive->tradeFlow($perp->venue_symbol, $day, $largeNotional), fn (TradeFlow $f): bool => $within($f->openTime))) : null,
                     'open interest' => $openInterest ? fn (): UpsertResult => $this->scalping->upsertOpenInterest($perp, CandleSource::Archive, array_filter($this->archive->openInterest($perp->venue_symbol, $day), fn (OpenInterest $o): bool => $within($o->time))) : null,
+                    'positioning' => $openInterest ? fn (): UpsertResult => $this->scalping->upsertPositioning($perp, CandleSource::Archive, array_filter($this->archive->positioning($perp->venue_symbol, $day), fn (Positioning $p): bool => $within($p->time))) : null,
                     'mark price' => $marks ? fn (): UpsertResult => $this->scalping->upsertMarks($perp, CandleSource::Archive, array_filter($this->archive->markPrices($perp->venue_symbol, $day), fn (PriceMinute $m): bool => $within($m->openTime))) : null,
                     'premium index' => $marks ? fn (): UpsertResult => $this->scalping->upsertPremium($perp, CandleSource::Archive, array_filter($this->archive->premiumIndex($perp->venue_symbol, $day), fn (PriceMinute $m): bool => $within($m->openTime))) : null,
                 ]);

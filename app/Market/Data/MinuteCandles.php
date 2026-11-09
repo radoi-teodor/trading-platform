@@ -20,6 +20,7 @@ final readonly class MinuteCandles
      * @param  array<string, PriceMinute>  $marks  the minute's mark price, by symbol
      * @param  array<string, PriceMinute>  $premium  the minute's premium index, by symbol
      * @param  array<string, OpenInterest>  $openInterest  open interest known from $closedAt (its time plus 5 minutes), by symbol
+     * @param  array<string, Positioning>  $positioning  positioning known from $closedAt (its time plus 5 minutes), by symbol (D-91)
      */
     public function __construct(
         public CarbonImmutable $closedAt,
@@ -29,5 +30,6 @@ final readonly class MinuteCandles
         public array $marks = [],
         public array $premium = [],
         public array $openInterest = [],
+        public array $positioning = [],
     ) {}
 }

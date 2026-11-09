@@ -7,6 +7,7 @@ namespace App\Strategy\Data;
 use App\Market\Data\Candle;
 use App\Market\Data\MinuteCandles;
 use App\Market\Data\OpenInterest;
+use App\Market\Data\Positioning;
 use App\Market\Data\PriceMinute;
 use App\Market\Data\TradeFlow;
 use App\Support\Number\Decimal;
@@ -29,6 +30,9 @@ final class PerpetualTracker
     /** @var array<string, OpenInterest> */
     private array $openInterest = [];
 
+    /** @var array<string, Positioning> */
+    private array $positioning = [];
+
     /** @var array<string, array<int, TradeFlow>> by symbol, then by minute open timestamp */
     private array $flow = [];
 
@@ -44,6 +48,10 @@ final class PerpetualTracker
 
         foreach ($minute->openInterest as $symbol => $interest) {
             $this->openInterest[$symbol] = $interest;
+        }
+
+        foreach ($minute->positioning as $symbol => $positioning) {
+            $this->positioning[$symbol] = $positioning;
         }
 
         foreach ($minute->flow as $symbol => $flow) {
@@ -68,6 +76,7 @@ final class PerpetualTracker
             }
         }
 
-        return new PerpetualView($this->marks[$symbol]->close ?? null, $this->premium[$symbol]->close ?? null, $this->openInterest[$symbol]->contracts ?? null, $buy, $sell);
+        return new PerpetualView($this->marks[$symbol]->close ?? null, $this->premium[$symbol]->close ?? null, $this->openInterest[$symbol]->contracts ?? null, $buy, $sell,
+            $this->positioning[$symbol]->longShortRatio ?? null, $this->positioning[$symbol]->topTraderRatio ?? null, $this->positioning[$symbol]->takerRatio ?? null);
     }
 }

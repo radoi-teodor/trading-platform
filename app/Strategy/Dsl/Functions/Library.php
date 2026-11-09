@@ -84,6 +84,10 @@ final class Library
         $specs[] = new FunctionSpec('basis', Group::Perpetual, $fraction, isCall: false);
         $specs[] = new FunctionSpec('mark_price', Group::Perpetual, $price, isCall: false);
 
+        foreach (['long_short_ratio', 'top_trader_ratio', 'taker_ratio'] as $name) {
+            $specs[] = new FunctionSpec($name, Group::Perpetual, $plain, isCall: false);
+        }
+
         foreach (['large_buy_volume', 'large_sell_volume', 'large_delta'] as $name) {
             $specs[] = new FunctionSpec($name, Group::Perpetual, Type::series(Unit::Volume), isCall: false);
         }

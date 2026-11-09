@@ -332,13 +332,14 @@ final class CompiledStrategy implements LimitedStrategy
     /**
      * The stores of data for scalping its expressions read (D-79), so a backtest can refuse a range they do not cover.
      *
-     * @return list<string> table names: trade_flow, open_interest, mark_price_minutes, premium_index_minutes
+     * @return list<string> table names: trade_flow, open_interest, positioning, mark_price_minutes, premium_index_minutes
      */
     public function scalpingData(): array
     {
         $tables = [
             'open_interest' => 'open_interest', 'oi_change' => 'open_interest', 'mark_price' => 'mark_price_minutes', 'basis' => 'premium_index_minutes',
             'large_buy_volume' => 'trade_flow', 'large_sell_volume' => 'trade_flow', 'large_delta' => 'trade_flow',
+            'long_short_ratio' => 'positioning', 'top_trader_ratio' => 'positioning', 'taker_ratio' => 'positioning',
         ];
         $exits = $this->spec->exits;
         $expressions = [...$this->spec->filters, ...array_map(fn (EntrySpec $entry) => $entry->when, array_values($this->spec->entries)), $exits->stopLoss, $exits->trailing, $exits->when];

@@ -52,6 +52,8 @@ final class ReadBack
         'trade_r' => 'the open result in R', 'hour_utc' => 'the UTC hour', 'weekday' => 'the weekday',
         'buy_volume' => 'the volume bought by takers', 'sell_volume' => 'the volume sold by takers', 'delta' => 'the volume delta',
         'open_interest' => 'the open interest', 'mark_price' => 'the mark price', 'basis' => 'the basis',
+        'long_short_ratio' => 'the ratio of accounts long to short', 'top_trader_ratio' => 'the ratio of the top traders positions long to short',
+        'taker_ratio' => 'the ratio of taker buy to sell volume',
         'large_buy_volume' => 'the volume of large buys', 'large_sell_volume' => 'the volume of large sells', 'large_delta' => 'the large-trade delta',
     ];
 

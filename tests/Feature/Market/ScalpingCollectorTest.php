@@ -51,8 +51,29 @@ function defaultBinanceFakes(): void
         'fapi.binance.com/futures/data/openInterestHist*' => Http::response([['symbol' => 'BTCUSDT', 'sumOpenInterest' => '95000.5', 'sumOpenInterestValue' => '7400000000.25', 'timestamp' => 1794218100000]]),
         'fapi.binance.com/fapi/v1/markPriceKlines*' => Http::response([]),
         'fapi.binance.com/fapi/v1/aggTrades*' => Http::response([]),
+        ...positioningFakes(),
     ]);
 }
+
+/** @return array<string, mixed> the three ratio endpoints, in the shapes Binance answers (D-91) */
+function positioningFakes(): array
+{
+    return [
+        'fapi.binance.com/futures/data/globalLongShortAccountRatio*' => Http::response([['symbol' => 'BTCUSDT', 'longAccount' => '0.7365', 'longShortRatio' => '2.7951', 'shortAccount' => '0.2635', 'timestamp' => 1794218100000]]),
+        'fapi.binance.com/futures/data/topLongShortPositionRatio*' => Http::response([['symbol' => 'BTCUSDT', 'longAccount' => '0.6861', 'longShortRatio' => '2.1860', 'shortAccount' => '0.3139', 'timestamp' => 1794218100000]]),
+        'fapi.binance.com/futures/data/takerlongshortRatio*' => Http::response([['buySellRatio' => '1.2883', 'sellVol' => '136.1080', 'buyVol' => '175.3530', 'timestamp' => 1794218100000]]),
+    ];
+}
+
+it('reads the long/short, top-trader and taker ratios over REST, one row per 5 minutes (D-91)', function (): void {
+    defaultBinanceFakes();
+    [$collector, , $btc] = collector();
+
+    $collector->tick();
+    $row = app(ScalpingRepository::class)->positioning($btc, CarbonImmutable::parse('2026-11-09 09:55', 'UTC'), CarbonImmutable::parse('2026-11-09 09:55', 'UTC'))[0];
+
+    expect([(string) $row->longShortRatio, (string) $row->topTraderRatio, (string) $row->takerRatio])->toBe(['2.7951', '2.186', '1.2883']);
+});
 
 it('subscribes to the trades and the mark price of each instrument it follows', function (): void {
     defaultBinanceFakes();

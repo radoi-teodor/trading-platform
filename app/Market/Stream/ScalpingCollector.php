@@ -41,6 +41,10 @@ final class ScalpingCollector
 
     private ?int $lastRest = null;
 
+    private const int POSITIONING_EVERY_PASSES = 3;
+
+    private int $restPasses = 0;
+
     public function __construct(
         private readonly BinanceRestClient $rest,
         private readonly ScalpingRepository $repository,
@@ -117,11 +121,17 @@ final class ScalpingCollector
 
         $this->lastRest = $now->getTimestamp();
         $closed = CarbonImmutable::createFromTimestampUTC($minute)->subMinute();
+        // Positioning changes every 5 minutes and costs three requests: every third pass, 30 seconds, is enough (D-91).
+        $positioning = $this->restPasses++ % self::POSITIONING_EVERY_PASSES === 0;
 
         foreach ($this->instruments as $venue => $instrument) {
-            $this->guarded($venue, function () use ($venue, $instrument, $closed): void {
+            $this->guarded($venue, function () use ($venue, $instrument, $closed, $positioning): void {
                 $this->repository->upsertPremium($instrument, CandleSource::Rest, $this->rest->priceMinutes('premiumIndexKlines', $venue, $closed->subMinutes(2), $closed));
                 $this->repository->upsertOpenInterest($instrument, CandleSource::Rest, $this->rest->openInterestHistory($venue, $closed->subMinutes(15), $closed->addMinute()));
+
+                if ($positioning) {
+                    $this->repository->upsertPositioning($instrument, CandleSource::Rest, $this->rest->positioning($venue, $closed->subMinutes(15), $closed->addMinute()));
+                }
             });
         }
     }
@@ -137,6 +147,7 @@ final class ScalpingCollector
                 $this->repository->upsertMarks($instrument, CandleSource::Rest, $this->rest->priceMinutes('markPriceKlines', $venue, $from, $to));
                 $this->repository->upsertPremium($instrument, CandleSource::Rest, $this->rest->priceMinutes('premiumIndexKlines', $venue, $from, $to));
                 $this->repository->upsertOpenInterest($instrument, CandleSource::Rest, $this->rest->openInterestHistory($venue, $from, $to->addMinute()));
+                $this->repository->upsertPositioning($instrument, CandleSource::Rest, $this->rest->positioning($venue, $from, $to->addMinute()));
                 $stored = [];
 
                 foreach ($this->repository->flow($instrument, $from, $to) as $flow) {

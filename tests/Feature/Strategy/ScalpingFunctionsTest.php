@@ -8,6 +8,7 @@ use App\Market\Data\CandleSource;
 use App\Market\Data\FundingRate;
 use App\Market\Data\MarketType;
 use App\Market\Data\OpenInterest;
+use App\Market\Data\Positioning;
 use App\Market\Data\PriceMinute;
 use App\Market\Data\TradeFlow;
 use App\Market\FundingRateRepository;
@@ -108,6 +109,24 @@ it('reads open interest only five minutes after its time, never earlier', functi
     // The candle closing at 00:05 sees the value stamped 00:00, not the one stamped 00:05.
     expect($chart['series']['open_interest'][0])->toBe((string) Decimal::of($stamped[0]['contracts'] ?? ''))
         ->and($chart['series']['open_interest'][0])->not->toBe((string) Decimal::of($stamped[1]['contracts'] ?? ''));
+});
+
+it('reads the long/short, top-trader and taker ratios five minutes after their time (D-91)', function (): void {
+    $perp = storeScalpingHour();
+    $rows = [];
+
+    foreach (range(0, 11) as $i) {
+        $rows[] = new Positioning(CarbonImmutable::parse('2026-11-01 00:00', 'UTC')->addMinutes(5 * $i), Decimal::of((string) (2 + $i)), Decimal::of((string) (10 + $i)), Decimal::of((string) (20 + $i)));
+    }
+
+    app(ScalpingRepository::class)->upsertPositioning($perp, CandleSource::Archive, $rows);
+    $chart = app(ChartSeries::class)->compute(Symbol::parse('BTC/USDT:USDT'), Timeframe::FiveMinutes, CarbonImmutable::parse('2026-11-01 00:00', 'UTC'), CarbonImmutable::parse('2026-11-01 00:15', 'UTC'), ['long_short_ratio', 'top_trader_ratio', 'taker_ratio']);
+
+    // The candle closing at 00:05 sees the row stamped 00:00, the one closing at 00:15 the row stamped 00:10.
+    expect($chart['series']['long_short_ratio'])->toBe(['2', '3', '4'])
+        ->and($chart['series']['top_trader_ratio'])->toBe(['10', '11', '12'])
+        ->and($chart['series']['taker_ratio'])->toBe(['20', '21', '22'])
+        ->and($chart['types']['long_short_ratio'])->toBe('a value series');
 });
 
 it('knows what each function measures, and keeps the large-trade flow to perpetuals', function (): void {

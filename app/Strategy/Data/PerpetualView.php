@@ -19,5 +19,8 @@ final readonly class PerpetualView
         public ?Decimal $openInterest = null,
         public ?Decimal $largeBuyVolume = null,
         public ?Decimal $largeSellVolume = null,
+        public ?Decimal $longShortRatio = null,
+        public ?Decimal $topTraderRatio = null,
+        public ?Decimal $takerRatio = null,
     ) {}
 }

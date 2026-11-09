@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Market\Archive\ArchiveMissing;
 use App\Market\Archive\BinanceArchive;
 use App\Market\Data\OpenInterest;
+use App\Market\Data\Positioning;
 use App\Market\Data\PriceMinute;
 use App\Market\Data\TradeFlow;
 use App\Support\Number\Decimal;
@@ -45,6 +46,16 @@ it('reads open interest every 5 minutes in time order, from its text timestamps'
     expect($rows)->toHaveCount(288)
         ->and($view($rows[0]))->toBe(['2026-11-01T00:00:00Z', '96913.056', '7510208385.689683'])
         ->and($view($rows[287]))->toBe(['2026-11-01T23:55:00Z', '95255.531', '7459972293.553056']);
+});
+
+it('reads the long/short, top-trader and taker ratios of the same metrics file (D-91)', function (): void {
+    $rows = app(BinanceArchive::class)->positioning('BTCUSDT', CarbonImmutable::parse(SCALPING_DAY, 'UTC'));
+    $view = fn (Positioning $p): array => [$p->time->toIso8601ZuluString(), (string) $p->longShortRatio, (string) $p->topTraderRatio, (string) $p->takerRatio];
+
+    expect($rows)->toHaveCount(288)
+        ->and($view($rows[0]))->toBe(['2026-11-01T00:00:00Z', '2.57410739', '1.676205', '0.370209'])
+        ->and($view($rows[287]))->toBe(['2026-11-01T23:55:00Z', '2.30029281', '1.674094', '0.876894'])
+        ->and($rows[0]->knownAt()->toIso8601ZuluString())->toBe('2026-11-01T00:05:00Z');
 });
 
 it('reads the mark price and the premium index of every minute', function (): void {

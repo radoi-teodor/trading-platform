@@ -11,6 +11,7 @@ use App\Market\Data\Candle;
 use App\Market\Data\FundingRate;
 use App\Market\Data\MarketType;
 use App\Market\Data\OpenInterest;
+use App\Market\Data\Positioning;
 use App\Market\Data\PriceMinute;
 use App\Market\Data\TradeFlow;
 use App\Market\Data\TradeFlowBuilder;
@@ -118,6 +119,29 @@ final readonly class BinanceArchive
             // create_time is text, in UTC: 2026-11-01 00:05:00.
             $time = CarbonImmutable::createFromFormat('Y-m-d H:i:s', $fields[0], 'UTC') ?: throw new UnexpectedValueException("Binance metrics: '{$fields[0]}' is not a time.");
             $rows[$time->getTimestamp()] = new OpenInterest($time, Decimal::of(ExchangeNumber::plain($fields[2])), Decimal::of(ExchangeNumber::plain($fields[3])));
+        }
+
+        ksort($rows);
+
+        return array_values($rows);
+    }
+
+    /**
+     * The day's positioning every 5 minutes, oldest first (D-91), from the same metrics file as open interest:
+     * count_long_short_ratio (accounts), sum_toptrader_long_short_ratio (top traders' positions) and
+     * sum_taker_long_short_vol_ratio (taker volume). An empty field is a ratio Binance did not give.
+     *
+     * @return list<Positioning>
+     */
+    public function positioning(string $venueSymbol, CarbonImmutable $day): array
+    {
+        $local = $this->archive("futures/um/daily/metrics/{$venueSymbol}/{$venueSymbol}-metrics-{$day->utc()->format('Y-m-d')}.zip");
+        $ratio = fn (string $field): ?Decimal => trim($field) === '' ? null : Decimal::of(ExchangeNumber::plain(trim($field)));
+        $rows = [];
+
+        foreach (self::lines($local, 8) as $fields) {
+            $time = CarbonImmutable::createFromFormat('Y-m-d H:i:s', $fields[0], 'UTC') ?: throw new UnexpectedValueException("Binance metrics: '{$fields[0]}' is not a time.");
+            $rows[$time->getTimestamp()] = new Positioning($time, $ratio($fields[6]), $ratio($fields[5]), $ratio($fields[7]));
         }
 
         ksort($rows);

@@ -10,6 +10,7 @@ use App\Market\Data\InstrumentDefinition;
 use App\Market\Data\InstrumentStatus;
 use App\Market\Data\MarketType;
 use App\Market\Data\OpenInterest;
+use App\Market\Data\Positioning;
 use App\Market\Data\PriceMinute;
 use App\Market\Data\TradeFlow;
 use App\Market\Data\TradeFlowBuilder;
@@ -193,6 +194,36 @@ final readonly class BinanceRestClient
         ksort($values);
 
         return array_values($values);
+    }
+
+    /**
+     * A perpetual's positioning every 5 minutes from $from to $to (D-91), joined by time from three endpoints that
+     * match the metrics archive's columns: accounts, top traders' positions and taker volume. A ratio an endpoint
+     * did not give for a time is null.
+     *
+     * @return list<Positioning>
+     */
+    public function positioning(string $venueSymbol, CarbonImmutable $from, CarbonImmutable $to): array
+    {
+        $read = function (string $path, string $field) use ($venueSymbol, $from, $to): array {
+            $ratios = [];
+
+            foreach (Json::array($this->get(MarketType::Perp, $path, [
+                'symbol' => $venueSymbol, 'period' => '5m', 'limit' => 500,
+                'startTime' => EpochTime::milliseconds($from), 'endTime' => EpochTime::milliseconds($to),
+            ]), $path) as $row) {
+                $ratios[EpochTime::parse((string) Json::int($row, 'timestamp'))->getTimestamp()] = Decimal::of(Json::number($row, $field));
+            }
+
+            return $ratios;
+        };
+        $accounts = $read('/futures/data/globalLongShortAccountRatio', 'longShortRatio');
+        $top = $read('/futures/data/topLongShortPositionRatio', 'longShortRatio');
+        $taker = $read('/futures/data/takerlongshortRatio', 'buySellRatio');
+        $times = array_unique([...array_keys($accounts), ...array_keys($top), ...array_keys($taker)]);
+        sort($times);
+
+        return array_map(fn (int $time): Positioning => new Positioning(CarbonImmutable::createFromTimestampUTC($time), $accounts[$time] ?? null, $top[$time] ?? null, $taker[$time] ?? null), $times);
     }
 
     /**

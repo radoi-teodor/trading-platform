@@ -6,6 +6,7 @@ namespace App\Market;
 
 use App\Market\Data\CandleSource;
 use App\Market\Data\OpenInterest;
+use App\Market\Data\Positioning;
 use App\Market\Data\PriceMinute;
 use App\Market\Data\TradeFlow;
 use App\Market\Data\UpsertResult;
@@ -27,6 +28,7 @@ final readonly class ScalpingRepository
     private const array COLUMNS = [
         'trade_flow' => ['open_time', ['large_buy_volume', 'large_sell_volume', 'large_buy_count', 'large_sell_count', 'largest_notional', 'threshold']],
         'open_interest' => ['time', ['contracts', 'value']],
+        'positioning' => ['time', ['long_short_ratio', 'top_trader_ratio', 'taker_ratio']],
         'mark_price_minutes' => ['open_time', ['open', 'high', 'low', 'close']],
         'premium_index_minutes' => ['open_time', ['open', 'high', 'low', 'close']],
     ];
@@ -57,6 +59,18 @@ final readonly class ScalpingRepository
         return $this->upsert('open_interest', $instrument, $source, $values);
     }
 
+    /** @param iterable<Positioning> $rows */
+    public function upsertPositioning(Instrument $instrument, CandleSource $source, iterable $rows): UpsertResult
+    {
+        $values = [];
+
+        foreach ($rows as $p) {
+            $values[] = [$p->time, $p->longShortRatio?->__toString(), $p->topTraderRatio?->__toString(), $p->takerRatio?->__toString()];
+        }
+
+        return $this->upsert('positioning', $instrument, $source, $values);
+    }
+
     /** @param iterable<PriceMinute> $rows */
     public function upsertMarks(Instrument $instrument, CandleSource $source, iterable $rows): UpsertResult
     {
@@ -82,6 +96,20 @@ final readonly class ScalpingRepository
     public function openInterest(Instrument $instrument, CarbonImmutable $from, CarbonImmutable $to): array
     {
         return array_map(fn (object $r): OpenInterest => new OpenInterest(Rows::time($r, 'time'), Decimal::of(Rows::string($r, 'contracts')), Decimal::of(Rows::string($r, 'value'))), $this->rows('open_interest', $instrument, $from, $to));
+    }
+
+    /** @return list<Positioning> values stamped from $from to $to, oldest first */
+    public function positioning(Instrument $instrument, CarbonImmutable $from, CarbonImmutable $to): array
+    {
+        return array_map(self::positioningRow(...), $this->rows('positioning', $instrument, $from, $to));
+    }
+
+    /** A stored positioning row, its missing ratios null. */
+    public static function positioningRow(object $r): Positioning
+    {
+        $ratio = fn (string $column): ?Decimal => ($value = Rows::nullableString($r, $column)) === null ? null : Decimal::of($value);
+
+        return new Positioning(Rows::time($r, 'time'), $ratio('long_short_ratio'), $ratio('top_trader_ratio'), $ratio('taker_ratio'));
     }
 
     /** @return list<PriceMinute> */

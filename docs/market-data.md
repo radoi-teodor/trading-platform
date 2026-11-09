@@ -145,6 +145,7 @@ so in its file name. The opt-in `network` group (`composer test:network`) reads 
 |-------|---------------------------------------------|------|------------|
 | `trade_flow` (instrument, minute): large-trade volume bought and sold, their count, the largest trade's notional | `daily/aggTrades/{SYM}/{SYM}-aggTrades-{day}.zip`, read as a stream and reduced to minutes | `<sym>@aggTrade`, reduced in memory | the minute's close |
 | `open_interest` (instrument, 5-minute time): contracts and quote value | `daily/metrics/{SYM}/{SYM}-metrics-{day}.zip` (`create_time` is text, UTC) | `GET /futures/data/openInterestHist?period=5m` | its time plus 5 minutes |
+| `positioning` (instrument, 5-minute time, D-91): accounts long to short (`long_short_ratio`), top traders' positions long to short (`top_trader_ratio`), taker buy to sell volume (`taker_ratio`) | the same `daily/metrics` file: `count_long_short_ratio`, `sum_toptrader_long_short_ratio`, `sum_taker_long_short_vol_ratio` (`--oi` imports both) | `GET /futures/data/globalLongShortAccountRatio`, `topLongShortPositionRatio`, `takerlongshortRatio` (`period=5m`), every 30 s | its time plus 5 minutes |
 | `mark_price_minutes` and `premium_index_minutes` (instrument, minute): open, high, low, close | `daily/markPriceKlines/{SYM}/1m/...` and `daily/premiumIndexKlines/{SYM}/1m/...` | `<sym>@markPrice@1s`; `GET /fapi/v1/premiumIndexKlines` | the minute's close |
 
 The large-trade notional is set per instrument in the universe (BTC 100,000 USDT, ETH 50,000 by default) and applied
