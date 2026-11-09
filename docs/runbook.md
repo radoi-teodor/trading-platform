@@ -16,7 +16,7 @@ created in the phase that needs it and this file is updated with it.
 | market-data | `php artisan market:stream spot` and `php artisan market:stream perp` | Every enabled instrument has a candle less than 2 timeframes old |
 | engine | `php artisan engine:run <account>` (the account's mode: paper or testnet) | The account's snapshot is under 2 minutes old, no open reconciliation mismatch |
 | notifications | `php artisan queue:work database --queue=notifications` | No failed jobs |
-| simulation worker | `php artisan queue:work simulation --queue=simulation --timeout=3600 --tries=1` | Runs leave `queued` |
+| simulation worker | `php artisan queue:work simulation --queue=simulation,market --timeout=21600 --tries=1` | Runs and history imports leave `queued` |
 | scheduler | `php artisan schedule:work` | The daily report arrives each morning (D-77); `php artisan schedule:list` shows the jobs |
 | web | `php artisan serve` (or PHP-FPM behind a reverse proxy) | `/up` answers |
 
@@ -81,7 +81,7 @@ redirect_stderr=true
 stdout_logfile=/srv/trading-platform/storage/logs/scheduler.log
 
 [program:simulation]
-command=php artisan queue:work simulation --queue=simulation --timeout=3600 --tries=1
+command=php artisan queue:work simulation --queue=simulation,market --timeout=21600 --tries=1
 directory=/srv/trading-platform
 user=trading
 autorestart=true
@@ -177,6 +177,14 @@ only through Binance's public-data hosts and archives and should be confirmed on
 **Health.** Each stream writes a row in `heartbeats` (`market:stream spot`, `market:stream perp`) at least every
 30 seconds, with the result of its last gap repair. A heartbeat older than 2 minutes means the process is down.
 
+**The universe and history (D-80).** Settings, Market data lists the instruments followed: streamed or history
+only, with the scalping data on for perpetuals, and the notional from which a trade is large. Add any instrument
+`php artisan market:instruments perp` (or `spot`) has stored, then import its history from a day: the import runs as
+a job on the simulation worker, shows its progress there, and estimates its size. Twelve months of candles and
+scalping data for BTC and ETH perpetuals is roughly 1.3 GB in the database and 10 to 15 GB downloaded once. Restart
+`market:stream` after changing what is streamed. On the command line:
+`php artisan market:backfill BTC/USDT:USDT --from=2025-11 --funding --flow --oi --mark`.
+
 ## 9. Backtests
 
 | Task | Command |
@@ -218,7 +226,7 @@ strategies, and run backtests, grids and walk-forwards. It cannot trade, change 
 | Turn it on | `MCP_ENABLED=true` in `.env`, then restart the web process |
 | Create a token | Settings, MCP tokens (or `php artisan mcp:token <name>`): copy it now, it is shown once and stored only as a hash |
 | Revoke a token | Settings, MCP tokens (or `php artisan mcp:revoke <name>`) |
-| Run queued simulations | `php artisan queue:work simulation --queue=simulation --timeout=3600 --tries=1` |
+| Run queued simulations | `php artisan queue:work simulation --queue=simulation,market --timeout=21600 --tries=1` |
 
 Connect a client to `http://<host>:8000/mcp` with the header `Authorization: Bearer <token>`. For Claude Code:
 `claude mcp add --transport http trading-x http://127.0.0.1:8000/mcp --header "Authorization: Bearer <token>"`.

@@ -169,6 +169,73 @@
         </section>
     </div>
 
+    {{-- Market data: the universe and history imports (D-80). --}}
+    <section class="{{ $card }}" aria-labelledby="market-heading">
+        <h2 id="market-heading" class="{{ $heading }}">Market data</h2>
+        <div class="mb-3 overflow-x-auto">
+            <table class="w-full text-left text-sm">
+                <thead class="text-2xs uppercase tracking-wider text-muted">
+                    <tr><th class="py-1 pr-3 font-normal">Instrument</th><th class="pr-3 font-normal">Streamed</th><th class="pr-3 font-normal">Scalping data</th><th class="hidden pr-3 font-normal md:table-cell">Large trade from</th><th class="font-normal"></th></tr>
+                </thead>
+                <tbody class="font-mono">
+                    @foreach ($universe as $u)
+                        <tr class="h-row border-t border-border">
+                            <td class="whitespace-nowrap pr-3">{{ $u->symbol }}</td>
+                            <td class="pr-3"><input type="checkbox" class="size-4 accent-[var(--accent)]" aria-label="Stream {{ $u->symbol }}" @checked($u->streamed) wire:click="setUniverse({{ $u->id }}, 'streamed', {{ $u->streamed ? 'false' : 'true' }})"></td>
+                            <td class="pr-3">
+                                @if ($u->market === \App\Market\Data\MarketType::Perp)
+                                    <input type="checkbox" class="size-4 accent-[var(--accent)]" aria-label="Scalping data of {{ $u->symbol }}" @checked($u->scalping) wire:click="setUniverse({{ $u->id }}, 'scalping', {{ $u->scalping ? 'false' : 'true' }})">
+                                @else
+                                    <span class="text-muted">spot</span>
+                                @endif
+                            </td>
+                            <td class="hidden pr-3 md:table-cell">
+                                @if ($u->market === \App\Market\Data\MarketType::Perp)
+                                    <form wire:submit="setNotional({{ $u->id }})" class="flex items-center gap-1">
+                                        <input wire:model="notional.{{ $u->id }}" placeholder="{{ $u->large_notional === null ? 'default' : rtrim(rtrim($u->large_notional, '0'), '.') }}" aria-label="Large-trade notional of {{ $u->symbol }}" class="{{ $input }} w-28">
+                                    </form>
+                                @endif
+                            </td>
+                            <td class="whitespace-nowrap text-right">
+                                <button type="button" class="text-sm text-muted hover:text-text" wire:click="$set('importSymbol', {{ $u->id }})">Import</button>
+                                <button type="button" class="ml-2 text-sm text-down hover:underline" wire:click="removeInstrument({{ $u->id }})" wire:confirm="Stop following {{ $u->symbol }}? Its stored history stays.">Remove</button>
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+        <div class="grid grid-cols-1 gap-3 lg:grid-cols-2">
+            <form wire:submit="addInstrument" class="flex flex-wrap items-end gap-2">
+                <label class="block min-w-0 flex-1"><span class="{{ $label }}">Add an instrument</span><input wire:model="universeSymbol" placeholder="SOL/USDT:USDT or SOL/USDT" class="{{ $input }}"></label>
+                <x-button>Add</x-button>
+            </form>
+            <form wire:submit="import" class="flex flex-wrap items-end gap-2">
+                <label class="block min-w-0"><span class="{{ $label }}">Import history of</span>
+                    <select wire:model="importSymbol" class="{{ $input }}" aria-label="Instrument to import">
+                        <option value="">pick one</option>
+                        @foreach ($universe as $u)<option value="{{ $u->id }}">{{ $u->symbol }}</option>@endforeach
+                    </select>
+                </label>
+                <label class="block min-w-0"><span class="{{ $label }}">From</span><input wire:model="importFrom" placeholder="2025-11-01" class="{{ $input }} w-32"></label>
+                <label class="flex min-h-row items-center gap-1 text-sm"><input type="checkbox" class="size-4 accent-[var(--accent)]" wire:model="importCandles"> candles</label>
+                <label class="flex min-h-row items-center gap-1 text-sm"><input type="checkbox" class="size-4 accent-[var(--accent)]" wire:model="importScalping"> scalping data</label>
+                <x-button>Import</x-button>
+            </form>
+        </div>
+        @if ($marketMessage !== '')<p class="mt-2 text-sm text-muted" role="status">{{ $marketMessage }}</p>@endif
+        @if ($marketJobs->isNotEmpty())
+            <ul class="mt-3 text-sm" aria-label="Imports">
+                @foreach ($marketJobs as $j)
+                    <li class="border-t border-border py-1"><span class="font-mono">#{{ $j->id }} {{ $j->symbol }} from {{ $j->from->format('Y-m-d') }}</span>
+                        <span @class(['ml-2', 'text-up' => $j->status === 'done', 'text-down' => $j->status === 'failed', 'text-muted' => ! in_array($j->status, ['done', 'failed'], true)])>{{ $j->status }}</span>
+                        @if ($j->output)<span class="ml-2 text-muted">{{ \Illuminate\Support\Str::limit(trim(\Illuminate\Support\Arr::last(explode("\n", trim($j->output))) ?? ''), 120) }}</span>@endif
+                    </li>
+                @endforeach
+            </ul>
+        @endif
+    </section>
+
     {{-- Risk, read-only: raising a limit is a code change with a test (D-19). --}}
     <section class="{{ $card }}" aria-labelledby="risk-heading">
         <h2 id="risk-heading" class="{{ $heading }}">Risk limits</h2>

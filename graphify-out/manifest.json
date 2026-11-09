@@ -493,9 +493,9 @@
     "semantic_hash": "5265ba23201e9334112621310c7cfa62"
   },
   "app/Market/Instruments/Universe.php": {
-    "mtime": 1794225741.9539,
-    "seen": 1794226381.8852196,
-    "ast_hash": "6c0b94bd5899ccf00f3828d5a5dd4f0f",
+    "mtime": 1794227127.8074865,
+    "seen": 1794227873.3348005,
+    "ast_hash": "e6fbc71e4be9f0e9d4ef7674e36f620b",
     "semantic_hash": ""
   },
   "app/Market/Models/Instrument.php": {
@@ -1840,9 +1840,9 @@
     "semantic_hash": ""
   },
   "docs/architecture.md": {
-    "mtime": 1794222883.7782564,
-    "seen": 1794223017.1002338,
-    "ast_hash": "de0a2eff1ef33d76ce909f3162532f97",
+    "mtime": 1794226550.9968796,
+    "seen": 1794227873.3478267,
+    "ast_hash": "902be195d5eec0526508fe9c77b1e0be",
     "semantic_hash": ""
   },
   "docs/assessment.md": {
@@ -1894,9 +1894,9 @@
     "semantic_hash": ""
   },
   "docs/runbook.md": {
-    "mtime": 1794222326.8366356,
-    "seen": 1794223017.1004877,
-    "ast_hash": "03d87d60c7fcd0a3bd10465f0093b367",
+    "mtime": 1794226550.994349,
+    "seen": 1794227873.3479838,
+    "ast_hash": "fa565de86ee8cac5da51aa33ceffeed2",
     "semantic_hash": ""
   },
   "docs/security.md": {
@@ -3292,15 +3292,15 @@
     "semantic_hash": ""
   },
   "app/Livewire/SettingsScreen.php": {
-    "mtime": 1794222318.3699732,
-    "seen": 1794223017.0831664,
-    "ast_hash": "d82b1a33736fe94b1967bac4e6391fe6",
+    "mtime": 1794226540.337249,
+    "seen": 1794227873.333234,
+    "ast_hash": "94babcbec02fe915fcfa36e0d20ce236",
     "semantic_hash": ""
   },
   "resources/views/livewire/settings-screen.blade.php": {
-    "mtime": 1794222318.3704333,
-    "seen": 1794223017.0953827,
-    "ast_hash": "cddfde0217aeb2bcbd969ff48ab960ee",
+    "mtime": 1794226528.770754,
+    "seen": 1794227873.3438787,
+    "ast_hash": "508897201652d87c3e0d4f0c663483ad",
     "semantic_hash": ""
   },
   "tests/Feature/Web/SettingsScreenTest.php": {
@@ -3466,9 +3466,9 @@
     "semantic_hash": ""
   },
   "app/Notifications/Health/HealthChecks.php": {
-    "mtime": 1794222284.1511755,
-    "seen": 1794223017.0856936,
-    "ast_hash": "0f5714a00af6c33cdb8f5a42d7824158",
+    "mtime": 1794226475.8390713,
+    "seen": 1794227873.335447,
+    "ast_hash": "5fa9d6928b845319544274a7243bfa71",
     "semantic_hash": ""
   },
   "app/Notifications/Health/HealthResult.php": {
@@ -3490,9 +3490,9 @@
     "semantic_hash": ""
   },
   "tests/Feature/Notifications/HealthTest.php": {
-    "mtime": 1794222364.8632975,
-    "seen": 1794223017.09625,
-    "ast_hash": "5501919fa1be15b9ca692be9fd610f48",
+    "mtime": 1794226475.8394186,
+    "seen": 1794227873.3448188,
+    "ast_hash": "f75f665cccccaf3b2e0f11f1a4c0a303",
     "semantic_hash": ""
   },
   "tests/Support/FakeDisk.php": {
@@ -3607,6 +3607,36 @@
     "mtime": 1794225762.4736435,
     "seen": 1794226381.8956451,
     "ast_hash": "dbbb2e4709cd7b6a13d46863d2fc7027",
+    "semantic_hash": ""
+  },
+  "app/Market/Jobs/ImportMarketData.php": {
+    "mtime": 1794226475.8232424,
+    "seen": 1794227873.334803,
+    "ast_hash": "c5f2e4dd0e9e791b3600cfcd05395f59",
+    "semantic_hash": ""
+  },
+  "app/Market/Models/MarketJob.php": {
+    "mtime": 1794226447.4083045,
+    "seen": 1794227873.3348684,
+    "ast_hash": "19a588bd44052cbdbde7718c7f8dbf8c",
+    "semantic_hash": ""
+  },
+  "app/Market/Models/UniverseEntry.php": {
+    "mtime": 1794226447.4070275,
+    "seen": 1794227873.334871,
+    "ast_hash": "7a0c9dbb308c2376e36323f67cbb6b65",
+    "semantic_hash": ""
+  },
+  "database/migrations/2026_11_09_000016_create_market_universe_tables.php": {
+    "mtime": 1794227206.0505056,
+    "seen": 1794227873.3432703,
+    "ast_hash": "51dec0dbd13ba7a7dbb672d8c23ee019",
+    "semantic_hash": ""
+  },
+  "tests/Feature/Web/MarketDataSettingsTest.php": {
+    "mtime": 1794227127.8099048,
+    "seen": 1794227873.3451414,
+    "ast_hash": "694fbeee24a2938233f36167822ec237",
     "semantic_hash": ""
   },
   "package-lock.json": {

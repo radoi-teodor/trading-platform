@@ -7,11 +7,11 @@ namespace App\Notifications\Health;
 use App\Execution\Models\Account;
 use App\Execution\Models\AccountSnapshot;
 use App\Market\Data\MarketType;
+use App\Market\Instruments\Universe;
 use App\Market\Models\Instrument;
 use App\Support\Clock\Clock;
 use App\Support\Symbol;
 use Carbon\CarbonImmutable;
-use Illuminate\Contracts\Config\Repository;
 use Illuminate\Database\ConnectionInterface;
 
 /**
@@ -34,7 +34,7 @@ final readonly class HealthChecks
 
     public const int MIN_FREE_PERCENT = 10;
 
-    public function __construct(private ConnectionInterface $db, private Clock $clock, private Repository $config, private DiskUsage $disk) {}
+    public function __construct(private ConnectionInterface $db, private Clock $clock, private Universe $universe, private DiskUsage $disk) {}
 
     /** @return list<HealthResult> */
     public function run(): array
@@ -48,20 +48,21 @@ final readonly class HealthChecks
     private function streams(CarbonImmutable $now): array
     {
         $results = [];
-        $universe = $this->config->get('market.universe');
 
-        foreach (is_array($universe) ? $universe : [] as $market => $symbols) {
-            if (! is_array($symbols) || $symbols === [] || ! is_string($market)) {
+        foreach (MarketType::cases() as $market) {
+            $instruments = $this->universe->instruments($market);
+
+            if ($instruments === []) {
                 continue;
             }
 
-            $beat = $this->db->table('heartbeats')->where('process', "market:stream {$market}")->value('beat_at');
-            $results[] = new HealthResult("stream {$market}", is_string($beat)
+            $beat = $this->db->table('heartbeats')->where('process', "market:stream {$market->value}")->value('beat_at');
+            $results[] = new HealthResult("stream {$market->value}", is_string($beat)
                 ? self::older(CarbonImmutable::parse($beat, 'UTC'), $now, self::HEARTBEAT_SECONDS, fn (int $m): string => "no heartbeat for {$m} minutes")
                 : 'it has never run');
 
-            foreach ($symbols as $text) {
-                $results[] = $this->candles(Symbol::parse(is_string($text) ? $text : ''), $now);
+            foreach ($instruments as $instrument) {
+                $results[] = $this->candles(Symbol::parse($instrument->symbol), $now);
             }
         }
 
@@ -112,8 +113,11 @@ final readonly class HealthChecks
 
     private function simulations(CarbonImmutable $now): HealthResult
     {
-        $oldest = $this->db->table('simulation_jobs')->where('status', 'queued')->min('created_at');
-        $running = $this->db->table('simulation_jobs')->where('status', 'running')->exists();
+        $oldest = collect([
+            $this->db->table('simulation_jobs')->where('status', 'queued')->min('created_at'),
+            $this->db->table('market_jobs')->where('status', 'queued')->min('created_at'),
+        ])->filter(fn (mixed $at): bool => is_string($at))->min();
+        $running = $this->db->table('simulation_jobs')->where('status', 'running')->exists() || $this->db->table('market_jobs')->where('status', 'running')->exists();
 
         if (! is_string($oldest) || $running) {
             return new HealthResult('simulation queue');

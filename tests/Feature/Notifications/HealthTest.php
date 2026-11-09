@@ -9,6 +9,7 @@ use App\Market\CandleRepository;
 use App\Market\Data\CandleSource;
 use App\Market\Data\MarketType;
 use App\Market\Models\Instrument;
+use App\Market\Models\UniverseEntry;
 use App\Notifications\Health\DiskUsage;
 use App\Support\Clock\Clock;
 use App\Support\Clock\SimClock;
@@ -33,7 +34,8 @@ const HEALTH_NOW = '2026-11-09 10:00:30';
 function healthyMachine(): Account
 {
     app()->instance(Clock::class, new SimClock(CarbonImmutable::parse(HEALTH_NOW, 'UTC')));
-    config()->set('market.universe', ['spot' => ['BTC/USDT'], 'perp' => []]);
+    UniverseEntry::query()->delete();
+    UniverseEntry::query()->create(['market' => MarketType::Spot, 'symbol' => 'BTC/USDT', 'streamed' => true, 'scalping' => false, 'created_at' => '2026-11-01']);
     config()->set('services.telegram', ['token' => '123456:health-test-only-not-a-real-token', 'chat_id' => '42', 'base_url' => 'https://api.telegram.org']);
     $disk = new FakeDisk(400_000_000_000, 1_000_000_000_000);
     app()->instance(DiskUsage::class, $disk);
