@@ -407,6 +407,37 @@ drawdown gate reads the 95th percentile of the trade resamples, at the account's
 `strategy:gates` take `--workers`: the sets are split over child processes reading the parent's database, and the
 outcomes are identical whatever their number (D-57).
 
+**D-67. The live feed reads closed minutes from the database** (2026-11-09, accepted with the Phase 4 plan)
+`engine:run` polls `candles` every 2 seconds for minutes closed by `market:stream` and handles a minute once every
+followed instrument has it; a missing minute trips the stale-data breaker. Redis is not needed for it; the tick
+stream of `architecture.md` waits until a strategy needs prices inside the minute.
+
+**D-68. Paper accounts restart by replay** (2026-11-09, accepted with the Phase 4 plan)
+A paper account's state is rebuilt on start by replaying its minutes and commands from its start through the same
+loop, and every replayed decision must equal the journaled one; the first difference halts the account and alerts.
+A restart or a power cut loses nothing, and every restart is also a replay test.
+
+**D-69. Binance through our own client, not ccxt** (2026-11-09, accepted with the Phase 4 plan; amends D-2)
+Signed REST (HMAC-SHA256) and the user data stream are our code, next to the public client of Phase 1, which
+already knows Binance's symbols, filters and errors. The PHP edition of ccxt is large, synchronous and would sit
+beside that code. Testnet and live differ only in their base URLs and keys.
+
+**D-70. Polling instead of Reverb in Phase 4** (2026-11-09, accepted with the Phase 4 plan; amends D-3)
+Livewire components poll the account snapshot every 2 seconds. One operator does not need a WebSocket server;
+Reverb comes back with a D-number when something needs pushes.
+
+**D-71. Paper follows Backtested automatically** (2026-11-09, accepted with the Phase 4 plan)
+When a version becomes Backtested it is deployed to the paper account and its stage moves to Paper, both
+journaled (`risk-policy.md`, section 6). The engine picks it up at its next start. Paper runs only versions that
+passed the gates (the operator's answer to the Phase 4 questions).
+
+**D-72. OBV and volume profile join the library** (2026-11-09, accepted with the Phase 4 plan)
+`obv()` is a volume series. `vp_poc(n)`, `vp_vah(n)` and `vp_val(n)` are price series of the volume profile of the
+last n candles: 24 bins between their lowest low and highest high, each candle's volume spread evenly over the bins
+its range covers, the point of control the fullest bin's middle (the lower on a tie), and the value area grown from
+it, one bin at a time towards the larger neighbour, until it holds 70 % of the volume. They are checked against the
+Python oracle like every other indicator.
+
 | Id | Question | Blocks |
 |----|----------|--------|
 | O-6 | Pay Binance fees in BNB (25 % off spot)? Needs a small BNB balance whose price moves. | Live cost model (D-28 reads it from the account either way) |

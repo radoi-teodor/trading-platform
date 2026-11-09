@@ -27,8 +27,8 @@ database between two codebases.
 | web | `php artisan serve` / PHP-FPM | HTTP, Livewire UI, MCP endpoint | Never waits on the engine or the network; reads state, writes commands |
 | reverb | `php artisan reverb:start` | WebSockets to the browser | Throttled broadcasts (prices at most 4 per second per instrument) |
 | market-data | `php artisan market:stream spot` and `market:stream perp` | One combined WebSocket stream per market | Blocking client, one process per market; stores closed candles, repairs gaps on reconnect (`docs/market-data.md`); later publishes ticks to a Redis stream |
-| engine | `php artisan engine:run {account} --mode=paper\|live` | Orders, positions, ledger of one account | The only writer of trading state for that account |
-| horizon | `php artisan horizon` | Queued jobs | Queues: `simulation` (CPU-heavy), `notifications`, `default` |
+| engine | `php artisan engine:run {account}` | Orders, positions, ledger of one account, in the account's mode (paper or testnet; live from Phase 6) | The only writer of trading state for that account; reads closed minutes from the database (D-67), restarts by replay (D-68) |
+| queue workers | `php artisan queue:work --queue=notifications,default` and the simulation worker below | Queued jobs | Horizon once Redis is installed |
 | simulation worker | `php artisan queue:work simulation --queue=simulation --timeout=3600 --tries=1` | Background backtests, grids, walk-forwards (D-62) | Until Redis and Horizon are installed |
 | scheduler | `php artisan schedule:work` | Timed jobs | Reconciliation sweep, daily reports |
 
@@ -52,7 +52,7 @@ A modular monolith under `app/`. Each module has `Contracts/`, `Data/` (immutabl
 | `Simulation` | Backtest runner, walk-forward, Monte Carlo, metrics, reports | Support, Market, Strategy, Risk, Portfolio, Execution (simulated venue only) |
 | `Agents` | The MCP server for external research agents: tools, tokens, call log (D-63, D-64) | Support, Market, Strategy, Simulation, Portfolio (read), Journal |
 | `Journal` | Engine decision records, command log | Support |
-| `Notifications` | Telegram, email | Support, Journal |
+| `Notifications` | Telegram (Phase 4), email | Support, Journal |
 | `Web` | Livewire components, controllers, MCP server | everything above, read-only except through commands |
 
 The rule that matters most: **`Agents` never depends on `Execution`**, and nothing in `Agents` can produce an

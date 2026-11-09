@@ -15,14 +15,13 @@ candle of every instrument the account follows whose minute ended at `t` (open t
 - Strategies do not see 1-minute candles unless their timeframe is 1 minute. Each strategy declares an instrument
   and a timeframe; an aggregator builds that timeframe from the 1-minute candles and hands the strategy a closed
   candle when the last minute of the period closes. A 4-hour candle opening at 08:00 is decided on at 12:00.
-- Fills, timers and operator commands become events of their own in Phase 4. In a backtest, fills come from the
-  simulated venue and are read at the next minute event, which is how a live engine sees them too: after they
-  happened.
+- Fills are read at the next minute event, in a backtest from the simulated venue and in paper and testnet from
+  the venue's updates: after they happened. Operator commands are applied at the next minute event (section 9).
 
 ## 2. Order of work in one event
 
 1. **Stamp.** The clock is set to `t` (`SimClock` in a backtest) and every record of this event carries `t`.
-2. **Commands.** Pause, resume, halt, flatten and promote, queued since the last event. Phase 4.
+2. **Commands.** Pause, resume, halt and flatten, queued since the last event (section 9).
 3. **Reconcile.** Read the venue's order updates since the last event, its open orders and its balances. Apply
    every new fill to the ledger. Compare the ledger with the venue (section 6).
 4. **Mark.** Value every asset at the last close of its instrument. Equity is in the account's quote asset
@@ -37,7 +36,7 @@ candle of every instrument the account follows whose minute ended at `t` (open t
    order ids derived from the decision id, sent to the venue.
 10. **Journal.** One decision record per strategy call: candle, intents, verdicts, orders. Engine records for
     halts, flattening and reconciliation.
-11. **Publish.** State changes for the UI and notifications. Phase 4.
+11. **Publish.** A snapshot of the account for the UI and the notifications of what happened (section 9).
 
 The simulated venue matches orders against the 1-minute candle that follows the event (section 3), so an order
 decided at `t` can fill no earlier than the open of the minute starting at `t`. Nothing in a backtest can see a
@@ -146,8 +145,8 @@ our code, so a difference can only be a bug: the run stops with the mismatch.
 ## 7. Journal
 
 `App\Execution\Contracts\DecisionLog` receives the records of step 10. A backtest keeps them in memory and
-summarises them in its report: decisions, intents, verdicts by reason code, orders, halts. The database journal
-comes in Phase 4. Intents emitted during warmup (before the run's start, while indicators fill) are not acted
+summarises them in its report: decisions, intents, verdicts by reason code, orders, halts. Paper and testnet accounts
+write them to `engine_journal` (section 9). Intents emitted during warmup (before the run's start, while indicators fill) are not acted
 on and are counted apart.
 
 ## 8. Perpetuals (Phase 2b)
@@ -183,3 +182,35 @@ the other; a flatten closes the spot leg first, then the hedge.
 **Reconciliation** compares, at every event, the spot balances, the USD-M wallet and every position (side, quantity,
 entry price, margin) with the venue's. The venue's updates are one numbered stream of order updates and income
 (funding, liquidation), so the ledger books them in the order they happened.
+
+## 9. Live operation (Phase 4)
+
+`php artisan engine:run <account>` runs one account in paper or testnet mode; live is refused until Phase 6 and the
+operator's approval (D-16). It is the only writer of the account's trading state.
+
+**Feed (D-67).** The engine polls the `candles` table every 2 seconds for minutes that `market:stream` closed. A
+minute is handled once every instrument the account follows has it, in the order of section 1. An instrument
+whose minute is missing for two of its strategies' timeframes trips the stale-data breaker; a missing minute is
+never skipped silently.
+
+**Restart by replay (D-68).** A paper account keeps its journal, not a copy of its state. On start the engine
+replays every minute from the account's start through the same loop, with each command applied at the event it
+was applied at before, and compares each replayed decision with the journaled one. The first difference halts the
+account and alerts: a divergent replay is a bug (`simulation.md`, section 9). A testnet account reconciles with the
+venue instead, which wins (D-10).
+
+**Commands.** The web process and the command line write rows of `engine_commands`; the engine applies them at
+step 2 of the next event and journals each with that event: pause and resume a strategy, halt, resume and flatten
+the account (`risk-policy.md`, section 5). `engine:halt` and `engine:flatten` work with the web process down.
+Resume and flatten need the operator's re-authentication in the UI.
+
+**Breakers.** Every breaker of `risk-policy.md`, section 3, is evaluated at step 5 from the event's data and the
+venue's error and clock reports, and journaled when it trips and when it clears.
+
+**Deployments (D-71).** A version enters the paper account when it becomes Backtested; the engine loads the
+account's deployments when it starts, so a new deployment asks for a restart, which replay makes safe.
+
+**Publish (D-70).** After every event the engine writes `account_snapshots` (equity, balances, positions, working
+orders, active breakers) and queues notifications for halts, breakers, mismatches and demotions. The UI polls the
+snapshot and never waits on the engine.
+

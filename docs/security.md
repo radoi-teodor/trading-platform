@@ -21,12 +21,19 @@ in a public repository. This document lists what is protected, from whom, and ho
   account that owns it.
 - Separate keys per account and per environment (testnet, live). A testnet key never works live and the reverse.
 - Rotated at least every 90 days and immediately after any suspicion. Rotation is a runbook procedure.
+- Entered only through `php artisan account:keys <account>` (asked interactively, never as an argument) or the
+  Account screen after re-authentication. Never through chat, a file in the repository or an environment variable.
+- The Telegram bot token and chat id live in `.env` (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`), never in the
+  repository, the journal or a message.
 
 ## 3. Access to the platform
 
 - One operator account (D-5). No registration route. No default or seeded password: the first user is created
   by an artisan command that asks for the password interactively.
 - Password plus TOTP. Login throttled. Sessions expire after inactivity.
+- Built with Laravel Fortify: the first user comes from `php artisan user:create`, which asks for the password and
+  shows the TOTP secret once; there is no registration or password reset by email. Re-authentication asks for the
+  password and a fresh TOTP code and lasts 10 minutes.
 - Re-authentication (password and TOTP) for: raising a risk limit, promoting to a live stage, adding or replacing
   exchange keys, enabling perpetuals, flattening an account.
 - The web process is not exposed on `0.0.0.0` without TLS and a reverse proxy. Production runs with

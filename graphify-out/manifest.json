@@ -1837,15 +1837,15 @@
     "semantic_hash": ""
   },
   "docs/README.md": {
-    "mtime": 1794175073.201845,
-    "seen": 1794175110.7078307,
-    "ast_hash": "c3f02b4d95a9d494ffa9ca8f21c91d67",
+    "mtime": 1794189939.896649,
+    "seen": 1794189957.3206887,
+    "ast_hash": "904c819fd099b559a5ac6b97b8b9347e",
     "semantic_hash": ""
   },
   "docs/architecture.md": {
-    "mtime": 1794175017.7370923,
-    "seen": 1794175110.7078328,
-    "ast_hash": "9fb2604fceb97e0c1bc0c6eb0a26b106",
+    "mtime": 1794189951.2846575,
+    "seen": 1794189957.320692,
+    "ast_hash": "1369b64f91b1414c3970c6839c544d62",
     "semantic_hash": ""
   },
   "docs/assessment.md": {
@@ -1867,15 +1867,15 @@
     "semantic_hash": ""
   },
   "docs/decisions.md": {
-    "mtime": 1794177307.4482558,
-    "seen": 1794177322.2719235,
-    "ast_hash": "b45b4b6d9bc211061526737cd74ecafe",
+    "mtime": 1794189939.896148,
+    "seen": 1794189957.320771,
+    "ast_hash": "60b238cca66b07faa60ebf61ce2223e2",
     "semantic_hash": ""
   },
   "docs/engine.md": {
-    "mtime": 1794170482.9526486,
-    "seen": 1794170488.8357904,
-    "ast_hash": "99220afceb6f7d0e00d042725cbcb807",
+    "mtime": 1794189939.894689,
+    "seen": 1794189957.3207736,
+    "ast_hash": "f4fa355ec1aa4b8869cecc84e11058a7",
     "semantic_hash": ""
   },
   "docs/glossary.md": {
@@ -1903,9 +1903,9 @@
     "semantic_hash": ""
   },
   "docs/security.md": {
-    "mtime": 1794175017.7373455,
-    "seen": 1794175110.707905,
-    "ast_hash": "922ee1d6634fdda1bdd38d60cee09d5e",
+    "mtime": 1794189951.2848887,
+    "seen": 1794189957.3208644,
+    "ast_hash": "aeb2ced314e65e655177bd9d0106bb36",
     "semantic_hash": ""
   },
   "docs/simulation.md": {
@@ -2851,9 +2851,9 @@
     "semantic_hash": ""
   },
   "tests/Feature/Simulation/StrategyGatesTest.php": {
-    "mtime": 1794177240.1921818,
-    "seen": 1794177322.270425,
-    "ast_hash": "308f92be3755a95934e0675a839bc7e4",
+    "mtime": 1794177337.1376486,
+    "seen": 1794189957.3185587,
+    "ast_hash": "dfe66b7e9f9283b997499d5805972d51",
     "semantic_hash": ""
   },
   "package-lock.json": {
