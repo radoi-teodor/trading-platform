@@ -32,6 +32,7 @@ use App\Strategy\Indicators\Keltner;
 use App\Strategy\Indicators\Lowest;
 use App\Strategy\Indicators\Macd;
 use App\Strategy\Indicators\Natr;
+use App\Strategy\Indicators\Obv;
 use App\Strategy\Indicators\RealizedVolatility;
 use App\Strategy\Indicators\Roc;
 use App\Strategy\Indicators\Rsi;
@@ -40,6 +41,7 @@ use App\Strategy\Indicators\StandardDeviation;
 use App\Strategy\Indicators\Stochastic;
 use App\Strategy\Indicators\Supertrend;
 use App\Strategy\Indicators\ValueIndicator;
+use App\Strategy\Indicators\VolumeProfile;
 use App\Strategy\Indicators\Vwap;
 use App\Strategy\Indicators\Vwma;
 use App\Strategy\Indicators\Wma;
@@ -304,6 +306,8 @@ final class Compiler
             'stoch' => $onBar(new Stochastic($count('k'), $count('d'))),
             'atr' => $onBar(new Atr($count('n'))),
             'natr' => $onBar(new Natr($count('n'))),
+            'obv' => $onBar(new Obv),
+            'vp_poc', 'vp_vah', 'vp_val' => $this->volumeProfile(substr($node->name, 3), $count('n')),
             'donchian' => $onBar(new DonchianChannel($count('n'))),
             'keltner' => $onBar(new Keltner($count('n'), $number('k'))),
             'supertrend' => $onBar(new Supertrend($count('n'), $number('k'))),
@@ -399,6 +403,18 @@ final class Compiler
         };
     }
 
+    /** @return Closure(Frame): ?Decimal one level of the volume profile of the last $period candles (D-72) */
+    private function volumeProfile(string $level, int $period): Closure
+    {
+        $profile = new VolumeProfile($period);
+
+        return function (Frame $f) use ($profile, $level): ?Decimal {
+            $levels = $profile->push($f->candle);
+
+            return $levels[$level] ?? null;
+        };
+    }
+
     private function callSeconds(Call $node, Timeframe $timeframe): int
     {
         $arguments = $this->types->arguments($node);
@@ -410,7 +426,8 @@ final class Compiler
         }
 
         $own = match ($node->name) {
-            'ema', 'sma', 'wma', 'vwma', 'stdev', 'highest', 'lowest', 'bb', 'donchian', 'keltner', 'atr', 'natr', 'supertrend', 'chandelier', 'atr_trail' => $n('n'),
+            'ema', 'sma', 'wma', 'vwma', 'stdev', 'highest', 'lowest', 'bb', 'donchian', 'keltner', 'atr', 'natr', 'supertrend', 'chandelier', 'atr_trail', 'vp_poc', 'vp_vah', 'vp_val' => $n('n'),
+            'obv' => 1,
             'hma' => $n('n') + $root - 1,
             'rsi', 'roc', 'change', 'realized_vol', 'plus_di', 'minus_di' => $n('n') + 1,
             'adx' => 2 * $n('n'),

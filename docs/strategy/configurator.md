@@ -141,6 +141,7 @@ arg       = expr | identifier ":" expr ;
 | Volatility | `atr(n: 14)`, `natr(n)`, `stdev(n, src)`, `realized_vol(n)`, `bb(n: 20, k: 2).upper / .middle / .lower / .width`, `donchian(n).upper / .lower`, `keltner(n, k).upper / .lower` |
 | Trend | `adx(n: 14)`, `plus_di(n)`, `minus_di(n)`, `supertrend(n, k).line / .direction` |
 | Windows | `highest(src, n)`, `lowest(src, n)`, `change(src, n)` |
+| Volume | `obv()` (its level depends on where it starts: compare it with its own average or its change), `vp_poc(n)`, `vp_vah(n)`, `vp_val(n)` (the volume profile of the last n candles, D-72) |
 | Perpetuals | `funding_rate`, `funding_rate_avg(n)`, `open_interest`, `oi_change(n)`, `basis`, `mark_price` |
 | Position | `in_position`, `bars_in_trade`, `trade_r` (current open result in R) |
 | Time | `hour_utc`, `weekday` |

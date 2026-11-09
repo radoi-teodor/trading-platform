@@ -15,6 +15,7 @@ use App\Strategy\Indicators\Keltner;
 use App\Strategy\Indicators\Lowest;
 use App\Strategy\Indicators\Macd;
 use App\Strategy\Indicators\Natr;
+use App\Strategy\Indicators\Obv;
 use App\Strategy\Indicators\RealizedVolatility;
 use App\Strategy\Indicators\Roc;
 use App\Strategy\Indicators\Rsi;
@@ -22,6 +23,7 @@ use App\Strategy\Indicators\Sma;
 use App\Strategy\Indicators\StandardDeviation;
 use App\Strategy\Indicators\Stochastic;
 use App\Strategy\Indicators\Supertrend;
+use App\Strategy\Indicators\VolumeProfile;
 use App\Strategy\Indicators\Vwap;
 use App\Strategy\Indicators\Vwma;
 use App\Strategy\Indicators\Wma;
@@ -39,7 +41,7 @@ mutates(
     Sma::class, Ema::class, Wma::class, Hma::class, Vwma::class, Vwap::class, Rsi::class, Roc::class, Macd::class,
     Stochastic::class, Atr::class, Natr::class, StandardDeviation::class, RealizedVolatility::class, Bollinger::class,
     DonchianChannel::class, Keltner::class, DirectionalMovement::class, Supertrend::class, Highest::class,
-    Lowest::class, Change::class,
+    Lowest::class, Change::class, Obv::class, VolumeProfile::class,
 );
 
 /** @return array{bars: list<Candle>, cases: array<string, array{string, array<string, string>, array<string, list<?string>>}>} */
@@ -119,6 +121,8 @@ function runIndicator(string $function, array $a, array $bars): array
         'highest' => [new Highest($n('n')), 'src'],
         'lowest' => [new Lowest($n('n')), 'src'],
         'change' => [new Change($n('n')), 'src'],
+        'obv' => [new Obv, 'bar'],
+        'volume_profile' => [new VolumeProfile($n('n')), 'bar'],
         default => throw new InvalidArgumentException("No indicator {$function}."),
     };
     $outputs = [];

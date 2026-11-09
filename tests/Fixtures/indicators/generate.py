@@ -300,6 +300,58 @@ def change(xs, n):
     return [xs[i] - xs[i - n] if i >= n else None for i in range(len(xs))]
 
 
+def obv(bs):
+    out, total = [], D(0)
+    for i, b in enumerate(bs):
+        if i > 0:
+            prev = bs[i - 1]["close"]
+            total += b["volume"] if b["close"] > prev else (-b["volume"] if b["close"] < prev else 0)
+        out.append(total)
+    return out
+
+
+def volume_profile(bs, n, bins=24, share=D("0.7")):
+    """D-72: 24 bins between the window's lowest low and highest high; each candle's volume spread evenly over the bins
+    its range covers; the point of control is the middle of the fullest bin (the lower on a tie); the value area grows
+    from it one bin at a time towards the larger neighbour (the lower on a tie) until it holds 70 % of the volume."""
+    poc, vah, val = [], [], []
+    for i in range(len(bs)):
+        if i < n - 1:
+            poc.append(None); vah.append(None); val.append(None)
+            continue
+        w = bs[i - n + 1:i + 1]
+        lo = min(b["low"] for b in w)
+        hi = max(b["high"] for b in w)
+        if hi == lo:
+            poc.append(lo); vah.append(lo); val.append(lo)
+            continue
+        width = (hi - lo) / bins
+        volumes = [D(0)] * bins
+        for b in w:
+            first = min(bins - 1, int((b["low"] - lo) / width))
+            last = min(bins - 1, int((b["high"] - lo) / width))
+            part = b["volume"] / (last - first + 1)
+            for j in range(first, last + 1):
+                volumes[j] += part
+        top = max(volumes)
+        p = volumes.index(top)
+        total = sum(volumes)
+        held, low_bin, high_bin = volumes[p], p, p
+        while held < share * total and (low_bin > 0 or high_bin < bins - 1):
+            below = volumes[low_bin - 1] if low_bin > 0 else None
+            above = volumes[high_bin + 1] if high_bin < bins - 1 else None
+            if above is None or (below is not None and below >= above):
+                low_bin -= 1
+                held += below
+            else:
+                high_bin += 1
+                held += above
+        poc.append(lo + (p + D("0.5")) * width)
+        vah.append(lo + (high_bin + 1) * width)
+        val.append(lo + low_bin * width)
+    return {"poc": poc, "vah": vah, "val": val}
+
+
 def text(value):
     if value is None:
         return None
@@ -336,6 +388,9 @@ def main():
         ("highest", {"n": 10}, highest(close, 10)),
         ("lowest", {"n": 10}, lowest(close, 10)),
         ("change", {"n": 5}, change(close, 5)),
+        ("obv", {}, obv(bs)),
+        ("volume_profile", {"n": 30}, volume_profile(bs, 30)),
+        ("volume_profile", {"n": 7}, volume_profile(bs, 7)),
     ]
     out = {
         "bars": [{k: (v if k == "time" else text(v)) for k, v in b.items()} for b in bs],

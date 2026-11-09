@@ -1921,9 +1921,9 @@
     "semantic_hash": ""
   },
   "docs/strategy/configurator.md": {
-    "mtime": 1794175850.8776,
-    "seen": 1794175983.1392863,
-    "ast_hash": "9601516f84da2108c8c8a7539e927581",
+    "mtime": 1794190067.817974,
+    "seen": 1794190134.619291,
+    "ast_hash": "1830e91c2c8db7a16972f293389d3f0f",
     "semantic_hash": ""
   },
   "public/robots.txt": {
@@ -2065,21 +2065,21 @@
     "semantic_hash": ""
   },
   "tests/Fixtures/indicators/generate.py": {
-    "mtime": 1794165614.2168658,
-    "seen": 1794165823.8394327,
-    "ast_hash": "cc82ea90d79c7d0329120945a2b6d1f6",
+    "mtime": 1794189990.6539388,
+    "seen": 1794190134.6177943,
+    "ast_hash": "667ae51349a396d31bcc304b2b56aaf9",
     "semantic_hash": ""
   },
   "tests/Fixtures/indicators/reference.json": {
-    "mtime": 1794165618.7752676,
-    "seen": 1794165823.8394337,
-    "ast_hash": "5a212528eeb31da8715c67fd057fc0e8",
+    "mtime": 1794189990.7783663,
+    "seen": 1794190134.617796,
+    "ast_hash": "8fc21a76854d98cb982ce6084a547a0f",
     "semantic_hash": ""
   },
   "tests/Unit/Strategy/IndicatorReferenceTest.php": {
-    "mtime": 1794165781.7351427,
-    "seen": 1794165823.8400621,
-    "ast_hash": "8f088d8932fedfac27f23a900be53932",
+    "mtime": 1794189996.8699548,
+    "seen": 1794190134.6187968,
+    "ast_hash": "733641198ce26b4a587e66993b864079",
     "semantic_hash": ""
   },
   "app/Market/Contracts/InstrumentDirectory.php": {
@@ -2167,9 +2167,9 @@
     "semantic_hash": ""
   },
   "app/Strategy/Dsl/Functions/Library.php": {
-    "mtime": 1794175233.7409818,
-    "seen": 1794175398.0158672,
-    "ast_hash": "09420044943193202b7cd94d1018c891",
+    "mtime": 1794190051.1819487,
+    "seen": 1794190134.6154032,
+    "ast_hash": "ba9a2056a66b5a476b249dfdb421f33d",
     "semantic_hash": ""
   },
   "app/Strategy/Dsl/Functions/ParamKind.php": {
@@ -2275,9 +2275,9 @@
     "semantic_hash": ""
   },
   "app/Strategy/Dsl/Compiler/Compiler.php": {
-    "mtime": 1794175233.7394543,
-    "seen": 1794175398.015623,
-    "ast_hash": "fbc4fa1efe0ab60ca4afa71e1a680ca6",
+    "mtime": 1794190051.185914,
+    "seen": 1794190134.6150792,
+    "ast_hash": "1db85f631c4c88737b515ace569575c5",
     "semantic_hash": ""
   },
   "app/Strategy/Dsl/Compiler/Frame.php": {
@@ -2701,15 +2701,15 @@
     "semantic_hash": ""
   },
   "tests/Unit/Simulation/ChartSeriesTest.php": {
-    "mtime": 1794173426.2975068,
-    "seen": 1794173560.6714642,
-    "ast_hash": "50f06981e22fea125a37d56b224ffe05",
+    "mtime": 1794190060.6539404,
+    "seen": 1794190134.6185555,
+    "ast_hash": "eaca6552522dd6c99ddb981dea7e7437",
     "semantic_hash": ""
   },
   "app/Strategy/Dsl/ReadBack.php": {
-    "mtime": 1794175977.1287162,
-    "seen": 1794175983.1357152,
-    "ast_hash": "e78d6e99152ea2e1cca73e14810672fd",
+    "mtime": 1794190051.1862302,
+    "seen": 1794190134.6154892,
+    "ast_hash": "4ff57d7e4a6f870c94ccfe4ca430e034",
     "semantic_hash": ""
   },
   "tests/Unit/Strategy/Dsl/ReadBackTest.php": {
@@ -2854,6 +2854,18 @@
     "mtime": 1794177337.1376486,
     "seen": 1794189957.3185587,
     "ast_hash": "dfe66b7e9f9283b997499d5805972d51",
+    "semantic_hash": ""
+  },
+  "app/Strategy/Indicators/Obv.php": {
+    "mtime": 1794190020.2471068,
+    "seen": 1794190134.6159275,
+    "ast_hash": "45b8688e894fe5919a399c271591b2c5",
+    "semantic_hash": ""
+  },
+  "app/Strategy/Indicators/VolumeProfile.php": {
+    "mtime": 1794190128.303219,
+    "seen": 1794190134.616073,
+    "ast_hash": "4ae58abbed43b0259bccfeaf2d7313f5",
     "semantic_hash": ""
   },
   "package-lock.json": {

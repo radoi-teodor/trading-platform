@@ -6,6 +6,8 @@ use App\Market\Data\Candle;
 use App\Simulation\Charts\ChartSeries;
 use App\Strategy\Dsl\DslError;
 use App\Strategy\Indicators\Ema;
+use App\Strategy\Indicators\VolumeProfile;
+use App\Support\Number\Decimal;
 use App\Support\Symbol;
 use App\Support\Timeframe;
 use Carbon\CarbonImmutable;
@@ -33,7 +35,7 @@ function fiveMinuteBars(): array
         $g[0]->openTime, Timeframe::FiveMinutes, (string) $g[0]->open,
         (string) max(array_map(fn (Candle $c): string => (string) $c->high, $g)),
         (string) min(array_map(fn (Candle $c): string => (string) $c->low, $g)),
-        (string) $g[4]->close, '1', '1', 1, '0',
+        (string) $g[4]->close, (string) array_reduce($g, fn (Decimal $sum, Candle $c): Decimal => $sum->plus($c->volume), Decimal::zero()), '1', 1, '0',
     ), $bars);
 }
 
@@ -86,3 +88,23 @@ it('refuses expressions that are not series or conditions, and windows too long'
     'too many candles' => [['ema(9)'], '2026-10-01 00:00', '2026-10-05 00:00', 'at most 1000 candles; ask for a shorter window or a longer timeframe.'],
     'too many expressions' => [array_fill(0, 21, 'close'), '2026-10-01 05:00', '2026-10-01 06:00', 'at most 20 expressions at a time.'],
 ]);
+
+it('draws OBV and the volume profile levels with the indicators\' own formulas (D-72)', function (): void {
+    $result = chart()->compute(Symbol::parse('BTC/USDT'), Timeframe::FiveMinutes, CarbonImmutable::parse('2026-10-01 05:00', 'UTC'), CarbonImmutable::parse('2026-10-01 10:00', 'UTC'), ['vp_poc(20)', 'vp_vah(20)', 'vp_val(20)', 'obv() - sma(20, src: obv())']);
+    $profile = new VolumeProfile(20);
+    $expected = [];
+
+    // the warmup is the 20 candles before 05:00, from 03:20
+    foreach (array_filter(fiveMinuteBars(), fn (Candle $bar): bool => $bar->openTime >= CarbonImmutable::parse('2026-10-01 03:20', 'UTC')) as $bar) {
+        $levels = $profile->push($bar);
+
+        if ($bar->openTime >= CarbonImmutable::parse('2026-10-01 05:00', 'UTC')) {
+            $expected[] = (string) $levels['poc'];
+        }
+    }
+
+    expect($result['series']['vp_poc(20)'])->toBe($expected)
+        ->and($result['series']['vp_val(20)'][0] <= $result['series']['vp_poc(20)'][0])->toBeTrue()
+        ->and($result['series']['vp_vah(20)'][0] >= $result['series']['vp_poc(20)'][0])->toBeTrue()
+        ->and($result['series']['obv() - sma(20, src: obv())'][59])->not->toBeNull();
+});

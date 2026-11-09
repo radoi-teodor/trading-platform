@@ -63,6 +63,11 @@ final class Library
         $specs[] = new FunctionSpec('plus_di', Group::Indicator, $plain, [$count('n', '14')]);
         $specs[] = new FunctionSpec('minus_di', Group::Indicator, $plain, [$count('n', '14')]);
         $specs[] = new FunctionSpec('supertrend', Group::Indicator, null, [$count('n', '10'), $number('k', '3')], ['line' => $price, 'direction' => $plain]);
+        $specs[] = new FunctionSpec('obv', Group::Indicator, Type::series(Unit::Volume));
+        foreach (['vp_poc', 'vp_vah', 'vp_val'] as $name) {
+            $specs[] = new FunctionSpec($name, Group::Indicator, $price, [$count('n')]);
+        }
+
         $specs[] = new FunctionSpec('highest', Group::Indicator, null, [new ParamSpec('src', ParamKind::Series), $count('n')], followsSource: true);
         $specs[] = new FunctionSpec('lowest', Group::Indicator, null, [new ParamSpec('src', ParamKind::Series), $count('n')], followsSource: true);
         $specs[] = new FunctionSpec('change', Group::Indicator, null, [new ParamSpec('src', ParamKind::Series), $count('n')], followsSource: true);
