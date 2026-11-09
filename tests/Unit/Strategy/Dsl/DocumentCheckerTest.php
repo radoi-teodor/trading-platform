@@ -2,9 +2,11 @@
 
 declare(strict_types=1);
 
+use App\Market\Data\MarketType;
 use App\Strategy\Dsl\Document\CheckResult;
 use App\Strategy\Dsl\Document\DocumentChecker;
 use App\Strategy\Dsl\Document\PolicyLimits;
+use App\Strategy\Dsl\Document\UniverseRule;
 use App\Strategy\Dsl\DslError;
 use App\Strategy\Dsl\DslWriter;
 use App\Support\Number\Decimal;
@@ -117,12 +119,12 @@ it('refuses documents that break the rules, saying where and why', function (str
 
     expect($errors)->toContain($error);
 })->with([
-    'unknown key' => ['title: BTC', "colour: blue\ntitle: BTC", 'line 2, column 1: colour is not a key of a strategy document. Keys: strategy, title, family, hypothesis, fails_when, profile, template, params, market, timeframe, filters, entries, exits, sizing, limits.'],
+    'unknown key' => ['title: BTC', "colour: blue\ntitle: BTC", 'line 2, column 1: colour is not a key of a strategy document. Keys: strategy, title, family, hypothesis, fails_when, profile, template, params, market, universe, timeframe, filters, entries, exits, sizing, limits.'],
     'bad id' => ['strategy: btc-trend-4h', 'strategy: BTC Trend', 'line 1, column 11: strategy must be lowercase letters, digits and hyphens, such as btc-trend-4h.'],
     'missing title' => ["title: BTC trend follower on 4h\n", '', 'line 1, column 1: title is missing.'],
     'unknown family' => ['family: trend', 'family: magic', 'line 3, column 9: family must be one of trend, mean_reversion, carry.'],
     'dropped family (D-64)' => ['family: trend', 'family: event', 'line 3, column 9: family must be one of trend, mean_reversion, carry.'],
-    'agents section (D-64)' => ['cooldown_after_loss: 8h', "cooldown_after_loss: 8h\nagents:\n  max_brief_age: 8h", 'line 41, column 1: agents is not a key of a strategy document. Keys: strategy, title, family, hypothesis, fails_when, profile, template, params, market, timeframe, filters, entries, exits, sizing, limits.'],
+    'agents section (D-64)' => ['cooldown_after_loss: 8h', "cooldown_after_loss: 8h\nagents:\n  max_brief_age: 8h", 'line 41, column 1: agents is not a key of a strategy document. Keys: strategy, title, family, hypothesis, fails_when, profile, template, params, market, universe, timeframe, filters, entries, exits, sizing, limits.'],
     'unknown timeframe' => ['timeframe: 4h', 'timeframe: 3h', 'line 13, column 12: timeframe must be one of 1m, 5m, 15m, 1h, 4h, 1d, 1w.'],
     'unknown instrument' => ['instruments: [BTC/USDT]', 'instruments: [DOGE/USDT]', 'line 12, column 17: DOGE/USDT is not a tradable spot instrument on binance; run market:instruments if it is new.'],
     'perpetual on spot' => ['instruments: [BTC/USDT]', 'instruments: [BTC/USDT:USDT]', 'line 12, column 17: BTC/USDT:USDT is a perpetual; market.type is spot.'],
@@ -140,7 +142,7 @@ it('refuses documents that break the rules, saying where and why', function (str
     'syntax error inside' => ['adx(14) > 20', 'adx(14) >', 'line 16, column 14: expected a value after >, found the end of the expression.'],
     'filters not a list' => ["filters:                              # all must be true for a new entry\n  - adx(14) > 20\n  - natr(14) < 3                      # skip the most volatile days\n  - volume > sma(20, src: volume)     # only on busier candles\n", "filters: adx(14) > 20\n", 'line 15, column 10: filters must be a list, one condition per line.'],
     'order elsewhere' => ['order: market', 'order: 2 * atr(14)', 'line 23, column 12: entries.long.order needs an order type, but 2 * atr(14) is a price series.'],
-    'no entries' => ["entries:\n  long:", "other_entries:\n  long:", 'line 20, column 1: other_entries is not a key of a strategy document. Keys: strategy, title, family, hypothesis, fails_when, profile, template, params, market, timeframe, filters, entries, exits, sizing, limits.'],
+    'no entries' => ["entries:\n  long:", "other_entries:\n  long:", 'line 20, column 1: other_entries is not a key of a strategy document. Keys: strategy, title, family, hypothesis, fails_when, profile, template, params, market, universe, timeframe, filters, entries, exits, sizing, limits.'],
 ]);
 
 it('declares parameters and checks their ranges', function (): void {
@@ -235,3 +237,94 @@ it('refuses a template it cannot read', function (string $from, string $to, stri
     'perp not perpetual' => ['perp: BTC/USDT:USDT', 'perp: ETH/USDT', 'line 9, column 9: perp must be the perpetual of BTC/USDT, BTC/USDT:USDT.'],
     'missing parameter' => ["  margin_buffer: 50%\n", '', 'line 7, column 1: funding_carry needs margin_buffer.'],
 ]);
+
+const UNIVERSE_EXAMPLE = <<<'YAML'
+    strategy: xs-momentum-4h
+    title: Cross-sectional momentum on 4h
+    family: trend
+    hypothesis: >
+      The perpetuals that rose most over a week keep rising against those that fell most.
+    fails_when: Sharp reversals of the whole market; winners and losers swap places.
+
+    universe: { rule: top, n: 50, by: quote_volume_30d }
+    timeframe: 4h
+
+    entries:
+      long:
+        when: top(5, roc(42))
+      short:
+        when: bottom(5, roc(42))
+
+    exits:
+      stop_loss: 2 * atr(14)
+      when: rank(roc(42)) > 10 and rank(roc(42)) <= count - 10
+
+    sizing:
+      risk_per_trade: 0.3%
+    YAML;
+
+it('compiles a universe strategy, which names a rule instead of instruments (D-92)', function (): void {
+    $result = checkDocument(UNIVERSE_EXAMPLE);
+
+    expect($result->errors)->toBe([])
+        ->and($result->warnings)->toBe([])
+        ->and($result->spec?->universe)->toEqual(new UniverseRule('top', 50, 'quote_volume_30d'))
+        ->and($result->spec?->market)->toBe(MarketType::Perp)
+        ->and($result->spec?->instruments)->toBe([])
+        ->and(array_keys($result->spec->entries ?? []))->toBe(['long', 'short'])
+        ->and(checkDocument(CONFIGURATOR_EXAMPLE)->spec?->universe)->toBeNull();
+});
+
+it('refuses a universe it cannot read, saying where and why', function (string $from, string $to, string $error): void {
+    expect(documentErrors(str_replace($from, $to, UNIVERSE_EXAMPLE)))->toBe([$error]);
+})->with([
+    'market as well' => ['timeframe: 4h', "market: { exchange: binance, type: perp, instruments: [BTC/USDT:USDT] }\ntimeframe: 4h", 'line 8, column 1: market and universe are two ways to say what is traded: keep one.'],
+    'another rule' => ['rule: top', 'rule: bottom', 'line 8, column 19: universe.rule must be top.'],
+    'another measure' => ['by: quote_volume_30d', 'by: market_cap', 'line 8, column 35: universe.by must be quote_volume_30d.'],
+    'a universe of one' => ['n: 50', 'n: 1', 'line 8, column 27: universe.n must be a whole number from 2 to 500, such as 50.'],
+    'a universe too large' => ['n: 50', 'n: 501', 'line 8, column 27: universe.n must be a whole number from 2 to 500, such as 50.'],
+    'not a whole number' => ['n: 50', 'n: 2.5', 'line 8, column 27: universe.n must be a whole number from 2 to 500, such as 50.'],
+    'a key missing' => [', by: quote_volume_30d', '', 'line 8, column 1: universe needs rule, n and by, such as { rule: top, n: 50, by: quote_volume_30d }.'],
+    'an unknown key' => ['n: 50,', 'n: 50, of: perp,', 'line 8, column 31: of is not a key of universe. Keys: rule, n, by.'],
+    'not a set of keys' => ['universe: { rule: top, n: 50, by: quote_volume_30d }', 'universe: top50', 'line 8, column 11: universe must be a set of keys.'],
+]);
+
+it('refuses a ranking in a strategy that names its instruments', function (): void {
+    expect(documentErrors(str_replace('  - adx(14) > 20', '  - top(5, roc(42))', CONFIGURATOR_EXAMPLE)))->toBe([
+        'line 16, column 5: top ranks the members of a universe, and this strategy names its instruments. Write universe: { rule: top, n: 50, by: quote_volume_30d } instead of market to use it.',
+    ]);
+});
+
+it('refuses a universe beside a template', function (): void {
+    $errors = documentErrors(<<<'YAML'
+        strategy: btc-funding-carry
+        title: BTC funding carry
+        family: carry
+        hypothesis: Leveraged longs pay positive funding; long spot plus short perpetual collects it.
+        fails_when: Funding turns negative for days, or the exchange fails.
+        template: funding_carry
+        universe: { rule: top, n: 50, by: quote_volume_30d }
+        params:
+          spot: BTC/USDT
+          perp: BTC/USDT:USDT
+          enter_when: funding_rate_avg(9) > 0.01%
+          exit_when: funding_rate_avg(3) < 0%
+          max_leverage_perp: 2
+          margin_buffer: 50%
+        sizing:
+          max_position: 30%
+        YAML);
+
+    expect($errors)->toBe(['line 7, column 1: a template names its own instruments: remove universe.']);
+});
+
+it('warns when an entry of a universe strategy does not rank the members', function (): void {
+    $warning = 'entries.long does not rank the members: every member whose condition holds may enter, in symbol order, until the limits are reached. Use top(n, ...) or rank(...) in its when or in filters to choose among them.';
+    $unranked = str_replace('when: top(5, roc(42))', 'when: roc(42) > 0', UNIVERSE_EXAMPLE);
+    $filtered = str_replace("entries:\n", "filters:\n  - percentile(volume) > 50%\n\nentries:\n", $unranked);
+
+    expect(checkDocument($unranked)->errors)->toBe([])
+        ->and(checkDocument($unranked)->warnings)->toBe([$warning])
+        ->and(checkDocument($filtered)->errors)->toBe([])
+        ->and(checkDocument($filtered)->warnings)->toBe([]);
+});

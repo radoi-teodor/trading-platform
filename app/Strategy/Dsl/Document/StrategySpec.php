@@ -14,7 +14,7 @@ final readonly class StrategySpec
 {
     /**
      * @param  array<string, ParameterSpec>  $params
-     * @param  list<Symbol>  $instruments
+     * @param  list<Symbol>  $instruments  none for a universe strategy, whose members change month by month
      * @param  list<Expression>  $filters
      * @param  array<string, EntrySpec>  $entries  by side, long then short
      */
@@ -38,5 +38,6 @@ final readonly class StrategySpec
         public ?int $maxOpenPositions,
         public ?int $maxTradesPerDay,
         public ?int $cooldownSeconds,
+        public ?UniverseRule $universe = null,
     ) {}
 }

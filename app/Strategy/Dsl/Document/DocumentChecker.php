@@ -18,6 +18,7 @@ use App\Strategy\Dsl\DslWriter;
 use App\Strategy\Dsl\Functions\Group;
 use App\Strategy\Dsl\Parser;
 use App\Strategy\Dsl\Position;
+use App\Strategy\Dsl\Rankings;
 use App\Strategy\Dsl\Scope;
 use App\Strategy\Dsl\TypeChecker;
 use App\Strategy\Dsl\Types\Kind;
@@ -42,12 +43,14 @@ use InvalidArgumentException;
 final class DocumentChecker
 {
     private const array KEYS = [
-        'strategy', 'title', 'family', 'hypothesis', 'fails_when', 'profile', 'template', 'params', 'market', 'timeframe',
+        'strategy', 'title', 'family', 'hypothesis', 'fails_when', 'profile', 'template', 'params', 'market', 'universe',
+        'timeframe',
         'filters', 'entries', 'exits', 'sizing', 'limits',
     ];
 
     private const array SECTIONS = [
         'market' => ['exchange', 'type', 'instruments'],
+        'universe' => ['rule', 'n', 'by'],
         'entry' => ['when', 'order'],
         'exits' => ['stop_loss', 'take_profit', 'trailing', 'time_stop', 'when'],
         'sizing' => ['risk_per_trade', 'max_position'],
@@ -123,6 +126,10 @@ final class DocumentChecker
         $sizing = $this->section($document, 'sizing', 'sizing');
 
         if ($template !== null) {
+            if (isset($document->entries['universe'])) {
+                $this->fail($document->keyPosition('universe') ?? new Position(1, 1), 'a template names its own instruments: remove universe.');
+            }
+
             $carry = $this->carry($document, $template, $sizing, $timeframe ?? Timeframe::OneHour);
 
             if ($id === null || $title === null || $family === null || $hypothesis === null || $failsWhen === null || $carry === null) {
@@ -136,16 +143,25 @@ final class DocumentChecker
             ), []];
         }
 
-        [$market, $instruments] = $this->market($document);
+        $ranked = isset($document->entries['universe']);
+        $universe = $ranked ? $this->universe($document) : null;
+        [$market, $instruments] = $ranked ? [MarketType::Perp, []] : $this->market($document);
         $params = $this->params($document);
         $scope = new Scope(
             $timeframe ?? Timeframe::OneHour,
             $market === MarketType::Perp,
             array_map(fn (ParameterSpec $p): Type => Type::of($p->kind), $params),
             array_map(fn (ParameterSpec $p): bool => $p->whole, $params),
+            [],
+            $ranked,
         );
         $filters = $this->filters($document, $scope);
         $entries = $this->entries($document, $scope, $market, $instruments);
+
+        if ($ranked) {
+            $this->unranked($filters, $entries, $scope);
+        }
+
         $exits = $this->exits($document, $scope, $benchmark);
         $riskPerTrade = $this->fraction($sizing, 'risk_per_trade', $this->policy->riskPerTrade);
         $maxPosition = $this->fraction($sizing, 'max_position', $this->policy->maxPosition);
@@ -162,8 +178,73 @@ final class DocumentChecker
         return [new StrategySpec(
             $id->text, $title->text, $family->text, trim($hypothesis->text), trim($failsWhen->text), $benchmark, null, $params,
             $market, $instruments, $timeframe, $filters, $entries, $exits, $riskPerTrade, $maxPosition,
-            $maxOpenPositions, $maxTradesPerDay, $cooldown,
+            $maxOpenPositions, $maxTradesPerDay, $cooldown, $universe,
         ), $scope->warnings];
+    }
+
+    /** The rule of a universe strategy (D-92): today the top N USDT perpetuals by 30-day quote volume, and no other. */
+    private function universe(YamlMap $document): ?UniverseRule
+    {
+        $at = $document->keyPosition('universe') ?? new Position(1, 1);
+
+        if (isset($document->entries['market'])) {
+            $this->fail($at, 'market and universe are two ways to say what is traded: keep one.');
+        }
+
+        $universe = $this->section($document, 'universe', 'universe');
+
+        if ($universe === null) {
+            return null;
+        }
+
+        $this->knownKeys($universe, self::SECTIONS['universe'], 'universe');
+        $rule = $this->text($universe, 'rule', required: false);
+        $n = $this->text($universe, 'n', required: false);
+        $by = $this->text($universe, 'by', required: false);
+
+        if ($rule === null || $n === null || $by === null) {
+            $this->fail($at, 'universe needs rule, n and by, such as { rule: top, n: 50, by: quote_volume_30d }.');
+
+            return null;
+        }
+
+        if ($rule->text !== 'top') {
+            $this->fail($rule->at, 'universe.rule must be top.');
+        }
+
+        if ($by->text !== 'quote_volume_30d') {
+            $this->fail($by->at, 'universe.by must be quote_volume_30d.');
+        }
+
+        if (preg_match('/^[1-9]\d{0,2}$/', $n->text) !== 1 || (int) $n->text < 2 || (int) $n->text > 500) {
+            $this->fail($n->at, 'universe.n must be a whole number from 2 to 500, such as 50.');
+
+            return null;
+        }
+
+        return new UniverseRule('top', (int) $n->text, 'quote_volume_30d');
+    }
+
+    /**
+     * Warns of an entry that chooses nobody: without a ranking in its condition or in the filters, every member
+     * whose condition holds may enter, and the order among them is only the symbols'.
+     *
+     * @param  list<Expression>  $filters
+     * @param  array<string, EntrySpec>  $entries
+     */
+    private function unranked(array $filters, array $entries, Scope $scope): void
+    {
+        foreach ($filters as $filter) {
+            if (Rankings::first($filter->node) !== null) {
+                return;
+            }
+        }
+
+        foreach ($entries as $name => $entry) {
+            if (Rankings::first($entry->when->node) === null) {
+                $scope->warn("entries.{$name} does not rank the members: every member whose condition holds may enter, in symbol order, until the limits are reached. Use top(n, ...) or rank(...) in its when or in filters to choose among them.");
+            }
+        }
     }
 
     /** @return array{?MarketType, list<Symbol>} */
