@@ -253,9 +253,9 @@
     "semantic_hash": "bdc07eb4af862872b83af6a57d453d90"
   },
   "app/Market/Backfill/Backfill.php": {
-    "mtime": 1794241292.812952,
-    "seen": 1794241766.2067876,
-    "ast_hash": "751f674b31a77d8bac4f4b25182cc3b5",
+    "mtime": 1794252053.4288278,
+    "seen": 1794252493.543479,
+    "ast_hash": "5eb4fbaedf0887a1b348ef7ba2e204b4",
     "semantic_hash": ""
   },
   "app/Market/Backfill/BackfillReport.php": {
@@ -283,9 +283,9 @@
     "semantic_hash": "d2e78f65f1896285aed98bee0d91bb86"
   },
   "app/Market/Binance/BinanceRestClient.php": {
-    "mtime": 1794236648.1869228,
-    "seen": 1794237954.2579832,
-    "ast_hash": "5e12725a4472cd60bb40c77a79167ec4",
+    "mtime": 1794251912.2266154,
+    "seen": 1794252493.544571,
+    "ast_hash": "a9a5d769d65b628127d7639796670709",
     "semantic_hash": ""
   },
   "app/Market/Binance/EpochTime.php": {
@@ -367,10 +367,10 @@
     "semantic_hash": ""
   },
   "app/Market/Console/SyncInstruments.php": {
-    "mtime": 1794234536.6631699,
-    "seen": 1794237954.2581697,
-    "ast_hash": "c6a477c23afdfd0d78c32689c981e3de",
-    "semantic_hash": "c6a477c23afdfd0d78c32689c981e3de"
+    "mtime": 1794251834.1989832,
+    "seen": 1794252493.547757,
+    "ast_hash": "599b827c6614efdcaa5d38a2324db1bb",
+    "semantic_hash": ""
   },
   "app/Market/Console/VerifyMarketData.php": {
     "mtime": 1794234536.6631699,
@@ -403,10 +403,10 @@
     "semantic_hash": "65a1d7431af0c6a234cbc8344945617d"
   },
   "app/Market/Data/InstrumentDefinition.php": {
-    "mtime": 1794234536.6715877,
-    "seen": 1794237954.25824,
-    "ast_hash": "ad44abc7905d5421eec53f099d8d72c4",
-    "semantic_hash": "ad44abc7905d5421eec53f099d8d72c4"
+    "mtime": 1794251627.4492488,
+    "seen": 1794252493.549358,
+    "ast_hash": "48f661246c1eac05f4a7e2f761c90161",
+    "semantic_hash": ""
   },
   "app/Market/Data/InstrumentRules.php": {
     "mtime": 1794234536.673401,
@@ -481,10 +481,10 @@
     "semantic_hash": "e79b02a562c9e150d1bc270bed47958d"
   },
   "app/Market/Instruments/InstrumentSync.php": {
-    "mtime": 1794234536.691615,
-    "seen": 1794237954.258409,
-    "ast_hash": "8f975737bffa80e56c4bcc701f19f1d8",
-    "semantic_hash": "8f975737bffa80e56c4bcc701f19f1d8"
+    "mtime": 1794251644.6296625,
+    "seen": 1794252493.553164,
+    "ast_hash": "423646b209915b4cf8e8b863ba385760",
+    "semantic_hash": ""
   },
   "app/Market/Instruments/SyncResult.php": {
     "mtime": 1794234536.6942775,
@@ -493,16 +493,16 @@
     "semantic_hash": "5265ba23201e9334112621310c7cfa62"
   },
   "app/Market/Instruments/Universe.php": {
-    "mtime": 1794234536.6942775,
-    "seen": 1794237954.2584388,
-    "ast_hash": "e6fbc71e4be9f0e9d4ef7674e36f620b",
+    "mtime": 1794252063.917578,
+    "seen": 1794252493.553585,
+    "ast_hash": "0c8072b1e92be5d32f4fa897ade36ca1",
     "semantic_hash": ""
   },
   "app/Market/Models/Instrument.php": {
-    "mtime": 1794234536.698445,
-    "seen": 1794237954.2584593,
-    "ast_hash": "df4c60004ac76316e7bbe4894f5bc58a",
-    "semantic_hash": "df4c60004ac76316e7bbe4894f5bc58a"
+    "mtime": 1794251641.9249487,
+    "seen": 1794252493.553788,
+    "ast_hash": "b147927936133211c7b27eb2a2430a9e",
+    "semantic_hash": ""
   },
   "app/Market/Models/InstrumentFilter.php": {
     "mtime": 1794234536.698445,
@@ -523,10 +523,10 @@
     "semantic_hash": "9a470e21e2be1b8c299bb682f41004b4"
   },
   "app/Market/Quality/QualityCheck.php": {
-    "mtime": 1794234536.706728,
-    "seen": 1794237954.258519,
-    "ast_hash": "4bde6a764b30570004e35e6331c14684",
-    "semantic_hash": "4bde6a764b30570004e35e6331c14684"
+    "mtime": 1794252033.8905237,
+    "seen": 1794252493.554914,
+    "ast_hash": "65e5e5961a12bad8feece05f336c4b96",
+    "semantic_hash": ""
   },
   "app/Market/Quality/QualityReport.php": {
     "mtime": 1794234536.7108798,
@@ -631,9 +631,9 @@
     "semantic_hash": "1532fd9ce5d308e65f8531379e399fd9"
   },
   "app/Providers/AppServiceProvider.php": {
-    "mtime": 1794234536.7462325,
-    "seen": 1794237954.258864,
-    "ast_hash": "55b8693685e83b07855ecadf12372184",
+    "mtime": 1794251805.2696612,
+    "seen": 1794252493.5618565,
+    "ast_hash": "377f0608e2e787f57f0bb8f6c61dddc7",
     "semantic_hash": ""
   },
   "app/Risk/Data/AccountView.php": {
@@ -1189,9 +1189,9 @@
     "semantic_hash": "f5b793964e0317b51bfb1ee93a5e6ae8"
   },
   "config/exchanges.php": {
-    "mtime": 1794243511.1907554,
-    "seen": 1794244430.1776013,
-    "ast_hash": "835d433ad2c3e7a9d18d97a589d458d8",
+    "mtime": 1794251807.051415,
+    "seen": 1794252493.6060834,
+    "ast_hash": "1b01fe437850aaed4a43e80ac55d7313",
     "semantic_hash": ""
   },
   "config/filesystems.php": {
@@ -1358,15 +1358,15 @@
     "semantic_hash": ""
   },
   "tests/Feature/Market/BackfillTest.php": {
-    "mtime": 1794241139.1551306,
-    "seen": 1794241766.29255,
-    "ast_hash": "0dc84e6d6077767677e2b1e45fe07e3a",
+    "mtime": 1794252008.5527685,
+    "seen": 1794252493.6216848,
+    "ast_hash": "bf3cc0a50faab8d94d498874c6340605",
     "semantic_hash": ""
   },
   "tests/Feature/Market/BinanceRestClientTest.php": {
-    "mtime": 1794237541.9967153,
-    "seen": 1794237954.2619557,
-    "ast_hash": "bd58170052d510d7c7fb14a5cedf7662",
+    "mtime": 1794251905.9169707,
+    "seen": 1794252493.621695,
+    "ast_hash": "e97c688a00fb929c01406cd7c3a2e1ff",
     "semantic_hash": ""
   },
   "tests/Feature/Market/CandleFeedTest.php": {
@@ -1400,16 +1400,16 @@
     "semantic_hash": "863dadb99f902fccea7d7091c99440b1"
   },
   "tests/Feature/Market/InstrumentSyncTest.php": {
-    "mtime": 1794234537.1885571,
-    "seen": 1794237954.2620156,
-    "ast_hash": "70585e01426489a01bd1ce626af454e4",
-    "semantic_hash": "70585e01426489a01bd1ce626af454e4"
+    "mtime": 1794251612.7124698,
+    "seen": 1794252493.6228125,
+    "ast_hash": "11ac0ef8f9314b6daf17a5097780a0b6",
+    "semantic_hash": ""
   },
   "tests/Feature/Market/QualityCheckTest.php": {
-    "mtime": 1794234537.1885571,
-    "seen": 1794237954.262024,
-    "ast_hash": "0b4e0770195f00bcf1adb609400298bb",
-    "semantic_hash": "0b4e0770195f00bcf1adb609400298bb"
+    "mtime": 1794252000.390482,
+    "seen": 1794252493.622823,
+    "ast_hash": "65852d9c14d304c9cf61b8fd7a31e6bf",
+    "semantic_hash": ""
   },
   "tests/Feature/Network/BinancePublicDataTest.php": {
     "mtime": 1794234537.1943057,
@@ -1834,9 +1834,9 @@
     "semantic_hash": ""
   },
   "docs/README.md": {
-    "mtime": 1794241270.0943515,
-    "seen": 1794241766.3244798,
-    "ast_hash": "f080656bff568782bb59950ba313f125",
+    "mtime": 1794251560.3133023,
+    "seen": 1794252493.6496968,
+    "ast_hash": "a7f7c207fae63e232c2166c3b7f3af6e",
     "semantic_hash": ""
   },
   "docs/architecture.md": {
@@ -1864,9 +1864,9 @@
     "semantic_hash": ""
   },
   "docs/decisions.md": {
-    "mtime": 1794244944.7358038,
-    "seen": 1794246201.3435636,
-    "ast_hash": "a43407cee26ef2c7caef1441435e5391",
+    "mtime": 1794251548.1182854,
+    "seen": 1794252493.6504898,
+    "ast_hash": "1d482bd8854c59607943df2b3587eb16",
     "semantic_hash": ""
   },
   "docs/engine.md": {
@@ -1882,9 +1882,9 @@
     "semantic_hash": ""
   },
   "docs/market-data.md": {
-    "mtime": 1794243512.686257,
-    "seen": 1794244430.2219284,
-    "ast_hash": "1447bcd7919a827b08876d59fade901f",
+    "mtime": 1794252098.497177,
+    "seen": 1794252493.6509957,
+    "ast_hash": "dc91bde6a89611db347a4ba6b5b03688",
     "semantic_hash": ""
   },
   "docs/risk-policy.md": {
@@ -1894,9 +1894,9 @@
     "semantic_hash": ""
   },
   "docs/runbook.md": {
-    "mtime": 1794244946.652526,
-    "seen": 1794246201.34576,
-    "ast_hash": "99b90103410cd56861613c65aaceaaca",
+    "mtime": 1794252099.917529,
+    "seen": 1794252493.651225,
+    "ast_hash": "50aa0f4be9395f95b725d0fcd26ee53b",
     "semantic_hash": ""
   },
   "docs/security.md": {
@@ -1918,9 +1918,9 @@
     "semantic_hash": ""
   },
   "docs/strategy/configurator.md": {
-    "mtime": 1794234537.0375984,
-    "seen": 1794237954.2634578,
-    "ast_hash": "bbb0c8f5a27dde469858502349799c36",
+    "mtime": 1794251564.811625,
+    "seen": 1794252493.6518285,
+    "ast_hash": "af960c6bc3dc954c9dd86aa07b8365eb",
     "semantic_hash": ""
   },
   "public/robots.txt": {
@@ -1930,9 +1930,9 @@
     "semantic_hash": ""
   },
   "tests/Fixtures/binance/README.md": {
-    "mtime": 1794234537.2257082,
-    "seen": 1794237954.2634842,
-    "ast_hash": "f7db6dc805602fe20201e4495190feb3",
+    "mtime": 1794251770.5502691,
+    "seen": 1794252493.6520479,
+    "ast_hash": "cf4b6a84d4fb981f08f56fa48c5c3a7e",
     "semantic_hash": ""
   },
   "app/Strategy/Indicators/Bollinger.php": {
@@ -3226,9 +3226,9 @@
     "semantic_hash": ""
   },
   "resources/views/livewire/strategies-screen.blade.php": {
-    "mtime": 1794234537.1404605,
-    "seen": 1794237954.261759,
-    "ast_hash": "8394f61932b643201c43d3bb28bbb2fe",
+    "mtime": 1794248676.2254882,
+    "seen": 1794252493.617781,
+    "ast_hash": "324347d5914f8ab28426e115d7c23b62",
     "semantic_hash": ""
   },
   "tests/Feature/Web/ScreensTest.php": {
@@ -3292,9 +3292,9 @@
     "semantic_hash": ""
   },
   "app/Livewire/SettingsScreen.php": {
-    "mtime": 1794244858.56218,
-    "seen": 1794246201.135258,
-    "ast_hash": "c44cfb53d7ba802e9e008e936460d10c",
+    "mtime": 1794252065.5493524,
+    "seen": 1794252493.5424192,
+    "ast_hash": "0731fec28e98aeb2f7d12a733e44b7b8",
     "semantic_hash": ""
   },
   "resources/views/livewire/settings-screen.blade.php": {
@@ -3634,9 +3634,9 @@
     "semantic_hash": ""
   },
   "tests/Feature/Web/MarketDataSettingsTest.php": {
-    "mtime": 1794234537.2184262,
-    "seen": 1794237954.262222,
-    "ast_hash": "694fbeee24a2938233f36167822ec237",
+    "mtime": 1794252021.932093,
+    "seen": 1794252493.6269066,
+    "ast_hash": "a6d3019cde88b47cdd29aaff03df6ab2",
     "semantic_hash": ""
   },
   "app/Execution/Accounts/LiveGate.php": {
@@ -3793,6 +3793,30 @@
     "mtime": 1794244834.8527718,
     "seen": 1794246201.1815946,
     "ast_hash": "4a2a90b2574eba8b06bc0676a6fc3c53",
+    "semantic_hash": ""
+  },
+  "app/Market/Archive/ArchiveCatalog.php": {
+    "mtime": 1794251798.7206936,
+    "seen": 1794252493.542629,
+    "ast_hash": "3c18975da22dfd390298cade8997e4aa",
+    "semantic_hash": ""
+  },
+  "database/migrations/2026_11_09_000020_add_lifetime_to_instruments.php": {
+    "mtime": 1794251622.2751918,
+    "seen": 1794252493.6135137,
+    "ast_hash": "39877a5c83fa3d7664215176ec229e9c",
+    "semantic_hash": ""
+  },
+  "tests/Feature/Market/ArchiveCatalogTest.php": {
+    "mtime": 1794251789.7131493,
+    "seen": 1794252493.621449,
+    "ast_hash": "245253ee621589abc9714d79d04ae1ac",
+    "semantic_hash": ""
+  },
+  "docs/universe.md": {
+    "mtime": 1794251538.3598855,
+    "seen": 1794252493.6518393,
+    "ast_hash": "91b35e2534c26839b8b8abdec33e8ecb",
     "semantic_hash": ""
   },
   "package-lock.json": {

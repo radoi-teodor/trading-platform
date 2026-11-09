@@ -190,7 +190,9 @@ final class SettingsScreen extends Component
     {
         try {
             $entry = $universe->add(Symbol::parse(trim($this->universeSymbol)));
-            $this->marketMessage = "{$entry->symbol} joins the universe. Restart market:stream {$entry->market->value} to stream it, and import its history below.";
+            $this->marketMessage = $entry->streamed
+                ? "{$entry->symbol} joins the universe. Restart market:stream {$entry->market->value} to stream it, and import its history below."
+                : "{$entry->symbol} joins the universe for its history only: it is delisted. Import its history below.";
             $this->universeSymbol = '';
         } catch (InvalidArgumentException $failure) {
             $this->marketMessage = $failure->getMessage();

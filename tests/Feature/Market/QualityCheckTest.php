@@ -33,6 +33,18 @@ function qualityRange(array $range): string
     return $range['from']->format('m-d H:i').' '.$range['to']->format('m-d H:i');
 }
 
+it('does not count minutes before the listing or from the delisting as gaps (D-89)', function (): void {
+    $btc = qualityInstrument();
+    $btc->update(['listed_at' => CandleFactory::time(3), 'delisted_at' => CandleFactory::time(7)]);
+    storeMinutes($btc, [3, 4, 5, 6]);
+
+    $report = app(QualityCheck::class)->run($btc, CandleFactory::time(0), CandleFactory::time(9));
+
+    expect($report->expectedMinutes)->toBe(4)
+        ->and($report->missingMinutes)->toBe(0)
+        ->and($report->gaps)->toBe([]);
+});
+
 it('reports missing minutes as ranges', function (): void {
     $btc = qualityInstrument();
     storeMinutes($btc, [0, 1, 2, 5, 6, 9]);

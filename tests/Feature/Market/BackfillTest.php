@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Market\Backfill\Backfill;
 use App\Market\Backfill\BackfillReport;
+use App\Market\Data\InstrumentStatus;
 use App\Market\Data\MarketType;
 use App\Market\Models\Instrument;
 use App\Support\Clock\Clock;
@@ -103,6 +104,33 @@ it('stores a full monthly archive without holding the month in memory', function
         ->and($report->failure)->toBeNull()
         ->and(DB::table('candles')->count())->toBe(44640)
         ->and(memory_get_peak_usage() - $before)->toBeLessThan(48 * 1024 * 1024);
+});
+
+it('starts at the listing, without asking for archives or REST before it (D-89)', function (): void {
+    fakeBinanceForBackfill();
+    app()->instance(Clock::class, new SimClock(CarbonImmutable::parse('2026-11-03 12:00:00', 'UTC')));
+    $instrument = Instrument::register('binance', MarketType::Spot, Symbol::parse('BTC/USDT'), CarbonImmutable::parse('2026-11-03', 'UTC'));
+    $instrument->update(['listed_at' => CarbonImmutable::parse('2026-11-02 00:00:00', 'UTC')]);
+
+    $report = app(Backfill::class)->candles($instrument, CarbonImmutable::parse('2026-10-01', 'UTC'), CarbonImmutable::parse('2026-11-03 12:00:00', 'UTC'));
+
+    expect(mainSteps($report))->toBe(['daily 2026-11-02', 'rest 2026-11-03'])
+        ->and($report->failure)->toBeNull();
+    Http::assertNotSent(fn (Request $request): bool => str_contains($request->url(), '2026-10.zip') || str_contains($request->url(), '2026-11-01.zip'));
+});
+
+it('stops at the delisting and never asks REST for a delisted instrument (D-89)', function (): void {
+    fakeBinanceForBackfill();
+    app()->instance(Clock::class, new SimClock(CarbonImmutable::parse('2026-11-03 12:00:00', 'UTC')));
+    $instrument = Instrument::register('binance', MarketType::Spot, Symbol::parse('BTC/USDT'), CarbonImmutable::parse('2026-11-03', 'UTC'), InstrumentStatus::Delisted);
+    $instrument->update(['delisted_at' => CarbonImmutable::parse('2026-11-02 00:00:00', 'UTC')]);
+
+    $report = app(Backfill::class)->candles($instrument, CarbonImmutable::parse('2026-10-01', 'UTC'), CarbonImmutable::parse('2026-11-03 12:00:00', 'UTC'));
+
+    // The sparse test archives leave gaps; for a delisted instrument they stay gaps, REST knows nothing of it.
+    expect(array_map(fn ($step): string => $step->source, $report->steps))->toBe(['monthly 2026-10', 'daily 2026-11-01'])
+        ->and($report->failure)->toBeNull();
+    Http::assertNotSent(fn (Request $request): bool => str_contains($request->url(), '/klines?') || str_contains($request->url(), '2026-11-02.zip'));
 });
 
 it('only keeps candles inside the asked range', function (): void {

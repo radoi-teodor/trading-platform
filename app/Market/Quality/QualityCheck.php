@@ -27,8 +27,9 @@ final readonly class QualityCheck
 
     public function run(Instrument $instrument, CarbonImmutable $from, CarbonImmutable $to): QualityReport
     {
-        $from = Timeframe::OneMinute->openTimeContaining($from);
-        $to = Timeframe::OneMinute->openTimeContaining($to);
+        // Minutes before the listing and from the delisting on are not gaps (D-89).
+        $from = Timeframe::OneMinute->openTimeContaining($instrument->listed_at === null ? $from : $from->max($instrument->listed_at));
+        $to = Timeframe::OneMinute->openTimeContaining($instrument->delisted_at === null ? $to : $to->min($instrument->delisted_at->subMinute()));
         $first = $from->getTimestamp();
         $last = $to->getTimestamp();
 

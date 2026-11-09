@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Market\Instruments;
 
+use App\Market\Data\InstrumentStatus;
 use App\Market\Data\MarketType;
 use App\Market\Models\Instrument;
 use App\Market\Models\UniverseEntry;
@@ -87,11 +88,16 @@ final readonly class Universe
     {
         $market = $symbol->isPerpetual() ? MarketType::Perp : MarketType::Spot;
 
-        if (! (new StoredInstruments)->isTradable($symbol)) {
+        $stored = Instrument::query()->where('exchange', 'binance')->where('market', $market)->where('symbol', (string) $symbol)->first();
+
+        if ($stored === null) {
             throw new InvalidArgumentException("{$symbol} is not a stored instrument; run market:instruments first.");
         }
 
-        return UniverseEntry::query()->firstOrCreate(['market' => $market, 'symbol' => (string) $symbol], ['streamed' => true, 'scalping' => false, 'created_at' => $this->clock->now()]);
+        // A delisted instrument joins for its history only (D-89): there is nothing left to stream.
+        $streamed = $stored->status !== InstrumentStatus::Delisted;
+
+        return UniverseEntry::query()->firstOrCreate(['market' => $market, 'symbol' => (string) $symbol], ['streamed' => $streamed, 'scalping' => false, 'created_at' => $this->clock->now()]);
     }
 
     /** The instrument loaded by market:instruments, or registered from its symbol when that was not possible. */

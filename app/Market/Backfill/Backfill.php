@@ -13,6 +13,7 @@ use App\Market\Binance\BinanceRestClient;
 use App\Market\CandleRepository;
 use App\Market\Data\CandleSource;
 use App\Market\Data\FundingRate;
+use App\Market\Data\InstrumentStatus;
 use App\Market\Data\OpenInterest;
 use App\Market\Data\PriceMinute;
 use App\Market\Data\TradeFlow;
@@ -84,6 +85,11 @@ final readonly class Backfill
         $now = $this->clock->now();
         $today = $now->startOfDay();
         $to = $to->min(Timeframe::OneMinute->openTimeContaining($now)->subMinute());
+        // The instrument's lifetime bounds the range (D-89): nothing before the listing, nothing from the delisting.
+        $from = $instrument->listed_at === null ? $from : $from->max($instrument->listed_at);
+        $to = $instrument->delisted_at === null ? $to : $to->min($instrument->delisted_at->subMinute());
+        // REST knows only what trades: a delisted instrument is filled from archives alone, its gaps stay gaps.
+        $rest = $instrument->status !== InstrumentStatus::Delisted;
         $cursor = $from->utc()->startOfDay();
         $steps = [];
 
@@ -93,7 +99,7 @@ final readonly class Backfill
 
                 if ($cursor->equalTo($month->start) && $month->end()->lessThanOrEqualTo($today) && $month->end()->subMinute()->lessThanOrEqualTo($to)) {
                     try {
-                        $this->storeArchive($instrument, $month, $from, $to, $steps);
+                        $this->storeArchive($instrument, $month, $from, $to, $steps, $rest);
                         $cursor = $month->end();
 
                         continue;
@@ -106,13 +112,17 @@ final readonly class Backfill
 
                 if ($day->end()->lessThanOrEqualTo($today)) {
                     try {
-                        $this->storeArchive($instrument, $day, $from, $to, $steps);
+                        $this->storeArchive($instrument, $day, $from, $to, $steps, $rest);
                         $cursor = $day->end();
 
                         continue;
                     } catch (ArchiveMissing) {
-                        // Not published yet: REST from here on.
+                        // Not published yet: REST from here on, for an instrument REST still knows.
                     }
+                }
+
+                if (! $rest) {
+                    break;
                 }
 
                 $steps[] = $this->storeRest($instrument, $cursor->max($from), $to);
@@ -161,7 +171,7 @@ final readonly class Backfill
      *
      * @param  list<BackfillStep>  $steps
      */
-    private function storeArchive(Instrument $instrument, ArchivePeriod $period, CarbonImmutable $from, CarbonImmutable $to, array &$steps): void
+    private function storeArchive(Instrument $instrument, ArchivePeriod $period, CarbonImmutable $from, CarbonImmutable $to, array &$steps, bool $rest = true): void
     {
         $archived = $this->archive->klines($instrument->market, $instrument->venue_symbol, $period);
         $openTimes = [];
@@ -176,6 +186,10 @@ final readonly class Backfill
             }
         })();
         $steps[] = new BackfillStep("{$period->folder()} {$period->label()}", $this->candles->upsert($instrument, CandleSource::Archive, $candles));
+
+        if (! $rest) {
+            return;
+        }
 
         $windowStart = $period->start->max(Timeframe::OneMinute->openTimeContaining($from));
         $windowEnd = $period->end()->subMinute()->min($to);

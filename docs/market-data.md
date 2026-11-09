@@ -125,6 +125,13 @@ The universe is the `market_universe` table, edited on the Settings screen; `con
 the exchange lists; only the universe is backfilled and streamed, and an instrument can be history only. The
 stream reads the universe when it starts.
 
+**Lifetime (D-89).** `market:instruments perp` keeps each perpetual's listing (`onboardDate`), its delivery when it
+was settled, and its underlying type; stock, index and commodity contracts (`TRADIFI_PERPETUAL`) are perpetuals
+with their own type. `market:instruments perp --history` also registers, as delisted, every perpetual only the
+public archive listing still knows. Backfill and `market:check` stop at the listing and at the delisting: those
+minutes are not gaps. A delisted instrument is filled from archives only (REST no longer knows it), and a minute
+its archives lack stays a gap. A delisted instrument joins the universe for its history only.
+
 ## 7. Tests
 
 The default suite never touches the network: the HTTP client is faked, stray requests fail the test, and

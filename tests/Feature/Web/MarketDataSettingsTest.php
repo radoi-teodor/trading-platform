@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Livewire\SettingsScreen;
+use App\Market\Data\InstrumentStatus;
 use App\Market\Data\MarketType;
 use App\Market\Instruments\Universe;
 use App\Market\Jobs\ImportMarketData;
@@ -49,6 +50,17 @@ it('adds any stored instrument, refuses one Binance does not list, and removes o
     $doge = UniverseEntry::query()->where('symbol', 'DOGE/USDT:USDT')->sole();
     Livewire::test(SettingsScreen::class)->call('removeInstrument', $doge->id)->assertSee('DOGE/USDT:USDT leaves the universe');
     expect(app(Universe::class)->symbols(MarketType::Perp))->toHaveCount(5);
+});
+
+it('adds a delisted perpetual for its history only, never streamed (D-89)', function (): void {
+    Instrument::register('binance', MarketType::Perp, Symbol::parse('SRM/USDT:USDT'), CarbonImmutable::parse('2026-11-01', 'UTC'), InstrumentStatus::Delisted);
+
+    Livewire::test(SettingsScreen::class)
+        ->set('universeSymbol', 'SRM/USDT:USDT')->call('addInstrument')
+        ->assertSee('SRM/USDT:USDT joins the universe for its history only: it is delisted');
+
+    expect(UniverseEntry::query()->where('symbol', 'SRM/USDT:USDT')->sole()->streamed)->toBeFalse()
+        ->and(array_map(fn (Instrument $i): string => $i->symbol, app(Universe::class)->instruments(MarketType::Perp)))->not->toContain('SRM/USDT:USDT');
 });
 
 it('switches streaming, the scalping data and the large-trade notional, and says a restart is needed', function (): void {
