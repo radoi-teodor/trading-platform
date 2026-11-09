@@ -13,4 +13,5 @@ enum ParamKind: string
     case Duration = 'a duration';
     case Percent = 'a percent';
     case DepthBand = 'a band of the order book: 1%, 2% or 5%';
+    case Members = 'a whole number of members';
 }

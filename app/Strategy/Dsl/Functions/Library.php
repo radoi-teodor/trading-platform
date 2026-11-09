@@ -113,6 +113,14 @@ final class Library
         $specs[] = new FunctionSpec('market', Group::Order, Type::of(Kind::Order), isCall: false);
         $specs[] = new FunctionSpec('limit', Group::Order, Type::of(Kind::Order), [new ParamSpec('offset', ParamKind::Percent), new ParamSpec('expiry', ParamKind::Duration, '1 bars')]);
 
+        // Rankings across the members of a universe (D-92): each reads every member's src on the candle that closed.
+        $ranked = new ParamSpec('src', ParamKind::Series);
+        $specs[] = new FunctionSpec('rank', Group::Universe, $plain, [$ranked]);
+        $specs[] = new FunctionSpec('percentile', Group::Universe, $fraction, [$ranked]);
+        $specs[] = new FunctionSpec('top', Group::Universe, $condition, [new ParamSpec('n', ParamKind::Members), $ranked]);
+        $specs[] = new FunctionSpec('bottom', Group::Universe, $condition, [new ParamSpec('n', ParamKind::Members), $ranked]);
+        $specs[] = new FunctionSpec('count', Group::Universe, $plain, isCall: false);
+
         $byName = [];
 
         foreach ($specs as $spec) {

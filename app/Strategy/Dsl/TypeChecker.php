@@ -42,6 +42,12 @@ final class TypeChecker
     /** @var SplObjectStorage<Call, array<string, Node>> the arguments of every call, by parameter name */
     private SplObjectStorage $calls;
 
+    /** How many rankings' sources enclose the node being checked. */
+    private int $ranking = 0;
+
+    /** The other timeframe an enclosing `on` reads, when there is one. */
+    private ?Timeframe $other = null;
+
     public function __construct()
     {
         $this->calls = new SplObjectStorage;
@@ -114,12 +120,20 @@ final class TypeChecker
             throw new DslError($node->at, "{$node->name} takes no arguments: write {$node->name}.");
         }
 
-        $arguments = $this->bind($node, $spec);
+        $arguments = $this->bind($node, $spec, $scope);
         $this->calls[$node] = $arguments;
         $source = null;
 
         foreach ($spec->params as $param) {
-            $type = $this->argument($arguments[$param->name], $param, $spec, $scope);
+            $ranked = $spec->group === Group::Universe && $param->name === 'src' ? 1 : 0;
+            $this->ranking += $ranked;
+
+            try {
+                $type = $this->argument($arguments[$param->name], $param, $spec, $scope);
+            } finally {
+                $this->ranking -= $ranked;
+            }
+
             $source = $param->name === 'src' ? $type : $source;
         }
 
@@ -152,7 +166,7 @@ final class TypeChecker
      *
      * @return array<string, Node>
      */
-    private function bind(Call $node, FunctionSpec $spec): array
+    private function bind(Call $node, FunctionSpec $spec, Scope $scope): array
     {
         $bound = [];
         $named = false;
@@ -180,6 +194,13 @@ final class TypeChecker
         foreach ($spec->params as $param) {
             if (! isset($bound[$param->name])) {
                 if ($param->default === null) {
+                    // bottom(roc(42)) lacks its n, not its src: say so before saying what is missing.
+                    foreach ($spec->params as $given) {
+                        if ($given->kind === ParamKind::Members && isset($bound[$given->name])) {
+                            $this->members($bound[$given->name], $given, $spec, $scope);
+                        }
+                    }
+
                     throw new DslError($node->at, "{$node->name} needs {$param->name}, {$param->kind->value}.");
                 }
 
@@ -195,12 +216,14 @@ final class TypeChecker
         $wrong = fn (): DslError => new DslError($value->position(), "{$param->name} of {$spec->name} must be {$param->kind->value}, not ".DslWriter::write($value).'.');
 
         switch ($param->kind) {
+            case ParamKind::Members:
+                $this->members($value, $param, $spec, $scope);
+
+                return $this->check($value, $scope);
             case ParamKind::Count:
                 $type = $this->check($value, $scope);
-                $whole = $value instanceof NumberLiteral && self::isWhole($value->value)
-                    || $value instanceof Parameter && ($scope->wholeParameters[$value->name] ?? false);
 
-                if (! $whole) {
+                if (! self::whole($value, $scope)) {
                     throw new DslError($value->position(), "{$param->name} of {$spec->name} must be a whole number of candles from 1, such as {$spec->name}(20).");
                 }
 
@@ -229,6 +252,19 @@ final class TypeChecker
 
                 return $accepted ? $type : throw $wrong();
         }
+    }
+
+    private function members(Node $value, ParamSpec $param, FunctionSpec $spec, Scope $scope): void
+    {
+        if (! self::whole($value, $scope)) {
+            throw new DslError($value->position(), "{$param->name} of {$spec->name} must be a whole number of members from 1, such as {$spec->name}(5, roc(42)).");
+        }
+    }
+
+    private static function whole(Node $value, Scope $scope): bool
+    {
+        return $value instanceof NumberLiteral && self::isWhole($value->value)
+            || $value instanceof Parameter && ($scope->wholeParameters[$value->name] ?? false);
     }
 
     private function unary(Unary $node, Scope $scope): Type
@@ -337,7 +373,14 @@ final class TypeChecker
             throw new DslError($node->at, "on {$node->timeframe->value} reads a shorter timeframe than the strategy's {$scope->timeframe->value}; use {$scope->timeframe->value} or longer.");
         }
 
-        $type = $this->check($node->expression, $scope);
+        $outer = $this->other;
+        $this->other = $node->timeframe === $scope->timeframe ? $outer : $node->timeframe;
+
+        try {
+            $type = $this->check($node->expression, $scope);
+        } finally {
+            $this->other = $outer;
+        }
 
         if ($type->kind !== Kind::Series && $type->kind !== Kind::Condition) {
             throw new DslError($node->at, 'on applies to series and conditions; '.DslWriter::write($node->expression)." is {$type->describe()}.");
@@ -377,7 +420,27 @@ final class TypeChecker
             throw new DslError($node->position(), "{$name} exists only for perpetuals; this strategy trades spot.");
         }
 
+        if ($spec->group === Group::Universe) {
+            $this->ranks($name, $node, $scope);
+        }
+
         return $spec;
+    }
+
+    /** A ranking compares the members of a universe when the strategy's candle closes, each by its own values. */
+    private function ranks(string $name, Node $node, Scope $scope): void
+    {
+        if (! $scope->universe) {
+            throw new DslError($node->position(), "{$name} ranks the members of a universe, and this strategy names its instruments. Write universe: { rule: top, n: 50, by: quote_volume_30d } instead of market to use it.");
+        }
+
+        if ($this->ranking > 0) {
+            throw new DslError($node->position(), "{$name} cannot be ranked: a ranking reads each member's own values, such as rank(roc(42)).");
+        }
+
+        if ($this->other !== null) {
+            throw new DslError($node->position(), "{$name} is worked out when the strategy's {$scope->timeframe->value} candle closes; put on {$this->other->value} inside it, such as rank(roc(42) on {$this->other->value}).");
+        }
     }
 
     private static function isWhole(Decimal $value): bool

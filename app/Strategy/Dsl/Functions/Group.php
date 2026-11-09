@@ -14,4 +14,5 @@ enum Group
     case Time;
     case Exit;
     case Order;
+    case Universe;
 }

@@ -37,6 +37,7 @@ it('parses the grammar of docs/strategy/configurator.md with its precedence', fu
     'mixed arguments' => ['rsi(14, src: hl2)', '(rsi 14 src:hl2)'],
     'no arguments' => ['vwap() > close', '(> (vwap) close)'],
     'nested calls' => ['level(lowest(low, 10))', '(level (lowest low 10))'],
+    'a ranking of the universe' => ['top(5, roc(42))', '(top 5 (roc 42))'],
     'percent' => ['close > 2%', '(> close 2%)'],
     'negative percent' => ['limit(offset: -0.1%)', '(limit offset:(neg 0.1%))'],
     'durations and bars' => ['limit(offset: 0.1%, expiry: 2h)', '(limit offset:0.1% expiry:2h)'],

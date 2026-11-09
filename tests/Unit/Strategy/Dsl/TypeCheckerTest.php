@@ -15,9 +15,9 @@ use App\Support\Timeframe;
 
 mutates(TypeChecker::class, DslWriter::class, Scope::class);
 
-function dslScope(bool $perpetual = false): Scope
+function dslScope(bool $perpetual = false, bool $universe = false): Scope
 {
-    return new Scope(Timeframe::FourHours, $perpetual, ['fast' => Type::of(Kind::Number), 'band' => Type::of(Kind::Percent), 'k' => Type::of(Kind::Number)], ['fast' => true]);
+    return new Scope(Timeframe::FourHours, $perpetual, ['fast' => Type::of(Kind::Number), 'band' => Type::of(Kind::Percent), 'k' => Type::of(Kind::Number)], ['fast' => true], [], $universe);
 }
 
 it('types expressions', function (string $source, string $type, bool $perpetual): void {
@@ -104,3 +104,40 @@ it('writes expressions back as DSL with only the parentheses they need', functio
     ['time_stop(60 bars)', 'time_stop(60 bars)'],
     ['3R', '3R'],
 ]);
+
+it('types rankings in a universe strategy (D-92)', function (string $source, string $type): void {
+    expect((new TypeChecker)->check(Parser::parse($source), dslScope(true, true))->describe())->toBe($type);
+})->with([
+    'rank' => ['rank(roc(42))', 'a value series'],
+    'percentile' => ['percentile(funding_rate)', 'a rate series'],
+    'percentile against a percent' => ['percentile(roc(42)) > 90%', 'a condition'],
+    'top' => ['top(5, roc(42))', 'a condition'],
+    'bottom with a parameter and a named source' => ['bottom($fast, src: volume)', 'a condition'],
+    'count' => ['rank(roc(42)) <= count - 10', 'a condition'],
+    'on the strategy timeframe' => ['top(5, roc(42)) on 4h', 'a condition'],
+    'a longer timeframe inside' => ['rank(roc(42) on 1d)', 'a value series'],
+    'a smoothed rank' => ['sma(5, src: rank(roc(42)))', 'a value series'],
+    'the previous rank' => ['rank(roc(42))[1] > rank(roc(42))', 'a condition'],
+]);
+
+it('refuses rankings without meaning, saying why (D-92)', function (string $source, string $message, bool $universe = true): void {
+    expect(fn () => (new TypeChecker)->check(Parser::parse($source, 22, 15), dslScope(true, $universe)))->toThrow(DslError::class, $message);
+})->with([
+    'outside a universe' => ['top(5, roc(42))', 'line 22, column 15: top ranks the members of a universe, and this strategy names its instruments. Write universe: { rule: top, n: 50, by: quote_volume_30d } instead of market to use it.', false],
+    'count outside a universe' => ['count > 5', 'line 22, column 15: count ranks the members of a universe, and this strategy names its instruments. Write universe: { rule: top, n: 50, by: quote_volume_30d } instead of market to use it.', false],
+    'a ranking of a ranking' => ['rank(rank(roc(42)))', "line 22, column 20: rank cannot be ranked: a ranking reads each member's own values, such as rank(roc(42))."],
+    'count inside a ranking' => ['top(5, roc(42) / count)', "line 22, column 32: count cannot be ranked: a ranking reads each member's own values, such as rank(roc(42))."],
+    'on another timeframe' => ['top(5, roc(42)) on 1d', "line 22, column 15: top is worked out when the strategy's 4h candle closes; put on 1d inside it, such as rank(roc(42) on 1d)."],
+    'members not whole' => ['top(2.5, roc(42))', 'line 22, column 19: n of top must be a whole number of members from 1, such as top(5, roc(42)).'],
+    'members forgotten' => ['bottom(roc(42))', 'line 22, column 22: n of bottom must be a whole number of members from 1, such as bottom(5, roc(42)).'],
+    'not a series' => ['rank(5)', 'line 22, column 20: src of rank must be a series, not 5.'],
+    'missing source' => ['rank()', 'line 22, column 15: rank needs src, a series.'],
+]);
+
+it('lets a ranking be used again after a refused one', function (): void {
+    $checker = new TypeChecker;
+
+    expect(fn () => $checker->check(Parser::parse('rank(rank(close))'), dslScope(true, true)))->toThrow(DslError::class)
+        ->and(fn () => $checker->check(Parser::parse('top(5, close) on 1d'), dslScope(true, true)))->toThrow(DslError::class)
+        ->and($checker->check(Parser::parse('rank(close)'), dslScope(true, true))->describe())->toBe('a value series');
+});
