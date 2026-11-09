@@ -284,7 +284,8 @@ final readonly class BinanceRestClient
 
     private function perpDefinition(mixed $symbol): ?InstrumentDefinition
     {
-        if (Json::string($symbol, 'contractType') !== 'PERPETUAL') {
+        // Stocks and commodities are perpetuals too (TRADIFI_PERPETUAL); their underlyingType tells them apart (D-89).
+        if (! in_array(Json::string($symbol, 'contractType'), ['PERPETUAL', 'TRADIFI_PERPETUAL'], true)) {
             return null;
         }
 

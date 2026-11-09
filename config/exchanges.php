@@ -16,6 +16,8 @@ return [
             'stream' => env('BINANCE_PERP_STREAM', 'wss://fstream.binance.com/market'),
         ],
         'archive' => env('BINANCE_ARCHIVE', 'https://data.binance.vision'),
+        // The archive's public S3 listing: every symbol that ever had a file, delisted ones included (D-89).
+        'archive_listing' => env('BINANCE_ARCHIVE_LISTING', 'https://s3-ap-northeast-1.amazonaws.com/data.binance.vision'),
         // Verified archives are kept here and checked against their checksum again on reuse.
         'archive_cache' => storage_path('app/binance-archive'),
         'timeout_seconds' => 15,

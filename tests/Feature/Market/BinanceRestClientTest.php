@@ -140,6 +140,22 @@ it('reads only perpetual contracts from the futures exchangeInfo', function (): 
         ->and($definitions[2]->status)->toBe(InstrumentStatus::Delisted);
 });
 
+it('reads stock and commodity perpetuals too, with what they are a contract on (D-89)', function (): void {
+    // Binance names them TRADIFI_PERPETUAL; skipping them made the archive catalog think they were delisted.
+    $fixture = (string) preg_replace(
+        '/("symbol": "ETHUSDT",.*?"contractType": )"PERPETUAL"(.*?"underlyingType": )"COIN"/s',
+        '${1}"TRADIFI_PERPETUAL"${2}"EQUITY"',
+        binanceFixture('perp-exchange-info.hand-written.json'),
+    );
+    Http::fake(['fapi.binance.com/fapi/v1/exchangeInfo*' => Http::response($fixture)]);
+    [$client] = binanceClient();
+
+    $eth = collect($client->exchangeInfo(MarketType::Perp))->first(fn ($d): bool => (string) $d->symbol === 'ETH/USDT:USDT');
+
+    expect($eth?->status)->toBe(InstrumentStatus::Trading)
+        ->and($eth?->underlyingType)->toBe('EQUITY');
+});
+
 it('reads when a perpetual was listed and what it is a contract on (D-89)', function (): void {
     // A settled contract carries its delivery time; a live perpetual carries 2100-12-25, which means none.
     $fixture = (string) preg_replace(

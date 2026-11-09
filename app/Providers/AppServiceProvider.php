@@ -6,6 +6,7 @@ namespace App\Providers;
 
 use App\Agents\Models\McpToken;
 use App\Execution\Contracts\Notifier;
+use App\Market\Archive\ArchiveCatalog;
 use App\Market\Archive\BinanceArchive;
 use App\Market\Binance\BinanceEndpoints;
 use App\Market\Binance\Sleeper;
@@ -67,6 +68,11 @@ final class AppServiceProvider extends ServiceProvider
             baseUrl: Config::string('exchanges.binance.archive'),
             cacheDirectory: Config::string('exchanges.binance.archive_cache'),
             timeoutSeconds: 120,
+        ));
+        $this->app->bind(ArchiveCatalog::class, fn (): ArchiveCatalog => new ArchiveCatalog(
+            http: $this->app->make(HttpFactory::class),
+            listingUrl: Config::string('exchanges.binance.archive_listing'),
+            timeoutSeconds: 60,
         ));
         $this->app->bind(DiskUsage::class, fn (): DiskUsage => new LocalDiskUsage(storage_path()));
     }
