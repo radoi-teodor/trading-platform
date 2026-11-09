@@ -64,7 +64,7 @@ it('needs a stored key, a clean account, and a clock within a second of Binance\
     fakeTestnet(openOrders: [['clientOrderId' => 'foreign', 'side' => 'BUY', 'origQty' => '1', 'executedQty' => '0', 'price' => '1', 'stopPrice' => '0', 'status' => 'NEW']]);
 
     expect(Artisan::call('engine:run', ['account' => 'testnet', '--once' => true]))->toBe(1)
-        ->and(Artisan::output())->toContain('has open orders or positions on testnet');
+        ->and(Artisan::output())->toContain('has open orders or positions on Binance');
 });
 
 it('starts from the exchange as it is, and halts when the clocks disagree', function (): void {

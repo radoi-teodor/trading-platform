@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Execution\Console;
 
 use App\Execution\AccountRuntime;
+use App\Execution\Accounts\LiveGate;
 use App\Execution\Contracts\Notifier;
 use App\Execution\Contracts\Venue;
 use App\Execution\Data\CommandKind;
@@ -13,6 +14,7 @@ use App\Execution\Data\EngineRecord;
 use App\Execution\Journal\ReplayDivergence;
 use App\Execution\Models\Account;
 use App\Execution\Models\AccountSnapshot;
+use App\Execution\Models\Deployment;
 use App\Execution\Models\EngineCommandRow;
 use App\Execution\Models\ExchangeKey;
 use App\Execution\Venues\BinanceVenue;
@@ -54,7 +56,7 @@ final class RunEngine extends Command
 
     protected $description = 'Run an account\'s engine on the live feed: paper now, testnet with its venue, live in phase 6';
 
-    public function handle(Repository $config, CandleFeed $feed, Clock $clock, Sleeper $sleeper, Notifier $notifier, HttpFactory $http): int
+    public function handle(Repository $config, CandleFeed $feed, Clock $clock, Sleeper $sleeper, Notifier $notifier, HttpFactory $http, LiveGate $gate): int
     {
         $name = (string) $this->argument('account');
         $account = Account::query()->where('name', $name)->first();
@@ -65,8 +67,10 @@ final class RunEngine extends Command
             return self::FAILURE;
         }
 
-        if ($account->mode === EngineMode::Live) {
-            $this->error("{$account->name} is live: live trading needs phase 6 and the operator's explicit approval (D-16).");
+        $refusal = $account->mode === EngineMode::Live ? $gate->refusal($account) : null;
+
+        if ($refusal !== null) {
+            $this->error($refusal);
 
             return self::FAILURE;
         }
@@ -74,7 +78,7 @@ final class RunEngine extends Command
         $client = null;
         $exchange = null;
 
-        if ($account->mode === EngineMode::Testnet) {
+        if ($account->mode === EngineMode::Testnet || $account->mode === EngineMode::Live) {
             $keys = ExchangeKey::query()->where('account_id', $account->id)->first();
 
             if ($keys === null) {
@@ -83,13 +87,28 @@ final class RunEngine extends Command
                 return self::FAILURE;
             }
 
-            $url = fn (string $key): string => is_string($value = $config->get("exchanges.binance.testnet.{$key}")) ? $value : throw new InvalidArgumentException("exchanges.binance.testnet.{$key} must be a URL.");
+            $network = $account->mode === EngineMode::Live ? 'live' : 'testnet';
+            $url = fn (string $key): string => is_string($value = $config->get("exchanges.binance.{$network}.{$key}")) ? $value : throw new InvalidArgumentException("exchanges.binance.{$network}.{$key} must be a URL.");
             $client = new SignedBinanceClient($http, $clock, $url('spot'), $url('perp'), $keys->api_key, $keys->api_secret);
+
+            if ($account->mode === EngineMode::Live) {
+                try {
+                    $problem = self::keyProblem($client, $account) ?? self::stageProblem($account);
+                } catch (BinanceRequestFailed $failure) {
+                    $problem = "the key's restrictions could not be read: {$failure->getMessage()}";
+                }
+
+                if ($problem !== null) {
+                    $this->error("{$account->name} cannot trade live: {$problem}");
+
+                    return self::FAILURE;
+                }
+            }
             $exchange = function (array $symbols) use ($client, $account, $clock): Venue {
                 $venue = new BinanceVenue($client, array_values(array_filter($symbols, fn (mixed $s): bool => $s instanceof Symbol)), Asset::of($account->quote), $clock->now());
 
                 if ($venue->openOrders() !== [] || $venue->positions() !== []) {
-                    throw new InvalidArgumentException("{$account->name} has open orders or positions on testnet: close them there, then start again. A testnet engine starts from a clean account.");
+                    throw new InvalidArgumentException("{$account->name} has open orders or positions on Binance: close them there, then start again. An exchange engine starts from a clean account.");
                 }
 
                 return $venue;
@@ -228,5 +247,29 @@ final class RunEngine extends Command
         $section = $config->get($key);
 
         return is_array($section) ? $section : throw new InvalidArgumentException("Configuration {$key} must be an array.");
+    }
+
+    /** What the key's restrictions, read from Binance, forbid (D-82): withdrawals, no IP restriction, a market it cannot trade. */
+    private static function keyProblem(SignedBinanceClient $client, Account $account): ?string
+    {
+        $rules = $client->signed(MarketType::Spot, 'GET', '/sapi/v1/account/apiRestrictions');
+        $perpetual = array_filter($account->symbols, fn (string $s): bool => str_contains($s, ':')) !== [];
+        $spot = array_filter($account->symbols, fn (string $s): bool => ! str_contains($s, ':')) !== [];
+
+        return match (true) {
+            ($rules['enableWithdrawals'] ?? true) !== false => 'its key can withdraw: create a key without the withdrawal right (docs/security.md, section 2)',
+            ($rules['ipRestrict'] ?? false) !== true => "its key is not restricted to IP addresses: restrict it to this machine's address on Binance",
+            $spot && ($rules['enableSpotAndMarginTrading'] ?? false) !== true => 'its key cannot trade spot',
+            $perpetual && ($rules['enableFutures'] ?? false) !== true => 'its key cannot trade USD-M futures',
+            default => null,
+        };
+    }
+
+    /** A live account runs only versions the ladder put at a live stage (D-83). */
+    private static function stageProblem(Account $account): ?string
+    {
+        $paper = Deployment::query()->where('account_id', $account->id)->where('active', true)->whereNotIn('stage', ['live_micro', 'live'])->count();
+
+        return $paper === 0 ? null : "{$paper} of its deployments are not at a live stage; promote them on the Strategies screen (D-83)";
     }
 }

@@ -1189,9 +1189,9 @@
     "semantic_hash": "f5b793964e0317b51bfb1ee93a5e6ae8"
   },
   "config/exchanges.php": {
-    "mtime": 1794192455.0125916,
-    "seen": 1794193132.0633383,
-    "ast_hash": "9cbee504d686634a4c6cc1ef586919fb",
+    "mtime": 1794228075.3995428,
+    "seen": 1794228953.7082205,
+    "ast_hash": "88cad69023ecdb9654c218c4a42957f9",
     "semantic_hash": ""
   },
   "config/filesystems.php": {
@@ -2704,15 +2704,15 @@
     "semantic_hash": ""
   },
   "app/Strategy/Dsl/ReadBack.php": {
-    "mtime": 1794190051.1862302,
-    "seen": 1794190134.6154892,
-    "ast_hash": "4ff57d7e4a6f870c94ccfe4ca430e034",
+    "mtime": 1794227956.071832,
+    "seen": 1794228953.706417,
+    "ast_hash": "ad6a6d3b5fcf6449a0d8aa09928cf0a0",
     "semantic_hash": ""
   },
   "tests/Unit/Strategy/Dsl/ReadBackTest.php": {
-    "mtime": 1794175861.6716895,
-    "seen": 1794175983.1387599,
-    "ast_hash": "124f8b3df02c755acecc3269ebabdeb2",
+    "mtime": 1794227978.0017524,
+    "seen": 1794228953.7118733,
+    "ast_hash": "328d5b5e5ca2ca858ab2a0b5c62b3a97",
     "semantic_hash": ""
   },
   "app/Simulation/Console/GridPart.php": {
@@ -2896,15 +2896,15 @@
     "semantic_hash": ""
   },
   "app/Execution/AccountRuntime.php": {
-    "mtime": 1794225821.5611556,
-    "seen": 1794226381.881494,
-    "ast_hash": "3be6c681efc691941256345bece88447",
+    "mtime": 1794228096.5868034,
+    "seen": 1794228953.6999254,
+    "ast_hash": "f9e20d74768a218550fb4aa6c197c3f9",
     "semantic_hash": ""
   },
   "app/Execution/Console/CreateAccount.php": {
-    "mtime": 1794216291.6500018,
-    "seen": 1794216415.9774766,
-    "ast_hash": "0d17522d468c4dad59378a63049126aa",
+    "mtime": 1794228912.064699,
+    "seen": 1794228953.6999376,
+    "ast_hash": "399b84906f0001313e33e972a3b83ce6",
     "semantic_hash": ""
   },
   "app/Execution/Console/FlattenEngine.php": {
@@ -2938,9 +2938,9 @@
     "semantic_hash": ""
   },
   "app/Execution/Console/RunEngine.php": {
-    "mtime": 1794225821.5616336,
-    "seen": 1794226381.8817167,
-    "ast_hash": "fc90ae94cf98102e8132c54ed8c22f48",
+    "mtime": 1794228114.3281224,
+    "seen": 1794228953.7000518,
+    "ast_hash": "2d6519e3e3c1b9288e8a36580e01eab7",
     "semantic_hash": ""
   },
   "app/Execution/Contracts/Notifier.php": {
@@ -2974,9 +2974,9 @@
     "semantic_hash": ""
   },
   "app/Execution/Models/Deployment.php": {
-    "mtime": 1794190993.0147812,
-    "seen": 1794192362.907522,
-    "ast_hash": "b0c1930a6b7825ceb303279b768d65df",
+    "mtime": 1794228045.3500555,
+    "seen": 1794228953.70092,
+    "ast_hash": "6f909ca9d40d03994fea17c0a9ac5848",
     "semantic_hash": ""
   },
   "app/Execution/Models/EngineCommandRow.php": {
@@ -3010,9 +3010,9 @@
     "semantic_hash": ""
   },
   "tests/Feature/Execution/PaperEngineTest.php": {
-    "mtime": 1794220973.741717,
-    "seen": 1794221506.7352464,
-    "ast_hash": "9c854095b4d1ab8f35be915f9bdee509",
+    "mtime": 1794228194.4897542,
+    "seen": 1794228953.7096725,
+    "ast_hash": "e401095dfd6383f2f7f0c9bd23d06d1e",
     "semantic_hash": ""
   },
   "tests/Feature/Notifications/TelegramTest.php": {
@@ -3076,9 +3076,9 @@
     "semantic_hash": ""
   },
   "tests/Feature/Execution/TestnetEngineTest.php": {
-    "mtime": 1794219020.452393,
-    "seen": 1794221506.7352488,
-    "ast_hash": "25d5f823eba67c847e2c7b0106208fa8",
+    "mtime": 1794228112.7286692,
+    "seen": 1794228953.7096994,
+    "ast_hash": "d2714e4ae82a781a11f61bc913acd12a",
     "semantic_hash": ""
   },
   "tests/Feature/Testnet/BinanceTestnetTest.php": {
@@ -3244,9 +3244,9 @@
     "semantic_hash": ""
   },
   "app/Execution/Accounts/OpenAccount.php": {
-    "mtime": 1794216276.2821982,
-    "seen": 1794216415.977475,
-    "ast_hash": "c28d6d2f8a9d995cb9f28445f6679b53",
+    "mtime": 1794228075.4019299,
+    "seen": 1794228953.699932,
+    "ast_hash": "b5b5496c18cb645bf553a3dec8cb70ff",
     "semantic_hash": ""
   },
   "app/Notifications/Models/NotificationSettings.php": {
@@ -3286,27 +3286,27 @@
     "semantic_hash": ""
   },
   "tests/Feature/Execution/OpenAccountTest.php": {
-    "mtime": 1794219020.452919,
-    "seen": 1794221506.735244,
-    "ast_hash": "94f830ab55f2afbb930d6b07e9c3db57",
+    "mtime": 1794228189.8100073,
+    "seen": 1794228953.7096705,
+    "ast_hash": "f30214d18374671898a913e66ab9e9bc",
     "semantic_hash": ""
   },
   "app/Livewire/SettingsScreen.php": {
-    "mtime": 1794226540.337249,
-    "seen": 1794227873.333234,
-    "ast_hash": "94babcbec02fe915fcfa36e0d20ce236",
+    "mtime": 1794228316.92964,
+    "seen": 1794228953.7014594,
+    "ast_hash": "0333059568d72f5716a02330b0a29730",
     "semantic_hash": ""
   },
   "resources/views/livewire/settings-screen.blade.php": {
-    "mtime": 1794226528.770754,
-    "seen": 1794227873.3438787,
-    "ast_hash": "508897201652d87c3e0d4f0c663483ad",
+    "mtime": 1794228316.929966,
+    "seen": 1794228953.7093706,
+    "ast_hash": "823b94ac9c704a504a348322e20cdc66",
     "semantic_hash": ""
   },
   "tests/Feature/Web/SettingsScreenTest.php": {
-    "mtime": 1794222318.3512006,
-    "seen": 1794223017.0966694,
-    "ast_hash": "29599410742651dda025252b54826456",
+    "mtime": 1794228330.5403953,
+    "seen": 1794228953.710359,
+    "ast_hash": "45845059ee632c081fadf843abf4575d",
     "semantic_hash": ""
   },
   "tests/Support/web.php": {
@@ -3637,6 +3637,48 @@
     "mtime": 1794227127.8099048,
     "seen": 1794227873.3451414,
     "ast_hash": "694fbeee24a2938233f36167822ec237",
+    "semantic_hash": ""
+  },
+  "app/Execution/Accounts/LiveGate.php": {
+    "mtime": 1794228075.4069664,
+    "seen": 1794228953.6999292,
+    "ast_hash": "64950b2d87b460a6964873da1a9c9750",
+    "semantic_hash": ""
+  },
+  "app/Execution/Console/ApproveLive.php": {
+    "mtime": 1794228912.0639074,
+    "seen": 1794228953.699934,
+    "ast_hash": "f66b28ee8b53c665a8db98ade53ff0f7",
+    "semantic_hash": ""
+  },
+  "app/Execution/Console/ConfirmsOperator.php": {
+    "mtime": 1794228912.0475924,
+    "seen": 1794228953.6999352,
+    "ast_hash": "d0cbb4df114a74d6b897880c23743a24",
+    "semantic_hash": ""
+  },
+  "app/Execution/Models/LiveApproval.php": {
+    "mtime": 1794228023.7467818,
+    "seen": 1794228953.7009888,
+    "ast_hash": "5d7949df724141de92b6835f8a4611db",
+    "semantic_hash": ""
+  },
+  "catalog/strategies/oi-momentum-long.strategy.yaml": {
+    "mtime": 1794227978.0016437,
+    "seen": 1794228953.7081041,
+    "ast_hash": "da14c9befede59a45dc2ab0b7956559d",
+    "semantic_hash": ""
+  },
+  "database/migrations/2026_11_09_000017_create_live_tables.php": {
+    "mtime": 1794228023.7435398,
+    "seen": 1794228953.7089012,
+    "ast_hash": "d4aa84051efff8e73427aee4b14c3290",
+    "semantic_hash": ""
+  },
+  "tests/Feature/Execution/LiveAccountTest.php": {
+    "mtime": 1794228287.6694107,
+    "seen": 1794228953.7096684,
+    "ast_hash": "4306085e61659463b041d82a57e292b7",
     "semantic_hash": ""
   },
   "package-lock.json": {

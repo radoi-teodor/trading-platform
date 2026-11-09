@@ -22,5 +22,10 @@ return [
             'spot' => env('BINANCE_TESTNET_SPOT', 'https://testnet.binance.vision'),
             'perp' => env('BINANCE_TESTNET_PERP', 'https://testnet.binancefuture.com'),
         ],
+        // Live accounts (Phase 6, D-82): real money, behind the operator's approval and the key checks.
+        'live' => [
+            'spot' => env('BINANCE_LIVE_SPOT', 'https://api.binance.com'),
+            'perp' => env('BINANCE_LIVE_PERP', 'https://fapi.binance.com'),
+        ],
     ],
 ];

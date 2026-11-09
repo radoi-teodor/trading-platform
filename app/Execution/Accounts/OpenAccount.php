@@ -16,8 +16,8 @@ use InvalidArgumentException;
 
 /**
  * Opens paper and testnet accounts and stores a testnet account's Binance key (docs/engine.md, section 9; D-75). The
- * command line and the Settings screen both go through here, so the rules are the same on both paths. Live accounts
- * come with phase 6 and the operator's approval (D-16).
+ * command line and the Settings screen both go through here, so the rules are the same on both paths. A live account
+ * is opened only once the operator confirmed it, and trades only once approved (D-82).
  */
 final readonly class OpenAccount
 {
@@ -28,7 +28,7 @@ final readonly class OpenAccount
      *
      * @throws InvalidArgumentException with the reason, in the operator's words
      */
-    public function open(string $name, string $mode, string $spot, string $futures, array $symbols, ?CarbonImmutable $start): Account
+    public function open(string $name, string $mode, string $spot, string $futures, array $symbols, ?CarbonImmutable $start, bool $confirmed = false): Account
     {
         if (preg_match('/^[a-z0-9]+(-[a-z0-9]+)*$/', $name) !== 1 || strlen($name) > 40) {
             throw new InvalidArgumentException('An account name is lowercase letters, digits and hyphens.');
@@ -36,8 +36,12 @@ final readonly class OpenAccount
 
         $engineMode = EngineMode::tryFrom($mode);
 
-        if ($engineMode !== EngineMode::Paper && $engineMode !== EngineMode::Testnet) {
-            throw new InvalidArgumentException('An account is paper or testnet; live accounts need phase 6 and the operator\'s approval (D-16).');
+        if ($engineMode === EngineMode::Live && ! $confirmed) {
+            throw new InvalidArgumentException('A live account is opened after re-authentication: on the Settings screen, or with account:create --mode=live, which asks for your password and a code (D-82).');
+        }
+
+        if (! in_array($engineMode, [EngineMode::Paper, EngineMode::Testnet, EngineMode::Live], true)) {
+            throw new InvalidArgumentException('An account is paper, testnet or live.');
         }
 
         if (Account::query()->where('name', $name)->exists()) {
@@ -64,8 +68,8 @@ final readonly class OpenAccount
     /** @throws InvalidArgumentException when the account is not testnet or the key is not shaped like Binance's */
     public function storeKey(Account $account, string $key, string $secret): void
     {
-        if ($account->mode !== EngineMode::Testnet) {
-            throw new InvalidArgumentException("{$account->name} is not a testnet account; keys for live accounts come with phase 6.");
+        if ($account->mode !== EngineMode::Testnet && $account->mode !== EngineMode::Live) {
+            throw new InvalidArgumentException("{$account->name} is a paper account; it needs no key.");
         }
 
         if (preg_match('/^[A-Za-z0-9]{16,128}$/', $key) !== 1 || preg_match('/^[A-Za-z0-9]{16,128}$/', $secret) !== 1) {

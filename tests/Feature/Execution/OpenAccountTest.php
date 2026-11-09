@@ -38,7 +38,7 @@ it('refuses what an account cannot be', function (string $name, string $mode, st
     expect(fn () => app(OpenAccount::class)->open($name, $mode, $equity, '0', array_values(array_filter($symbols, is_string(...))), null))->toThrow(InvalidArgumentException::class, $message);
 })->with([
     'a name with spaces' => ['my account', 'paper', '1', [], 'An account name is lowercase letters, digits and hyphens.'],
-    'a live account' => ['real', 'live', '1', [], 'An account is paper or testnet; live accounts need phase 6 and the operator\'s approval (D-16).'],
+    'a live account without confirmation' => ['real', 'live', '1', [], 'A live account is opened after re-authentication'],
     'a taken name' => ['paper', 'paper', '1', [], 'paper already exists.'],
     'a negative amount' => ['p2', 'paper', '-5', [], 'The spot balance is an amount of USDT.'],
     'an unknown instrument' => ['p2', 'paper', '1', ['DOGE/USDT'], 'DOGE/USDT is not a stored instrument; run market:instruments first.'],
@@ -63,6 +63,6 @@ it('stores keys for testnet accounts only, and only in their shape', function ()
     $paper = $service->open('paper', 'paper', '1', '0', [], null);
     $net = $service->open('net', 'testnet', '0', '0', [], null);
 
-    expect(fn () => $service->storeKey($paper, 'FAKEKEYFAKEKEY1234', 'secretsecretsecret5678'))->toThrow(InvalidArgumentException::class, 'paper is not a testnet account; keys for live accounts come with phase 6.')
+    expect(fn () => $service->storeKey($paper, 'FAKEKEYFAKEKEY1234', 'secretsecretsecret5678'))->toThrow(InvalidArgumentException::class, 'paper is a paper account; it needs no key.')
         ->and(fn () => $service->storeKey($net, 'short', 'secretsecretsecret5678'))->toThrow(InvalidArgumentException::class, 'A Binance key and secret are letters and digits; nothing was stored.');
 });

@@ -20,12 +20,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $reason
  * @property CarbonImmutable $created_at
  * @property CarbonImmutable|null $ended_at
+ * @property string $stage paper, live_micro or live (D-83)
+ * @property string $size_multiplier scales the strategy's risk per trade; 1 is full size (D-83)
  */
 final class Deployment extends Model
 {
     public const UPDATED_AT = null;
 
-    protected $fillable = ['account_id', 'strategy_version_id', 'parameters', 'active', 'reason', 'created_at', 'ended_at'];
+    protected $fillable = ['account_id', 'strategy_version_id', 'parameters', 'active', 'reason', 'created_at', 'ended_at', 'stage', 'size_multiplier'];
 
     /** @return BelongsTo<StrategyVersion, $this> */
     public function version(): BelongsTo

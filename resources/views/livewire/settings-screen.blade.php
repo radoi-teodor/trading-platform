@@ -75,7 +75,7 @@
                             <td class="pr-3">{{ $a->mode->value }}</td>
                             <td class="hidden whitespace-nowrap pr-3 sm:table-cell">{{ $a->started_at->format('Y-m-d H:i') }}</td>
                             <td class="hidden pr-3 md:table-cell">{{ implode(', ', $a->symbols) }}</td>
-                            <td class="pr-3 text-muted">{{ $a->mode === \App\Execution\Data\EngineMode::Testnet ? ($hints[$a->id] ?? 'none') : 'not needed' }}</td>
+                            <td class="pr-3 text-muted">{{ $a->mode === \App\Execution\Data\EngineMode::Paper ? 'not needed' : ($hints[$a->id] ?? 'none') }}</td>
                             <td><input type="checkbox" class="size-4 accent-[var(--accent)]" aria-label="Health check watches {{ $a->name }}" @checked($a->monitored) wire:click="monitor({{ $a->id }}, {{ $a->monitored ? 'false' : 'true' }})"></td>
                         </tr>
                     @empty
@@ -87,7 +87,7 @@
         <form wire:submit="openAccount" class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-6">
             <label class="block min-w-0"><span class="{{ $label }}">Name</span><input wire:model="accountName" placeholder="paper-2" class="{{ $input }}"></label>
             <label class="block min-w-0"><span class="{{ $label }}">Mode</span>
-                <select wire:model="accountMode" class="{{ $input }}"><option value="paper">paper</option><option value="testnet">testnet</option></select>
+                <select wire:model="accountMode" class="{{ $input }}"><option value="paper">paper</option><option value="testnet">testnet</option><option value="live">live (real money)</option></select>
             </label>
             <label class="block min-w-0"><span class="{{ $label }}">Spot USDT</span><input wire:model="accountSpot" inputmode="decimal" class="{{ $input }}"></label>
             <label class="block min-w-0"><span class="{{ $label }}">USD-M USDT</span><input wire:model="accountFutures" inputmode="decimal" class="{{ $input }}"></label>
@@ -95,15 +95,28 @@
             <label class="block min-w-0"><span class="{{ $label }}">Starts (UTC)</span><input wire:model="accountStart" placeholder="now" class="{{ $input }}"></label>
             <div class="sm:col-span-2 lg:col-span-6"><x-button>Open account</x-button></div>
         </form>
+        @foreach ($approvals as $id => $approval)
+            @php($live = $accounts->firstWhere('id', $id))
+            <div class="mt-3 flex flex-wrap items-center gap-2 rounded-control border border-live p-2 text-sm" aria-label="Live approval of {{ $live?->name }}">
+                <span class="font-mono">{{ $live?->name }}</span>
+                @if ($approval === null)
+                    <span class="text-muted">not approved for live trading</span>
+                    <x-button variant="danger" type="button" class="ml-auto" wire:click="approveLive({{ $id }})" wire:confirm="Approve {{ $live?->name }} for live trading with real money? It takes effect in 24 hours.">Approve live trading</x-button>
+                @else
+                    <span>approved {{ $approval->approved_at->format('Y-m-d H:i') }} UTC, {{ $approval->effective_at->isFuture() ? 'takes effect '.$approval->effective_at->format('Y-m-d H:i').' UTC' : 'in effect' }}</span>
+                    <x-button variant="secondary" type="button" class="ml-auto" wire:click="withdrawLive({{ $id }})">Withdraw</x-button>
+                @endif
+            </div>
+        @endforeach
         @if ($accountMessage !== '')<p class="mt-2 text-sm text-muted" role="status">{{ $accountMessage }}</p>@endif
     </section>
 
     <div class="grid grid-cols-1 gap-3 xl:grid-cols-2">
         {{-- Testnet keys: stored encrypted, the secret never shown back (D-20, D-75). --}}
         <section class="{{ $card }}" aria-labelledby="keys-heading">
-            <h2 id="keys-heading" class="{{ $heading }}">Testnet keys</h2>
+            <h2 id="keys-heading" class="{{ $heading }}">Exchange keys</h2>
             @if ($testnet->isEmpty())
-                <p class="text-sm text-muted">Open a testnet account first.</p>
+                <p class="text-sm text-muted">Open a testnet or live account first.</p>
             @else
                 <ul class="mb-3 text-sm">
                     @foreach ($testnet as $a)

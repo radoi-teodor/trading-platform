@@ -86,8 +86,8 @@ final class AccountRuntime
      */
     public function __construct(public readonly Account $account, array $risk, array $simulation, private readonly Clock $clock, ?Closure $onEvent = null, ?Closure $exchange = null)
     {
-        if ($account->mode === EngineMode::Live || ($account->mode === EngineMode::Testnet && $exchange === null) || $account->mode === EngineMode::Backtest) {
-            throw new InvalidArgumentException("{$account->name} is a {$account->mode->value} account: this runtime runs paper, and testnet with its venue; live comes with phase 6 (D-16).");
+        if ($account->mode === EngineMode::Backtest || ($account->mode !== EngineMode::Paper && $exchange === null)) {
+            throw new InvalidArgumentException("{$account->name} is a {$account->mode->value} account: this runtime runs paper, and testnet and live with their venue (D-82).");
         }
 
         $policy = RiskPolicy::account($risk);
@@ -110,8 +110,9 @@ final class AccountRuntime
             $symbols[$symbol] = Symbol::parse($symbol);
         }
 
-        // A testnet account starts from the exchange as it is now: it trades from this minute, after its warmup.
-        $tradingFrom = $account->mode === EngineMode::Testnet ? max($account->started_at, $clock->now()->startOfMinute()) : $account->started_at;
+        // An exchange account starts from the exchange as it is now: it trades from this minute, after its warmup.
+        $onExchange = $account->mode === EngineMode::Testnet || $account->mode === EngineMode::Live;
+        $tradingFrom = $onExchange ? max($account->started_at, $clock->now()->startOfMinute()) : $account->started_at;
         $feedFrom = $tradingFrom;
 
         foreach ($strategies as $strategy) {
@@ -141,13 +142,13 @@ final class AccountRuntime
         $this->tradingFrom = $tradingFrom;
         $this->venueClock = new SimClock($feedFrom);
 
-        if ($exchange !== null && $account->mode === EngineMode::Testnet) {
+        if ($exchange !== null && $onExchange) {
             $this->venue = null;
             $this->exchange = new WarmingVenue($exchange($this->symbols));
             $balances = array_values(array_map(fn (Balance $b): Money => Money::of((string) $b->total(), $b->asset), $this->exchange->balances()));
             $this->log = new DatabaseDecisionLog($account->id, $clock, $onEvent, replay: false);
             $this->engine = new Engine(
-                EngineMode::Testnet, $this->exchange, new Ledger($quote, $balances, $this->exchange->futuresWallet()), $policy, $this->log, $strategies, $rules,
+                $account->mode, $this->exchange, new Ledger($quote, $balances, $this->exchange->futuresWallet()), $policy, $this->log, $strategies, $rules,
                 $tradingFrom, $feedFrom, $maintenance,
             );
 

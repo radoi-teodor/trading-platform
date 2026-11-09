@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Agents\Models\McpToken;
+use App\Execution\Accounts\LiveGate;
 use App\Execution\Accounts\OpenAccount;
 use App\Execution\Models\Account;
 use App\Execution\Models\ExchangeKey;
@@ -120,9 +121,6 @@ it('opens an account and says what the service refuses', function (): void {
         ->set('accountName', 'paper-2')->set('accountMode', 'paper')->set('accountSpot', '5000')->set('accountSymbols', 'BTC/USDT')
         ->call('openAccount')
         ->assertSee('paper-2 (paper) is open')
-        ->set('accountName', 'real')->set('accountMode', 'live')
-        ->call('openAccount')
-        ->assertSee('live accounts need phase 6')
         ->set('accountName', 'p3')->set('accountMode', 'paper')->set('accountSymbols', 'DOGE/USDT')
         ->call('openAccount')
         ->assertSee('DOGE/USDT is not a stored instrument');
@@ -182,4 +180,22 @@ it('turns the health check of an account off and on without re-authentication', 
 
     Livewire::test(SettingsScreen::class)->call('monitor', $account->id, true);
     expect($account->refresh()->monitored)->toBeTrue();
+});
+
+it('opens a live account and approves it only after re-authentication, and withdraws without it', function (): void {
+    Livewire::test(SettingsScreen::class)->set('accountName', 'real')->set('accountMode', 'live')->call('openAccount')->assertRedirect(route('reauth'));
+    expect(Account::query()->count())->toBe(0);
+
+    confirmed();
+    Livewire::test(SettingsScreen::class)->set('accountName', 'real')->set('accountMode', 'live')->set('accountSpot', '0')->call('openAccount')->assertSee('real (live) is open');
+    $account = Account::query()->sole();
+
+    Livewire::test(SettingsScreen::class)->call('approveLive', $account->id)->assertSee('takes effect at');
+    expect(app(LiveGate::class)->current($account))->not->toBeNull();
+
+    session()->forget(ReauthController::SESSION_KEY);
+    Livewire::test(SettingsScreen::class)->call('withdrawLive', $account->id)->assertSee('withdrawn');
+    expect(app(LiveGate::class)->current($account))->toBeNull();
+
+    Livewire::test(SettingsScreen::class)->call('approveLive', $account->id)->assertRedirect(route('reauth'));
 });

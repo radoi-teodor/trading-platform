@@ -6,6 +6,7 @@ namespace App\Livewire;
 
 use App\Agents\Models\McpToken;
 use App\Agents\Tokens;
+use App\Execution\Accounts\LiveGate;
 use App\Execution\Accounts\OpenAccount;
 use App\Execution\Data\EngineMode;
 use App\Execution\Models\Account;
@@ -156,10 +157,15 @@ final class SettingsScreen extends Component
 
     public function openAccount(OpenAccount $accounts): void
     {
+        // A live account is opened only after re-authentication (D-82).
+        if ($this->accountMode === 'live' && ! $this->confirmed()) {
+            return;
+        }
+
         try {
             $start = trim($this->accountStart) === '' ? null : CarbonImmutable::parse(trim($this->accountStart), 'UTC');
             $symbols = array_values(array_filter(array_map(trim(...), explode(',', $this->accountSymbols)), fn (string $s): bool => $s !== ''));
-            $account = $accounts->open(trim($this->accountName), $this->accountMode, $this->accountSpot, $this->accountFutures, $symbols, $start);
+            $account = $accounts->open(trim($this->accountName), $this->accountMode, $this->accountSpot, $this->accountFutures, $symbols, $start, confirmed: $this->accountMode === 'live');
         } catch (InvalidArgumentException $failure) {
             $this->accountMessage = $failure->getMessage();
 
@@ -266,6 +272,34 @@ final class SettingsScreen extends Component
         $this->marketMessage = "Import of {$found->symbol} from {$from->format('Y-m-d')} queued as job {$job->id}: {$days} days, about {$megabytes} MB in the database. The simulation worker runs it.";
     }
 
+    /** Approves a live account after re-authentication; it takes effect 24 hours later (D-82, D-19). */
+    public function approveLive(int $account, LiveGate $gate): void
+    {
+        $found = Account::query()->find($account);
+
+        if ($found === null || ! $this->confirmed()) {
+            return;
+        }
+
+        try {
+            $approval = $gate->approve($found, 'ui');
+            $this->accountMessage = "{$found->name} is approved for live trading; it takes effect at {$approval->effective_at->format('Y-m-d H:i')} UTC. Withdraw it until then if you change your mind.";
+        } catch (InvalidArgumentException $failure) {
+            $this->accountMessage = $failure->getMessage();
+        }
+    }
+
+    /** Withdrawing lowers risk, so it needs no re-authentication (D-19). */
+    public function withdrawLive(int $account, LiveGate $gate): void
+    {
+        $found = Account::query()->find($account);
+
+        if ($found !== null) {
+            $gate->withdraw($found);
+            $this->accountMessage = "The live approval of {$found->name} is withdrawn; its engine refuses to start until a new one takes effect.";
+        }
+    }
+
     public function saveKey(OpenAccount $accounts): void
     {
         [$key, $secret] = [trim($this->apiKey), trim($this->apiSecret)];
@@ -326,7 +360,7 @@ final class SettingsScreen extends Component
         }
     }
 
-    public function render(TelegramSettings $telegram, OpenAccount $accounts, Repository $config): View
+    public function render(TelegramSettings $telegram, OpenAccount $accounts, Repository $config, LiveGate $gate): View
     {
         $accountList = Account::query()->orderBy('name')->get();
         $risk = $config->get('risk.account');
@@ -336,8 +370,9 @@ final class SettingsScreen extends Component
             'telegram' => $telegram,
             'optional' => $telegram->optional(),
             'accounts' => $accountList,
-            'testnet' => $accountList->filter(fn (Account $a): bool => $a->mode === EngineMode::Testnet)->values(),
-            'hints' => $accountList->mapWithKeys(fn (Account $a): array => [$a->id => $a->mode === EngineMode::Testnet ? $accounts->keyHint($a) : null])->all(),
+            'testnet' => $accountList->filter(fn (Account $a): bool => in_array($a->mode, [EngineMode::Testnet, EngineMode::Live], true))->values(),
+            'hints' => $accountList->mapWithKeys(fn (Account $a): array => [$a->id => in_array($a->mode, [EngineMode::Testnet, EngineMode::Live], true) ? $accounts->keyHint($a) : null])->all(),
+            'approvals' => $accountList->filter(fn (Account $a): bool => $a->mode === EngineMode::Live)->mapWithKeys(fn (Account $a): array => [$a->id => $gate->current($a)])->all(),
             'tokens' => McpToken::query()->orderBy('name')->orderByDesc('id')->get(),
             'risk' => RiskPolicy::account(is_array($risk) ? $risk : [])->toArray(),
             'universe' => UniverseEntry::query()->orderBy('market')->orderBy('id')->get(),

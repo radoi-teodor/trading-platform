@@ -104,12 +104,12 @@ it('waits at a missing minute instead of skipping it, and journals the stale fee
         ->and(JournalEntry::query()->where('kind', 'notice')->sole()->payload['detail'])->toBe('stale_data: the next minute closes at 2026-10-02T13:01:00Z');
 });
 
-it('refuses live accounts and accounts it does not know', function (): void {
+it('refuses a live account the operator has not approved, and accounts it does not know', function (): void {
     paperAccount();
     Account::query()->sole()->update(['mode' => 'live']);
 
     expect(Artisan::call('engine:run', ['account' => 'paper', '--once' => true]))->toBe(1)
-        ->and(Artisan::output())->toContain('live trading needs phase 6')
+        ->and(Artisan::output())->toContain('paper is not approved for live trading')
         ->and(Artisan::call('engine:run', ['account' => 'other', '--once' => true]))->toBe(1)
         ->and(Artisan::call('account:create', ['name' => 'real', '--mode' => 'live']))->toBe(1);
 });
