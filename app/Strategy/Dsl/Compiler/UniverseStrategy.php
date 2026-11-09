@@ -16,6 +16,7 @@ use App\Strategy\Data\Subscription;
 use App\Strategy\Data\UniverseSchedule;
 use App\Strategy\Dsl\Ast\Call;
 use App\Strategy\Dsl\Document\StrategySpec;
+use App\Strategy\Dsl\Document\UniverseRule;
 use App\Support\Symbol;
 use Carbon\CarbonImmutable;
 use LogicException;
@@ -59,6 +60,18 @@ final class UniverseStrategy implements CrossSectionalStrategy, LimitedStrategy
     public function identity(): StrategyIdentity
     {
         return $this->member->identity();
+    }
+
+    /** The rule that names its members. */
+    public function rule(): UniverseRule
+    {
+        return $this->spec->universe ?? throw new LogicException("{$this->spec->id} has no universe.");
+    }
+
+    /** Who its members are, month by month. */
+    public function schedule(): UniverseSchedule
+    {
+        return $this->universe;
     }
 
     public function subscriptions(): array

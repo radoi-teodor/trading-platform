@@ -52,11 +52,27 @@ it('ranks the top N by 30-day quote volume each month, point in time (D-89)', fu
         ->and($members->everyMember())->toBe(['BIG/USDT:USDT', 'GONE/USDT:USDT', 'NEW/USDT:USDT'])
         ->and(Artisan::output())->toContain('3 months, 3 instruments');
 
-    // What to import: each instrument over the months it was a member, from a month before for the warmup, and no
-    // further, so a coin that left the top is not downloaded to today.
+    // What to import: each instrument over the months it was a member, from a month before for the warmup to the
+    // day after, in which what is held in a coin that left is closed, and no further: a coin that left the top is
+    // not downloaded to today.
     expect(array_map(fn (array $s): string => "{$s[0]} {$s[1]->format('Y-m-d')} {$s[2]->format('Y-m-d')}", $members->spans()))->toBe([
-        'BIG/USDT:USDT 2025-01-01 2025-04-30',
-        'GONE/USDT:USDT 2025-01-01 2025-03-31',
-        'NEW/USDT:USDT 2025-03-01 2025-04-30',
+        'BIG/USDT:USDT 2025-01-01 2025-05-01',
+        'GONE/USDT:USDT 2025-01-01 2025-04-01',
+        'NEW/USDT:USDT 2025-03-01 2025-05-01',
     ]);
+
+    // What a strategy over the top N is given: the members of each month of its run, by rank.
+    $day = fn (string $text): CarbonImmutable => CarbonImmutable::parse($text, 'UTC');
+
+    expect($members->months(2, $day('2025-02-14'), $day('2025-04-02')))->toBe([
+        '2025-02' => ['GONE/USDT:USDT', 'BIG/USDT:USDT'],
+        '2025-03' => ['GONE/USDT:USDT', 'BIG/USDT:USDT'],
+        '2025-04' => ['NEW/USDT:USDT', 'BIG/USDT:USDT'],
+    ])
+        ->and($members->months(1, $day('2025-03-01'), $day('2025-05-20')))->toBe(['2025-03' => ['GONE/USDT:USDT'], '2025-04' => ['NEW/USDT:USDT'], '2025-05' => []])
+        ->and($members->built())->toBe(['top' => 2, 'from' => '2025-02', 'to' => '2025-04']);
+});
+
+it('says nothing is built before the first build (D-89)', function (): void {
+    expect(app(ResearchUniverse::class)->built())->toBeNull();
 });

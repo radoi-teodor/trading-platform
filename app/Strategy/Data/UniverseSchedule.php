@@ -33,6 +33,48 @@ final readonly class UniverseSchedule
         return isset($this->months[$time->utc()->format('Y-m')][$symbol]);
     }
 
+    /**
+     * Each member's runs of consecutive months: the first day of the run and the first day after it.
+     *
+     * @return array<string, list<array{CarbonImmutable, CarbonImmutable}>> by symbol, sorted
+     */
+    public function runs(): array
+    {
+        $months = array_map('strval', array_keys($this->months));
+        sort($months, SORT_STRING);
+        $open = [];
+        $runs = [];
+
+        foreach ($months as $month) {
+            $first = CarbonImmutable::parse("{$month}-01 00:00:00", 'UTC');
+
+            foreach (array_keys($this->months[$month]) as $symbol) {
+                $symbol = (string) $symbol;
+                $run = $open[$symbol] ?? null;
+
+                if ($run !== null && $run[1]->equalTo($first)) {
+                    $open[$symbol] = [$run[0], $first->addMonth()];
+
+                    continue;
+                }
+
+                if ($run !== null) {
+                    $runs[$symbol][] = $run;
+                }
+
+                $open[$symbol] = [$first, $first->addMonth()];
+            }
+        }
+
+        foreach ($open as $symbol => $run) {
+            $runs[$symbol][] = $run;
+        }
+
+        ksort($runs, SORT_STRING);
+
+        return $runs;
+    }
+
     /** @return list<string> every symbol that is a member in some month, sorted */
     public function symbols(): array
     {

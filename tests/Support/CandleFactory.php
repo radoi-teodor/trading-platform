@@ -54,11 +54,12 @@ final class CandleFactory
 
     /**
      * $count consecutive 1-minute candles from $start: a seeded random walk with varied ranges and volumes, so that
-     * aggregates are not trivially equal to their parts.
+     * aggregates are not trivially equal to their parts. $liquidity multiplies the volumes, for a market in which an
+     * order of a few units is small.
      *
      * @return list<Candle>
      */
-    public static function walk(string $start, int $count, int $seed = 7, string $price = '100.00'): array
+    public static function walk(string $start, int $count, int $seed = 7, string $price = '100.00', int $liquidity = 1): array
     {
         $random = new Randomizer(new Xoshiro256StarStar($seed));
         $time = CarbonImmutable::parse($start, 'UTC');
@@ -80,10 +81,10 @@ final class CandleFactory
                 self::cents($high),
                 self::cents($low),
                 self::cents($close),
-                self::thousandths($volume),
-                self::cents($volume * $close),
+                self::thousandths($volume * $liquidity),
+                self::cents($volume * $liquidity * $close),
                 $random->getInt(0, 200),
-                self::thousandths($taker),
+                self::thousandths($taker * $liquidity),
             );
             $cents = $close;
         }

@@ -65,8 +65,51 @@ final readonly class ResearchUniverse
     }
 
     /**
+     * The top $top of each month from $from's to $to's, by rank; a month that was not ranked has nobody.
+     *
+     * @return array<string, list<string>> symbols by month ('Y-m')
+     */
+    public function months(int $top, CarbonImmutable $from, CarbonImmutable $to): array
+    {
+        $first = $from->utc()->startOfMonth();
+        $last = $to->utc()->startOfMonth();
+        $months = [];
+
+        for ($month = $first; $month->lessThanOrEqualTo($last); $month = $month->addMonth()) {
+            $months[$month->format('Y-m')] = [];
+        }
+
+        foreach ($this->db->table('universe_members as u')->join('instruments as i', 'i.id', '=', 'u.instrument_id')
+            ->whereBetween('u.month', [$first->format('Y-m-d'), $last->format('Y-m-d')])->where('u.rank', '<=', $top)
+            ->orderBy('u.month')->orderBy('u.rank')->get(['u.month', 'i.symbol']) as $row) {
+            if (is_string($row->month ?? null) && is_string($row->symbol ?? null)) {
+                $months[substr($row->month, 0, 7)][] = $row->symbol;
+            }
+        }
+
+        return $months;
+    }
+
+    /**
+     * What was built: the largest top it can answer for, and its first and last month ('Y-m'); null before a build.
+     *
+     * @return array{top: int, from: string, to: string}|null
+     */
+    public function built(): ?array
+    {
+        $row = $this->db->table('universe_members')->selectRaw('max(rank) as top, min(month) as first, max(month) as last')->first();
+
+        if ($row === null || ! is_numeric($row->top ?? null) || ! is_string($row->first ?? null) || ! is_string($row->last ?? null)) {
+            return null;
+        }
+
+        return ['top' => (int) $row->top, 'from' => substr($row->first, 0, 7), 'to' => substr($row->last, 0, 7)];
+    }
+
+    /**
      * What to import: each instrument over its runs of consecutive member months, from the month before (the
-     * indicators' warmup) to the last day of the run, by symbol then time.
+     * indicators' warmup) to the day after the run (where what is held in an instrument that left is closed, D-92),
+     * by symbol then time.
      *
      * @return list<array{string, CarbonImmutable, CarbonImmutable}>
      */
@@ -87,14 +130,14 @@ final readonly class ResearchUniverse
             }
 
             if ($open !== null) {
-                $spans[] = [$open[0], $open[1], $open[2]->subDay()];
+                $spans[] = [$open[0], $open[1], $open[2]];
             }
 
             $open = [$symbol, $month->subMonth(), $month->addMonth()];
         }
 
         if ($open !== null) {
-            $spans[] = [$open[0], $open[1], $open[2]->subDay()];
+            $spans[] = [$open[0], $open[1], $open[2]];
         }
 
         return $spans;

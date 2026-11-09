@@ -19,6 +19,7 @@ use App\Simulation\Metrics\EquityTracker;
 use App\Support\Clock\SimClock;
 use App\Support\Number\Decimal;
 use App\Support\Symbol;
+use Carbon\CarbonImmutable;
 
 /**
  * Runs the engine loop over history (D-8): one SimClock, one pass over the candles, and for each participant (the
@@ -32,8 +33,9 @@ final readonly class Backtest
     /**
      * @param  array<string, RulesHistory>  $rules  by unified symbol
      * @param  list<Participant>  $benchmarks
+     * @param  array<string, CarbonImmutable>  $delistings  when an instrument stops trading, by unified symbol (D-92)
      */
-    public function run(RunDefinition $definition, Participant $main, array $rules, array $benchmarks = []): BacktestResult
+    public function run(RunDefinition $definition, Participant $main, array $rules, array $benchmarks = [], array $delistings = []): BacktestResult
     {
         $participants = [$main, ...$benchmarks];
         $feedFrom = $definition->warmupFrom;
@@ -43,7 +45,7 @@ final readonly class Backtest
         }
 
         $clock = new SimClock($feedFrom);
-        $runs = array_map(function (Participant $participant) use ($definition, $rules, $clock): array {
+        $runs = array_map(function (Participant $participant) use ($definition, $rules, $clock, $delistings): array {
             $spot = $participant->spotBalance ?? $definition->initialBalance;
             $futures = $participant->futuresBalance ?? $definition->futuresBalance ?? Decimal::zero();
             $venue = new SimulatedVenue(
@@ -54,7 +56,7 @@ final readonly class Backtest
             $log = new InMemoryDecisionLog;
             $engine = new Engine(
                 EngineMode::Backtest, $venue, $ledger, $participant->policy, $log, [$participant->strategy], $rules,
-                $definition->from, $participant->warmupFrom, $definition->maintenanceRate,
+                $definition->from, $participant->warmupFrom, $definition->maintenanceRate, $delistings,
             );
 
             return [$participant, $venue, $engine, $log, new EquityTracker($spot->amount->plus($futures), $definition->from)];

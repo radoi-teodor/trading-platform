@@ -22,12 +22,13 @@ use App\Simulation\Report\Report;
 use App\Simulation\Report\ReportBuilder;
 use App\Simulation\Validation\DeflatedSharpe;
 use App\Strategy\Contracts\Strategy;
-use App\Strategy\Dsl\Compiler\CompiledStrategy;
+use App\Strategy\Dsl\Compiler\UniverseStrategy;
 use App\Support\Asset;
 use App\Support\Clock\Clock;
 use App\Support\Number\Decimal;
 use App\Support\Number\Money;
 use App\Support\Symbol;
+use Carbon\CarbonImmutable;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Database\ConnectionInterface;
@@ -59,9 +60,15 @@ final class RunBacktest extends Command
             $file = $this->option('file');
             $label = str_contains($this->stringArgument('strategy'), '@v') ? $this->stringArgument('strategy') : null;
             $fromDocument = is_string($file) || $label !== null;
+            $from = $this->day('from');
+            $to = $this->day('to');
+
+            if ($to <= $from) {
+                throw new InvalidArgumentException('--to must be after --from.');
+            }
 
             if ($fromDocument) {
-                $loaded = $this->document($config, $clock, $label, is_string($file) ? $file : null);
+                $loaded = $this->document($config, $clock, $label, is_string($file) ? $file : null, $from, $to);
 
                 if ($loaded === null) {
                     return self::FAILURE;
@@ -74,9 +81,8 @@ final class RunBacktest extends Command
                 $strategy = $class::build($this->parameters($class::defaults()), $symbols);
             }
 
-            $from = $this->day('from');
-            $to = $this->day('to');
-            // The run is over what the strategy follows: a carry given its perpetual also trades the spot (D-49).
+            // The run is over what the strategy follows: a carry given its perpetual also trades the spot (D-49),
+            // and a universe strategy every member of the run's months (D-92).
             $symbols = self::followed($strategy);
             $rules = $this->rules($symbols);
         } catch (InvalidArgumentException $failure) {
@@ -85,23 +91,14 @@ final class RunBacktest extends Command
             return self::FAILURE;
         }
 
-        if ($to <= $from) {
-            $this->error('--to must be after --from.');
+        $warmupFrom = self::warmupFrom($strategy, $from);
+        $stops = $this->stops($symbols);
+        $problem = $this->historyProblem($quality, $funding, $strategy, $symbols, $warmupFrom, $from, $to, $stops);
+
+        if ($problem !== null) {
+            $this->error("{$problem}. Backfill it before backtesting (market:backfill).");
 
             return self::FAILURE;
-        }
-
-        $warmupFrom = self::warmupFrom($strategy, $from);
-
-        foreach ($symbols as $symbol) {
-            $problem = $this->coverage($quality, $symbol, $warmupFrom, $to) ?? $this->fundingCoverage($funding, $symbol, $warmupFrom, $to)
-                ?? $this->scalpingCoverage($strategy, $symbol, $from, $to);
-
-            if ($problem !== null) {
-                $this->error("{$symbol}: {$problem}. Backfill it before backtesting (market:backfill).");
-
-                return self::FAILURE;
-            }
         }
 
         $policy = $profile === 'benchmark' ? RiskPolicy::benchmark() : RiskPolicy::account($this->section($config, 'risk.account'));
@@ -110,7 +107,8 @@ final class RunBacktest extends Command
         [$spotBalance, $futuresBalance] = $this->wallets($config, $symbols, $equity);
         [$benchmarks, $missing] = $this->option('no-benchmarks')
             ? [[], []]
-            : $this->benchmarks($config, $quality, $symbols, $from, $to, $rules, $futuresBalance === null ? null : $equity);
+            // A universe is compared with holding bitcoin, not the first of its members (D-92).
+            : $this->benchmarks($config, $quality, $strategy instanceof UniverseStrategy ? [Symbol::parse("BTC/{$symbols[0]->quote}")] : $symbols, $from, $to, $rules, $futuresBalance === null ? null : $equity);
         $costs = $this->section($config, 'simulation.cost_model');
         $fees = $this->section($config, 'simulation.fees');
         $perpetual = $this->section($config, 'simulation.perpetual');
@@ -132,8 +130,11 @@ final class RunBacktest extends Command
             maintenanceRate: $futuresBalance === null ? null : self::decimal($perpetual, 'maintenance_margin_rate'),
         );
 
-        $this->info("Backtesting {$strategy->identity()->label()} ({$name}) on ".implode(', ', array_map('strval', $symbols))." from {$from->toDateString()} to {$to->toDateString()}...");
-        $result = (new Backtest(new DatabaseCandleFeed($db)))->run($definition, new Participant('strategy', $strategy, $policy, $warmupFrom), $rules, $benchmarks);
+        $on = $strategy instanceof UniverseStrategy
+            ? "the {$strategy->rule()->rule} {$strategy->rule()->n} by {$strategy->rule()->by}, ".count($symbols).' instruments'
+            : implode(', ', array_map('strval', $symbols));
+        $this->info("Backtesting {$strategy->identity()->label()} ({$name}) on {$on} from {$from->toDateString()} to {$to->toDateString()}...");
+        $result = (new Backtest(new DatabaseCandleFeed($db)))->run($definition, new Participant('strategy', $strategy, $policy, $warmupFrom), $rules, $benchmarks, $stops);
         $report = ReportBuilder::build($definition, $result, $rules, $missing);
         $hash = $report->hash();
         $artifact = $this->store($this->text($config, 'simulation.artifacts'), $hash, $report->json());
@@ -241,7 +242,7 @@ final class RunBacktest extends Command
      *
      * @return array{string, Strategy, string}|null
      */
-    private function document(Repository $config, Clock $clock, ?string $label, ?string $file): ?array
+    private function document(Repository $config, Clock $clock, ?string $label, ?string $file, CarbonImmutable $from, CarbonImmutable $to): ?array
     {
         if ($this->strings('symbol') !== []) {
             throw new InvalidArgumentException('A strategy document names its own instruments; leave out --symbol.');
@@ -262,6 +263,6 @@ final class RunBacktest extends Command
             $parameters[$key] = $value;
         }
 
-        return [$spec->id, CompiledStrategy::fromSpec($spec, $parameters, $version), $spec->benchmark ? 'benchmark' : 'account'];
+        return [$spec->id, $this->compile($spec, $parameters, $version, $from, $to), $spec->benchmark ? 'benchmark' : 'account'];
     }
 }

@@ -6,10 +6,13 @@ namespace App\Simulation\Console;
 
 use App\Execution\Data\FeeSchedule;
 use App\Execution\Venues\CostModel;
+use App\Market\CandleRepository;
+use App\Market\Data\InstrumentStatus;
 use App\Market\Data\MarketType;
 use App\Market\Data\RulesHistory;
 use App\Market\Feed\DatabaseCandleFeed;
 use App\Market\FundingRateRepository;
+use App\Market\Instruments\AssumedRules;
 use App\Market\Instruments\StoredInstruments;
 use App\Market\LiquidationRepository;
 use App\Market\Models\Instrument;
@@ -28,6 +31,8 @@ use App\Simulation\Validation\DeflatedSharpe;
 use App\Strategy\Contracts\BuildableStrategy;
 use App\Strategy\Contracts\Strategy;
 use App\Strategy\Dsl\Compiler\CompiledStrategy;
+use App\Strategy\Dsl\Compiler\Universes;
+use App\Strategy\Dsl\Compiler\UniverseStrategy;
 use App\Strategy\Dsl\Document\DocumentChecker;
 use App\Strategy\Dsl\Document\ParameterSpec;
 use App\Strategy\Dsl\Document\PolicyLimits;
@@ -39,6 +44,7 @@ use App\Support\Clock\Clock;
 use App\Support\Number\Decimal;
 use App\Support\Number\Money;
 use App\Support\Symbol;
+use App\Support\Timeframe;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Process\InvokedProcess as InvokedProcessContract;
@@ -98,7 +104,10 @@ trait PreparesBacktests
             $market = self::market($symbol);
             $instrument = self::instrument($symbol)
                 ?? throw new InvalidArgumentException("{$symbol} is not a known {$market->value} instrument; run market:instruments first.");
-            $rules[(string) $symbol] = $instrument->rulesHistory();
+            // A perpetual delisted before its filters were read has them worked out from its candles (D-89).
+            $rules[(string) $symbol] = $instrument->status === InstrumentStatus::Delisted && ! $instrument->filters()->exists()
+                ? $this->laravel->make(AssumedRules::class)->of($instrument)
+                : $instrument->rulesHistory();
         }
 
         return $rules;
@@ -166,6 +175,93 @@ trait PreparesBacktests
         }
 
         return [$participants, $missing];
+    }
+
+    /**
+     * Compiles a document for a run over [$from, $to); a universe strategy is given its members of those months
+     * (D-92).
+     *
+     * @param  array<string, string>  $parameters
+     */
+    protected function compile(StrategySpec $spec, array $parameters, int $version, CarbonImmutable $from, CarbonImmutable $to): Strategy
+    {
+        $universe = $spec->universe === null ? null : $this->laravel->make(Universes::class)->schedule($spec, $from, $to->subMinute());
+
+        return CompiledStrategy::fromSpec($spec, $parameters, $version, $universe);
+    }
+
+    /**
+     * When each instrument that was delisted stopped trading, by unified symbol: its delisting, or the minute after
+     * its last stored candle when that is earlier. The day of a delisting is known from the daily candles; the
+     * hour is in the minutes.
+     *
+     * @param  list<Symbol>  $symbols
+     * @return array<string, CarbonImmutable>
+     */
+    protected function stops(array $symbols): array
+    {
+        $candles = $this->laravel->make(CandleRepository::class);
+        $stops = [];
+
+        foreach ($symbols as $symbol) {
+            $instrument = self::instrument($symbol);
+            $delisted = $instrument?->delisted_at;
+
+            if ($instrument === null || $delisted === null) {
+                continue;
+            }
+
+            $last = $candles->latestOpenTime($instrument, Timeframe::OneMinute)?->addMinute();
+            $stops[(string) $symbol] = $last !== null && $last < $delisted ? $last : $delisted;
+        }
+
+        return $stops;
+    }
+
+    /**
+     * Why the stored history cannot carry $strategy over the run, or null: candles, funding and the data for
+     * scalping it reads. An instrument a strategy names is needed over the whole run. A member of a universe (D-92)
+     * is needed around its months as a member: from a month before them, which is its warm-up as the import brings
+     * it, to a day after them, where what is held in an instrument that left is closed; within the run, and not
+     * past the moment it stopped trading.
+     *
+     * @param  list<Symbol>  $symbols
+     * @param  array<string, CarbonImmutable>  $stops
+     */
+    protected function historyProblem(
+        QualityCheck $quality, FundingRateRepository $funding, Strategy $strategy, array $symbols,
+        CarbonImmutable $warmupFrom, CarbonImmutable $from, CarbonImmutable $to, array $stops,
+    ): ?string {
+        $runs = $strategy instanceof UniverseStrategy ? $strategy->schedule()->runs() : null;
+
+        foreach ($symbols as $symbol) {
+            $spans = [[$warmupFrom, $to]];
+
+            if ($runs !== null) {
+                $spans = [];
+                $stop = $stops[(string) $symbol] ?? $to;
+
+                foreach ($runs[(string) $symbol] ?? [] as [$first, $after]) {
+                    $start = $first->subMonth() > $warmupFrom ? $first->subMonth() : $warmupFrom;
+                    $end = min($to->getTimestamp(), $after->addDay()->getTimestamp(), $stop->getTimestamp());
+
+                    if ($start->getTimestamp() < $end) {
+                        $spans[] = [$start, CarbonImmutable::createFromTimestampUTC($end)];
+                    }
+                }
+            }
+
+            foreach ($spans as [$start, $end]) {
+                $problem = $this->coverage($quality, $symbol, $start, $end) ?? $this->fundingCoverage($funding, $symbol, $start, $end)
+                    ?? ($from < $end ? $this->scalpingCoverage($strategy, $symbol, $start > $from ? $start : $from, $end) : null);
+
+                if ($problem !== null) {
+                    return "{$symbol}: {$problem}";
+                }
+            }
+        }
+
+        return null;
     }
 
     /** Why the stored candles cannot carry a run over [$from, $to), or null. */
@@ -237,7 +333,7 @@ trait PreparesBacktests
     {
         $instrument = $symbol->isPerpetual() ? self::instrument($symbol) : null;
 
-        if (! $strategy instanceof CompiledStrategy || $instrument === null) {
+        if (! ($strategy instanceof CompiledStrategy || $strategy instanceof UniverseStrategy) || $instrument === null) {
             return null;
         }
 
