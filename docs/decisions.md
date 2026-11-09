@@ -449,6 +449,17 @@ changing that threshold is a risk decision left to the operator. Wide spread nee
 tick stream; stale data, venue errors and clock skew are tripped by `engine:run` and the venue. Commands are applied
 right after the venue is reconciled, so a flatten sees the positions the venue reports.
 
+**D-74. The testnet venue** (2026-11-09, with Phase 4 step 5)
+`BinanceVenue` reads fills over REST when the engine asks for updates at each minute (each working order's status
+and trades, and the perpetuals' funding), which is when a live engine sees fills anyway (`engine.md`, section 1); the
+user data stream can come later without changing the engine. Spot protection is an exchange OCO (limit maker above,
+stop-loss below); a perpetual's is a reduce-only stop and take-profit on isolated margin. Only the account's own
+assets and instruments are reported. A testnet engine starts from the exchange as it is and refuses an account with
+open orders or positions; it warms its indicators up on stored minutes without a request per minute; it halts on a
+clock more than a second off Binance's or a bad key, and stops on any other venue error for its supervisor to restart.
+The opt-in suite reads testnet keys from the shell (`TRADING_TESTNET_KEY`, `TRADING_TESTNET_SECRET`); live keys
+are never read that way.
+
 | Id | Question | Blocks |
 |----|----------|--------|
 | O-6 | Pay Binance fees in BNB (25 % off spot)? Needs a small BNB balance whose price moves. | Live cost model (D-28 reads it from the account either way) |

@@ -23,6 +23,8 @@ in a public repository. This document lists what is protected, from whom, and ho
 - Rotated at least every 90 days and immediately after any suspicion. Rotation is a runbook procedure.
 - Entered only through `php artisan account:keys <account>` (asked interactively, never as an argument) or the
   Account screen after re-authentication. Never through chat, a file in the repository or an environment variable.
+- The one exception: the opt-in testnet suite reads a testnet key from `TRADING_TESTNET_KEY` and
+  `TRADING_TESTNET_SECRET` in the shell that runs it; testnet keys carry no money (D-74).
 - The Telegram bot token and chat id live in `.env` (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`), never in the
   repository, the journal or a message.
 

@@ -17,5 +17,10 @@ return [
         // Verified archives are kept here and checked against their checksum again on reuse.
         'archive_cache' => storage_path('app/binance-archive'),
         'timeout_seconds' => 15,
+        // Testnet accounts (Phase 4): the same APIs on Binance's test networks, with test funds only.
+        'testnet' => [
+            'spot' => env('BINANCE_TESTNET_SPOT', 'https://testnet.binance.vision'),
+            'perp' => env('BINANCE_TESTNET_PERP', 'https://testnet.binancefuture.com'),
+        ],
     ],
 ];

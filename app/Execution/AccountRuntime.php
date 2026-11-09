@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Execution;
 
+use App\Execution\Contracts\Venue;
+use App\Execution\Data\Balance;
 use App\Execution\Data\EngineCommand;
 use App\Execution\Data\EngineMode;
 use App\Execution\Data\EngineRecord;
@@ -14,6 +16,7 @@ use App\Execution\Models\AccountSnapshot;
 use App\Execution\Models\Deployment;
 use App\Execution\Venues\CostModel;
 use App\Execution\Venues\SimulatedVenue;
+use App\Execution\Venues\WarmingVenue;
 use App\Market\Data\MinuteCandles;
 use App\Market\Data\RulesHistory;
 use App\Market\Instruments\StoredInstruments;
@@ -53,7 +56,11 @@ final class AccountRuntime
 
     private readonly SimClock $venueClock;
 
-    private readonly SimulatedVenue $venue;
+    private readonly ?SimulatedVenue $venue;
+
+    private readonly ?WarmingVenue $exchange;
+
+    public readonly CarbonImmutable $tradingFrom;
 
     public readonly DatabaseDecisionLog $log;
 
@@ -61,11 +68,12 @@ final class AccountRuntime
      * @param  array<array-key, mixed>  $risk  the `account` section of config/risk.php
      * @param  array<array-key, mixed>  $simulation  config/simulation.php
      * @param  (Closure(EngineRecord): void)|null  $onEvent  called for every new engine event and notice
+     * @param  (Closure(list<Symbol>): Venue)|null  $exchange  builds a testnet account's venue for its instruments
      */
-    public function __construct(public readonly Account $account, array $risk, array $simulation, private readonly Clock $clock, ?Closure $onEvent = null)
+    public function __construct(public readonly Account $account, array $risk, array $simulation, private readonly Clock $clock, ?Closure $onEvent = null, ?Closure $exchange = null)
     {
-        if ($account->mode !== EngineMode::Paper) {
-            throw new InvalidArgumentException("{$account->name} is a {$account->mode->value} account; this runtime runs paper accounts (testnet comes with its venue, live with phase 6).");
+        if ($account->mode === EngineMode::Live || ($account->mode === EngineMode::Testnet && $exchange === null) || $account->mode === EngineMode::Backtest) {
+            throw new InvalidArgumentException("{$account->name} is a {$account->mode->value} account: this runtime runs paper, and testnet with its venue; live comes with phase 6 (D-16).");
         }
 
         $policy = RiskPolicy::account($risk);
@@ -76,7 +84,9 @@ final class AccountRuntime
             $symbols[$symbol] = Symbol::parse($symbol);
         }
 
-        $feedFrom = $account->started_at;
+        // A testnet account starts from the exchange as it is now: it trades from this minute, after its warmup.
+        $tradingFrom = $account->mode === EngineMode::Testnet ? max($account->started_at, $clock->now()->startOfMinute()) : $account->started_at;
+        $feedFrom = $tradingFrom;
 
         foreach ($strategies as $strategy) {
             $seconds = 60;
@@ -86,7 +96,7 @@ final class AccountRuntime
                 $seconds = max($seconds, $subscription->timeframe->seconds());
             }
 
-            $start = $account->started_at->subSeconds($seconds * $strategy->warmupBars())->startOfDay();
+            $start = $tradingFrom->subSeconds($seconds * $strategy->warmupBars())->startOfDay();
             $feedFrom = $start < $feedFrom ? $start : $feedFrom;
         }
 
@@ -102,7 +112,23 @@ final class AccountRuntime
         $perpetual = self::section($simulation, 'perpetual');
         $perpetualFees = self::section($perpetual, 'fees');
         $maintenance = Decimal::of(self::text($perpetual, 'maintenance_margin_rate'));
+        $this->tradingFrom = $tradingFrom;
         $this->venueClock = new SimClock($feedFrom);
+
+        if ($exchange !== null && $account->mode === EngineMode::Testnet) {
+            $this->venue = null;
+            $this->exchange = new WarmingVenue($exchange($this->symbols));
+            $balances = array_values(array_map(fn (Balance $b): Money => Money::of((string) $b->total(), $b->asset), $this->exchange->balances()));
+            $this->log = new DatabaseDecisionLog($account->id, $clock, $onEvent, replay: false);
+            $this->engine = new Engine(
+                EngineMode::Testnet, $this->exchange, new Ledger($quote, $balances, $this->exchange->futuresWallet()), $policy, $this->log, $strategies, $rules,
+                $tradingFrom, $feedFrom, $maintenance,
+            );
+
+            return;
+        }
+
+        $this->exchange = null;
         $this->venue = new SimulatedVenue(
             $this->venueClock,
             new FeeSchedule(Decimal::of(self::text($fees, 'maker')), Decimal::of(self::text($fees, 'taker'))),
@@ -130,8 +156,18 @@ final class AccountRuntime
      */
     public function step(MinuteCandles $minute, array $commands = []): void
     {
+        if ($this->exchange !== null) {
+            if ($minute->closedAt > $this->tradingFrom) {
+                $this->exchange->warmedUp();
+            }
+
+            $this->engine->handle($minute, $commands);
+
+            return;
+        }
+
         $this->venueClock->advanceTo($minute->closedAt);
-        $this->venue->advance($minute);
+        $this->venue?->advance($minute);
         $this->engine->handle($minute, $commands);
     }
 

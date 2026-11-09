@@ -181,3 +181,17 @@ minute is never skipped: the engine waits, journals `stale_data` after 2 minutes
 reconciliation mismatches and replay divergences send a message; volatility shocks and price sanity stay in the
 journal, since they trip many times a day (D-73).
 
+## 12. Testnet
+
+| Task | Command |
+|------|---------|
+| Create the account | `php artisan account:create testnet --mode=testnet [--symbol=BTC/USDT]` |
+| Store its key | `php artisan account:keys testnet` (asked twice, hidden; from testnet.binance.vision, trade only) |
+| Run it | `php artisan engine:run testnet` |
+| Check the venue against the real test network | `TRADING_TESTNET=1 TRADING_TESTNET_KEY=... TRADING_TESTNET_SECRET=... composer test:testnet` |
+
+A testnet engine starts from the exchange as it is (D-74): close every order and position for its instruments on
+the testnet site first. It halts when the machine's clock is more than a second off Binance's (fix the time
+sync) or when the key is refused, and stops on any other venue error; its supervisor restarts it. Binance blocks
+some regions: run it from where your account works.
+

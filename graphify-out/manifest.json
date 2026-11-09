@@ -1189,10 +1189,10 @@
     "semantic_hash": "f5b793964e0317b51bfb1ee93a5e6ae8"
   },
   "config/exchanges.php": {
-    "mtime": 1794149993.4215407,
-    "seen": 1794165296.7231174,
-    "ast_hash": "33921bfc9eff6d7d8c8c3f570b76d5b6",
-    "semantic_hash": "33921bfc9eff6d7d8c8c3f570b76d5b6"
+    "mtime": 1794192455.0125916,
+    "seen": 1794193132.0633383,
+    "ast_hash": "9cbee504d686634a4c6cc1ef586919fb",
+    "semantic_hash": ""
   },
   "config/filesystems.php": {
     "mtime": 1794145120.1127894,
@@ -1864,9 +1864,9 @@
     "semantic_hash": ""
   },
   "docs/decisions.md": {
-    "mtime": 1794190618.8740954,
-    "seen": 1794190932.1308477,
-    "ast_hash": "e0b0024228f3f142916332becbc035c1",
+    "mtime": 1794192727.8835568,
+    "seen": 1794193132.0657933,
+    "ast_hash": "61c2efaf1cf173d1059406c369a378ae",
     "semantic_hash": ""
   },
   "docs/engine.md": {
@@ -1894,15 +1894,15 @@
     "semantic_hash": ""
   },
   "docs/runbook.md": {
-    "mtime": 1794191401.0419533,
-    "seen": 1794192362.9167047,
-    "ast_hash": "bece0b1d5fef6f08ebd9eb0a4c21d0f3",
+    "mtime": 1794192727.8843296,
+    "seen": 1794193132.0658772,
+    "ast_hash": "db0458af7530b9740cc44390dae859cc",
     "semantic_hash": ""
   },
   "docs/security.md": {
-    "mtime": 1794189951.2848887,
-    "seen": 1794189957.3208644,
-    "ast_hash": "aeb2ced314e65e655177bd9d0106bb36",
+    "mtime": 1794192727.8840163,
+    "seen": 1794193132.0658786,
+    "ast_hash": "ce94e6090cf91734d5d6887a324239c2",
     "semantic_hash": ""
   },
   "docs/simulation.md": {
@@ -2896,9 +2896,9 @@
     "semantic_hash": ""
   },
   "app/Execution/AccountRuntime.php": {
-    "mtime": 1794191222.0179067,
-    "seen": 1794192362.9066944,
-    "ast_hash": "677f4b0b0bc5634ea6656156c3225d50",
+    "mtime": 1794192658.5387928,
+    "seen": 1794193132.0514033,
+    "ast_hash": "5812a4e23167ba1b1f3baabde0360d4a",
     "semantic_hash": ""
   },
   "app/Execution/Console/CreateAccount.php": {
@@ -2938,9 +2938,9 @@
     "semantic_hash": ""
   },
   "app/Execution/Console/RunEngine.php": {
-    "mtime": 1794191222.0182922,
-    "seen": 1794192362.9067106,
-    "ast_hash": "f6f727388749a8d8de25c74ccd068881",
+    "mtime": 1794192728.9137504,
+    "seen": 1794193132.0516734,
+    "ast_hash": "1c724af0d69abc2f61eb05106d09b1ac",
     "semantic_hash": ""
   },
   "app/Execution/Contracts/Notifier.php": {
@@ -2950,9 +2950,9 @@
     "semantic_hash": ""
   },
   "app/Execution/Journal/DatabaseDecisionLog.php": {
-    "mtime": 1794191200.3418097,
-    "seen": 1794192362.907464,
-    "ast_hash": "802f9c76deb0a5ae418374b694824bd5",
+    "mtime": 1794192586.2697616,
+    "seen": 1794193132.0521293,
+    "ast_hash": "fdc0e9fb634cfe7a7ef385689fcbd3d8",
     "semantic_hash": ""
   },
   "app/Execution/Journal/ReplayDivergence.php": {
@@ -3019,6 +3019,72 @@
     "mtime": 1794192025.060077,
     "seen": 1794192362.9145713,
     "ast_hash": "f19cd40e47cf9dd694b4e305b742cb4d",
+    "semantic_hash": ""
+  },
+  "app/Execution/Console/StoreKeys.php": {
+    "mtime": 1794192586.0923316,
+    "seen": 1794193132.051675,
+    "ast_hash": "87eef82bb49ce75417c9d5b1fac3eebf",
+    "semantic_hash": ""
+  },
+  "app/Execution/Models/ExchangeKey.php": {
+    "mtime": 1794192586.0910122,
+    "seen": 1794193132.0522287,
+    "ast_hash": "30a022d9eab023299a7f06f53cb47f6a",
+    "semantic_hash": ""
+  },
+  "app/Execution/Venues/BinanceVenue.php": {
+    "mtime": 1794192527.3544235,
+    "seen": 1794193132.052292,
+    "ast_hash": "ef990bd1ea6c4b6307e837b250e6c9c2",
+    "semantic_hash": ""
+  },
+  "app/Execution/Venues/WarmingVenue.php": {
+    "mtime": 1794192658.5934196,
+    "seen": 1794193132.0523903,
+    "ast_hash": "8cce65056a382c6275194b28ace710d2",
+    "semantic_hash": ""
+  },
+  "app/Market/Binance/BinanceApiError.php": {
+    "mtime": 1794192454.9972045,
+    "seen": 1794193132.052523,
+    "ast_hash": "ff6358a6612bd9c0a2b0229ec29d686e",
+    "semantic_hash": ""
+  },
+  "app/Market/Binance/BinanceUnreachable.php": {
+    "mtime": 1794192455.00023,
+    "seen": 1794193132.0526028,
+    "ast_hash": "41a22601c68d34ef0181438f4253325a",
+    "semantic_hash": ""
+  },
+  "app/Market/Binance/SignedBinanceClient.php": {
+    "mtime": 1794192455.0016391,
+    "seen": 1794193132.0527077,
+    "ast_hash": "4bce21d633c0b10ecf14ac787a430185",
+    "semantic_hash": ""
+  },
+  "database/migrations/2026_11_09_000009_create_exchange_keys_table.php": {
+    "mtime": 1794192586.0895286,
+    "seen": 1794193132.0636957,
+    "ast_hash": "b48d6f588a46b60658b085c718e03d91",
+    "semantic_hash": ""
+  },
+  "tests/Feature/Execution/BinanceVenueTest.php": {
+    "mtime": 1794192633.722716,
+    "seen": 1794193132.0638976,
+    "ast_hash": "976fa69024cf220944340c93d80ab3b0",
+    "semantic_hash": ""
+  },
+  "tests/Feature/Execution/TestnetEngineTest.php": {
+    "mtime": 1794193115.9789286,
+    "seen": 1794193132.0639174,
+    "ast_hash": "e348abc2f37411983a88b76516f6ebb8",
+    "semantic_hash": ""
+  },
+  "tests/Feature/Testnet/BinanceTestnetTest.php": {
+    "mtime": 1794193071.7500556,
+    "seen": 1794193132.0642612,
+    "ast_hash": "17349fb98decdcedf1f144e0b21c0eac",
     "semantic_hash": ""
   },
   "package-lock.json": {

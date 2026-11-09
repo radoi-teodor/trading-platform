@@ -6,22 +6,35 @@ namespace App\Execution\Console;
 
 use App\Execution\AccountRuntime;
 use App\Execution\Contracts\Notifier;
+use App\Execution\Contracts\Venue;
+use App\Execution\Data\CommandKind;
 use App\Execution\Data\EngineMode;
 use App\Execution\Data\EngineRecord;
 use App\Execution\Journal\ReplayDivergence;
 use App\Execution\Models\Account;
 use App\Execution\Models\AccountSnapshot;
 use App\Execution\Models\EngineCommandRow;
+use App\Execution\Models\ExchangeKey;
+use App\Execution\Venues\BinanceVenue;
+use App\Market\Binance\BinanceApiError;
+use App\Market\Binance\BinanceRequestFailed;
+use App\Market\Binance\SignedBinanceClient;
 use App\Market\Binance\Sleeper;
 use App\Market\Contracts\CandleFeed;
+use App\Market\Data\MarketType;
+use App\Support\Asset;
 use App\Support\Clock\Clock;
+use App\Support\Symbol;
 use Carbon\CarbonImmutable;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Config\Repository;
+use Illuminate\Http\Client\Factory as HttpFactory;
 use InvalidArgumentException;
 
 /**
- * Runs one paper account (docs/engine.md, section 9). It replays every minute it already handled, with each command
+ * Runs one paper or testnet account (docs/engine.md, section 9). A testnet account starts from the exchange as it is, halts
+ * on a clock more than a second off Binance's or a bad key, and stops on a venue error for its supervisor to restart.
+ * A paper account replays every minute it already handled, with each command
  * at its event, and stops on the first record that differs from the journal (D-68); then it handles each new minute
  * once every followed instrument has it (D-67), applying the commands queued since, and publishes the account.
  */
@@ -29,6 +42,9 @@ final class RunEngine extends Command
 {
     /** Minutes of silence after which the feed is stale: two of the 1-minute timeframe the engine reads. */
     private const int STALE_MINUTES = 2;
+
+    /** docs/risk-policy.md, section 3: clock skew halts the account above 1 second. */
+    private const int MAX_SKEW_MS = 1000;
 
     protected $signature = 'engine:run
         {account : The account name}
@@ -38,7 +54,7 @@ final class RunEngine extends Command
 
     protected $description = 'Run an account\'s engine on the live feed: paper now, testnet with its venue, live in phase 6';
 
-    public function handle(Repository $config, CandleFeed $feed, Clock $clock, Sleeper $sleeper, Notifier $notifier): int
+    public function handle(Repository $config, CandleFeed $feed, Clock $clock, Sleeper $sleeper, Notifier $notifier, HttpFactory $http): int
     {
         $name = (string) $this->argument('account');
         $account = Account::query()->where('name', $name)->first();
@@ -55,16 +71,41 @@ final class RunEngine extends Command
             return self::FAILURE;
         }
 
+        $client = null;
+        $exchange = null;
+
+        if ($account->mode === EngineMode::Testnet) {
+            $keys = ExchangeKey::query()->where('account_id', $account->id)->first();
+
+            if ($keys === null) {
+                $this->error("{$account->name} has no key: store one with php artisan account:keys {$account->name}.");
+
+                return self::FAILURE;
+            }
+
+            $url = fn (string $key): string => is_string($value = $config->get("exchanges.binance.testnet.{$key}")) ? $value : throw new InvalidArgumentException("exchanges.binance.testnet.{$key} must be a URL.");
+            $client = new SignedBinanceClient($http, $clock, $url('spot'), $url('perp'), $keys->api_key, $keys->api_secret);
+            $exchange = function (array $symbols) use ($client, $account, $clock): Venue {
+                $venue = new BinanceVenue($client, array_values(array_filter($symbols, fn (mixed $s): bool => $s instanceof Symbol)), Asset::of($account->quote), $clock->now());
+
+                if ($venue->openOrders() !== [] || $venue->positions() !== []) {
+                    throw new InvalidArgumentException("{$account->name} has open orders or positions on testnet: close them there, then start again. A testnet engine starts from a clean account.");
+                }
+
+                return $venue;
+            };
+        }
+
         try {
-            $runtime = new AccountRuntime($account, $this->section($config, 'risk.account'), $this->section($config, 'simulation'), $clock, fn (EngineRecord $r) => $notifier->engineEvent($account->name, $r));
-        } catch (InvalidArgumentException $failure) {
+            $runtime = new AccountRuntime($account, $this->section($config, 'risk.account'), $this->section($config, 'simulation'), $clock, fn (EngineRecord $r) => $notifier->engineEvent($account->name, $r), $exchange);
+        } catch (InvalidArgumentException|BinanceRequestFailed $failure) {
             $this->error($failure->getMessage());
 
             return self::FAILURE;
         }
 
         $until = is_string($this->option('until')) ? CarbonImmutable::parse($this->option('until'), 'UTC') : null;
-        $last = AccountSnapshot::query()->find($account->id)?->minute;
+        $last = $account->mode === EngineMode::Paper ? AccountSnapshot::query()->find($account->id)?->minute : null;
         $cursor = $runtime->feedFrom;
         $stale = false;
 
@@ -82,6 +123,19 @@ final class RunEngine extends Command
 
             while (true) {
                 $now = $clock->now();
+
+                if ($client !== null) {
+                    $skew = abs($client->serverTime(MarketType::Spot)->getTimestampMs() - $now->getTimestampMs());
+
+                    if ($skew > self::MAX_SKEW_MS) {
+                        $this->halt($account, $clock);
+                        $runtime->log->notice(new EngineRecord($now, 'clock_skew', "the local clock is {$skew} ms away from Binance's; the account is halted"));
+                        $this->error('The clock is too far from Binance\'s: the account is halted.');
+
+                        return self::FAILURE;
+                    }
+                }
+
                 $to = $now->startOfMinute();
                 $to = $until !== null && $until < $to ? $until : $to;
                 $cursor = $this->handleMinutes($runtime, $feed, $cursor, $to, $account, replay: false);
@@ -104,6 +158,16 @@ final class RunEngine extends Command
 
                 $sleeper->sleep(max(1, (int) (is_string($this->option('poll')) ? $this->option('poll') : '2')));
             }
+        } catch (BinanceRequestFailed $failure) {
+            // A testnet engine stops on a venue error; the supervisor restarts it from the exchange's state.
+            if ($failure instanceof BinanceApiError && $failure->isAuthentication()) {
+                $this->halt($account, $clock);
+            }
+
+            $runtime->log->notice(new EngineRecord($clock->now(), 'venue_error', $failure->getMessage()));
+            $this->error($failure->getMessage());
+
+            return self::FAILURE;
         } catch (ReplayDivergence $divergence) {
             $runtime->log->notice(new EngineRecord($clock->now(), 'replay_divergence', $divergence->getMessage()));
             $this->error($divergence->getMessage().' The account stays stopped until the operator looks (D-68).');
@@ -149,6 +213,11 @@ final class RunEngine extends Command
         }
 
         return $cursor;
+    }
+
+    private function halt(Account $account, Clock $clock): void
+    {
+        EngineCommandRow::query()->create(['account_id' => $account->id, 'kind' => CommandKind::Halt, 'strategy' => null, 'issued_by' => 'engine', 'created_at' => $clock->now()]);
     }
 
     /** @return array<array-key, mixed> */

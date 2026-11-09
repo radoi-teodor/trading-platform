@@ -29,9 +29,16 @@ final class DatabaseDecisionLog implements DecisionLog
 
     public int $quietDecisions = 0;
 
-    /** @param (Closure(EngineRecord): void)|null $onEvent called for every new event once replay is over */
-    public function __construct(private readonly int $account, private readonly Clock $clock, private readonly ?Closure $onEvent = null)
+    /**
+     * @param  (Closure(EngineRecord): void)|null  $onEvent  called for every new event once replay is over
+     * @param  bool  $replay  false for a venue that is the truth (testnet, live): it writes from the first record
+     */
+    public function __construct(private readonly int $account, private readonly Clock $clock, private readonly ?Closure $onEvent = null, bool $replay = true)
     {
+        if (! $replay) {
+            return;
+        }
+
         foreach (JournalEntry::query()->where('account_id', $account)->where('kind', '!=', 'notice')->orderBy('id')->get() as $entry) {
             $this->expected[] = ['kind' => $entry->kind, 'payload' => $entry->payload];
         }
