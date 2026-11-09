@@ -22,6 +22,7 @@ final readonly class MinuteCandles
      * @param  array<string, OpenInterest>  $openInterest  open interest known from $closedAt (its time plus 5 minutes), by symbol
      * @param  array<string, Positioning>  $positioning  positioning known from $closedAt (its time plus 5 minutes), by symbol (D-91)
      * @param  array<string, BookDepth>  $depth  order book depth known from $closedAt (its 5 minutes over), by symbol (D-91)
+     * @param  array<string, Liquidations>  $liquidations  the minute's liquidations, by symbol, only for minutes the stream heard whole (D-91)
      */
     public function __construct(
         public CarbonImmutable $closedAt,
@@ -33,5 +34,6 @@ final readonly class MinuteCandles
         public array $openInterest = [],
         public array $positioning = [],
         public array $depth = [],
+        public array $liquidations = [],
     ) {}
 }

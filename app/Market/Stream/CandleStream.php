@@ -42,6 +42,8 @@ final class CandleStream
 
     private int $messagesThisSession = 0;
 
+    private bool $perpetual = false;
+
     /** @var array<string, int> the second the forming minute was last written, by venue symbol */
     private array $formingWrittenAt = [];
 
@@ -56,6 +58,7 @@ final class CandleStream
         private readonly LoggerInterface $logger,
         private readonly ScalpingCollector $scalping,
         private readonly FormingCandles $forming,
+        private readonly LiquidationCollector $liquidations,
     ) {}
 
     /**
@@ -81,6 +84,11 @@ final class CandleStream
 
             try {
                 $this->transport->connect($url);
+                $this->perpetual = $market === MarketType::Perp;
+
+                if ($this->perpetual) {
+                    $this->liquidations->start();
+                }
                 $this->repairGaps($instruments);
                 $this->scalping->repair();
                 $endedOnPurpose = $this->listen($byVenue, $process, $session);
@@ -128,6 +136,10 @@ final class CandleStream
             }
 
             $this->scalping->tick();
+
+            if ($this->perpetual) {
+                $this->liquidations->tick();
+            }
             $payload = $this->transport->receive();
 
             if ($payload === null) {
@@ -148,6 +160,12 @@ final class CandleStream
     {
         $decoded = json_decode($payload, true);
         $data = is_array($decoded) && is_array($decoded['data'] ?? null) ? $decoded['data'] : null;
+
+        if ($data !== null && ($data['e'] ?? null) === 'forceOrder') {
+            $this->liquidations->message($data);
+
+            return;
+        }
 
         if ($data !== null && in_array($data['e'] ?? null, ['aggTrade', 'markPriceUpdate'], true)) {
             $this->scalping->message($data);
@@ -236,7 +254,9 @@ final class CandleStream
     /** @param list<string> $venueSymbols */
     private function url(MarketType $market, array $venueSymbols): string
     {
-        $streams = implode('/', [...array_map(static fn (string $symbol): string => mb_strtolower($symbol).'@kline_1m', $venueSymbols), ...$this->scalping->streams()]);
+        // Perpetuals also carry every symbol's liquidations, in one stream (D-91).
+        $liquidations = $market === MarketType::Perp ? ['!forceOrder@arr'] : [];
+        $streams = implode('/', [...array_map(static fn (string $symbol): string => mb_strtolower($symbol).'@kline_1m', $venueSymbols), ...$this->scalping->streams(), ...$liquidations]);
 
         return $this->endpoints->stream($market).'/stream?streams='.$streams;
     }

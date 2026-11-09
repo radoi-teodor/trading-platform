@@ -220,6 +220,7 @@ final class AccountRuntime
                     'open_interest' => $minute->closedAt->getTimestamp() % 300 !== 0 || isset($minute->openInterest[$symbol]),
                     'positioning' => $minute->closedAt->getTimestamp() % 300 !== 0 || isset($minute->positioning[$symbol]),
                     'book_depth' => $minute->closedAt->getTimestamp() % 300 !== 0 || isset($minute->depth[$symbol]),
+                    'liquidation_minutes' => isset($minute->liquidations[$symbol]),
                     default => true,
                 };
 

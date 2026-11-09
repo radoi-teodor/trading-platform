@@ -127,6 +127,8 @@ final class Compiler
             'long_short_ratio' => fn (Frame $f): ?Decimal => $f->perpetual?->longShortRatio,
             'top_trader_ratio' => fn (Frame $f): ?Decimal => $f->perpetual?->topTraderRatio,
             'taker_ratio' => fn (Frame $f): ?Decimal => $f->perpetual?->takerRatio,
+            'long_liquidations' => fn (Frame $f): ?Decimal => $f->perpetual?->longLiquidations,
+            'short_liquidations' => fn (Frame $f): ?Decimal => $f->perpetual?->shortLiquidations,
             'large_buy_volume' => fn (Frame $f): ?Decimal => $f->perpetual?->largeBuyVolume,
             'large_sell_volume' => fn (Frame $f): ?Decimal => $f->perpetual?->largeSellVolume,
             'large_delta' => fn (Frame $f): ?Decimal => $f->perpetual?->largeBuyVolume?->minus($f->perpetual->largeSellVolume ?? Decimal::zero()),

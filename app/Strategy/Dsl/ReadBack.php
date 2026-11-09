@@ -54,6 +54,7 @@ final class ReadBack
         'open_interest' => 'the open interest', 'mark_price' => 'the mark price', 'basis' => 'the basis',
         'long_short_ratio' => 'the ratio of accounts long to short', 'top_trader_ratio' => 'the ratio of the top traders positions long to short',
         'taker_ratio' => 'the ratio of taker buy to sell volume',
+        'long_liquidations' => 'the long positions liquidated during the candle', 'short_liquidations' => 'the short positions liquidated during the candle',
         'large_buy_volume' => 'the volume of large buys', 'large_sell_volume' => 'the volume of large sells', 'large_delta' => 'the large-trade delta',
     ];
 

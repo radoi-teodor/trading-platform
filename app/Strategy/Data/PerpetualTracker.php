@@ -6,6 +6,7 @@ namespace App\Strategy\Data;
 
 use App\Market\Data\BookDepth;
 use App\Market\Data\Candle;
+use App\Market\Data\Liquidations;
 use App\Market\Data\MinuteCandles;
 use App\Market\Data\OpenInterest;
 use App\Market\Data\Positioning;
@@ -31,6 +32,9 @@ final class PerpetualTracker
     /** @var array<string, OpenInterest> */
     private array $openInterest = [];
 
+    /** @var array<string, array<int, Liquidations>> by symbol, then by minute open timestamp */
+    private array $liquidations = [];
+
     /** @var array<string, BookDepth> */
     private array $depth = [];
 
@@ -54,6 +58,14 @@ final class PerpetualTracker
             $this->openInterest[$symbol] = $interest;
         }
 
+        foreach ($minute->liquidations as $symbol => $liquidations) {
+            $this->liquidations[$symbol][$liquidations->openTime->getTimestamp()] = $liquidations;
+
+            if (count($this->liquidations[$symbol]) > self::FLOW_MINUTES) {
+                $this->liquidations[$symbol] = array_slice($this->liquidations[$symbol], -self::FLOW_MINUTES, preserve_keys: true);
+            }
+        }
+
         foreach ($minute->depth as $symbol => $depth) {
             $this->depth[$symbol] = $depth;
         }
@@ -71,6 +83,30 @@ final class PerpetualTracker
         }
     }
 
+    /**
+     * The long and short notional liquidated over the minutes from $from to $to (timestamps, $to excluded): null
+     * when a minute was not heard, since none and unknown differ (D-91).
+     *
+     * @return array{?Decimal, ?Decimal}
+     */
+    private function liquidated(string $symbol, int $from, int $to): array
+    {
+        $long = $short = Decimal::zero();
+
+        for ($at = $from; $at < $to; $at += 60) {
+            $minute = $this->liquidations[$symbol][$at] ?? null;
+
+            if ($minute === null) {
+                return [null, null];
+            }
+
+            $long = $long->plus($minute->longNotional);
+            $short = $short->plus($minute->shortNotional);
+        }
+
+        return [$long, $short];
+    }
+
     /** What a candle of $symbol that just closed sees; the flow is summed over the candle's own minutes. */
     public function view(string $symbol, Candle $candle): PerpetualView
     {
@@ -85,6 +121,6 @@ final class PerpetualTracker
         }
 
         return new PerpetualView($this->marks[$symbol]->close ?? null, $this->premium[$symbol]->close ?? null, $this->openInterest[$symbol]->contracts ?? null, $buy, $sell,
-            $this->positioning[$symbol]->longShortRatio ?? null, $this->positioning[$symbol]->topTraderRatio ?? null, $this->positioning[$symbol]->takerRatio ?? null, $this->depth[$symbol] ?? null);
+            $this->positioning[$symbol]->longShortRatio ?? null, $this->positioning[$symbol]->topTraderRatio ?? null, $this->positioning[$symbol]->takerRatio ?? null, $this->depth[$symbol] ?? null, ...$this->liquidated($symbol, $from, $to));
     }
 }

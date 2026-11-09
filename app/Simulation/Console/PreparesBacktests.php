@@ -11,6 +11,7 @@ use App\Market\Data\RulesHistory;
 use App\Market\Feed\DatabaseCandleFeed;
 use App\Market\FundingRateRepository;
 use App\Market\Instruments\StoredInstruments;
+use App\Market\LiquidationRepository;
 use App\Market\Models\Instrument;
 use App\Market\Quality\QualityCheck;
 use App\Market\ScalpingRepository;
@@ -240,11 +241,13 @@ trait PreparesBacktests
             return null;
         }
 
-        $names = ['trade_flow' => 'trade flow', 'open_interest' => 'open interest', 'mark_price_minutes' => 'mark price', 'premium_index_minutes' => 'premium index', 'positioning' => 'positioning ratios', 'book_depth' => 'order book depth'];
-        $flag = ['trade_flow' => '--flow', 'open_interest' => '--oi', 'mark_price_minutes' => '--mark', 'premium_index_minutes' => '--mark', 'positioning' => '--oi', 'book_depth' => '--depth'];
+        $names = ['trade_flow' => 'trade flow', 'open_interest' => 'open interest', 'mark_price_minutes' => 'mark price', 'premium_index_minutes' => 'premium index', 'positioning' => 'positioning ratios', 'book_depth' => 'order book depth', 'liquidation_minutes' => 'liquidations'];
+        $flag = ['trade_flow' => '--flow', 'open_interest' => '--oi', 'mark_price_minutes' => '--mark', 'premium_index_minutes' => '--mark', 'positioning' => '--oi', 'book_depth' => '--depth', 'liquidation_minutes' => 'none: they are collected live by market:stream perp'];
 
         foreach ($strategy->scalpingData() as $table) {
-            $missing = $this->laravel->make(ScalpingRepository::class)->missingDays($table, $instrument, $from, $to);
+            $missing = $table === 'liquidation_minutes'
+                ? $this->laravel->make(LiquidationRepository::class)->missingDays($from, $to)
+                : $this->laravel->make(ScalpingRepository::class)->missingDays($table, $instrument, $from, $to);
 
             if ($missing !== []) {
                 return sprintf('no %s stored on %s%s (market:backfill %s)', $names[$table], $missing[0], count($missing) > 1 ? ' and '.(count($missing) - 1).' more days' : '', $flag[$table]);

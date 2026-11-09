@@ -8,12 +8,14 @@ use App\Market\CandleRepository;
 use App\Market\Contracts\CandleFeed;
 use App\Market\Data\BookDepth;
 use App\Market\Data\FundingRate;
+use App\Market\Data\Liquidations;
 use App\Market\Data\MarketType;
 use App\Market\Data\MinuteCandles;
 use App\Market\Data\OpenInterest;
 use App\Market\Data\Positioning;
 use App\Market\Data\PriceMinute;
 use App\Market\Data\TradeFlow;
+use App\Market\LiquidationRepository;
 use App\Market\Models\Instrument;
 use App\Market\Persistence\Rows;
 use App\Market\ScalpingRepository;
@@ -55,7 +57,7 @@ final readonly class DatabaseCandleFeed implements CandleFeed
             ksort($minutes);
             $funding = $this->funding($symbolsById, $chunk, $end);
             $perpetuals = array_filter($symbolsById, fn (string $symbol): bool => str_contains($symbol, ':'));
-            [$flow, $marks, $premium, $interest, $positioning, $depth] = $perpetuals === [] ? [[], [], [], [], [], []] : $this->scalping($perpetuals, $chunk, $end);
+            [$flow, $marks, $premium, $interest, $positioning, $depth, $liquidations] = $perpetuals === [] ? [[], [], [], [], [], [], []] : $this->scalping($perpetuals, $chunk, $end);
 
             foreach ($minutes as $candles) {
                 ksort($candles, SORT_STRING);
@@ -63,7 +65,7 @@ final readonly class DatabaseCandleFeed implements CandleFeed
                 $closedAt = $first->endsAt();
                 $at = $closedAt->getTimestamp();
 
-                yield new MinuteCandles($closedAt, $candles, $funding[$at] ?? [], $flow[$at] ?? [], $marks[$at] ?? [], $premium[$at] ?? [], $interest[$at] ?? [], $positioning[$at] ?? [], $depth[$at] ?? []);
+                yield new MinuteCandles($closedAt, $candles, $funding[$at] ?? [], $flow[$at] ?? [], $marks[$at] ?? [], $premium[$at] ?? [], $interest[$at] ?? [], $positioning[$at] ?? [], $depth[$at] ?? [], $liquidations[$at] ?? []);
             }
         }
     }
@@ -106,7 +108,7 @@ final readonly class DatabaseCandleFeed implements CandleFeed
      * known at: a minute's flow, mark and premium at its own close, open interest five minutes after its time.
      *
      * @param  array<int, string>  $perpetuals  unified symbol by instrument id
-     * @return array{array<int, array<string, TradeFlow>>, array<int, array<string, PriceMinute>>, array<int, array<string, PriceMinute>>, array<int, array<string, OpenInterest>>, array<int, array<string, Positioning>>, array<int, array<string, BookDepth>>}
+     * @return array{array<int, array<string, TradeFlow>>, array<int, array<string, PriceMinute>>, array<int, array<string, PriceMinute>>, array<int, array<string, OpenInterest>>, array<int, array<string, Positioning>>, array<int, array<string, BookDepth>>, array<int, array<string, Liquidations>>}
      */
     private function scalping(array $perpetuals, CarbonImmutable $from, CarbonImmutable $to): array
     {
@@ -161,7 +163,26 @@ final readonly class DatabaseCandleFeed implements CandleFeed
             $depth[$d->knownAt()->getTimestamp()][$perpetuals[Rows::int($row, 'instrument_id')]] = $d;
         }
 
-        return [$flow, $marks, $premium, $interest, $positioning, $depth];
+        // Liquidations exist for the minutes the stream heard whole; such a minute without a row had none (D-91).
+        $liquidations = [];
+
+        foreach ($this->db->table('liquidation_coverage')->where('minute', '>=', Rows::timestamp($from))->where('minute', '<', Rows::timestamp($to))->pluck('minute') as $minute) {
+            $open = CarbonImmutable::parse(is_string($minute) ? $minute : '')->utc();
+
+            foreach ($perpetuals as $symbol) {
+                $liquidations[$open->getTimestamp() + 60][$symbol] = Liquidations::none($open);
+            }
+        }
+
+        foreach ($minutes('liquidation_minutes') as $row) {
+            $l = LiquidationRepository::row($row);
+
+            if (isset($liquidations[$l->openTime->getTimestamp() + 60])) {
+                $liquidations[$l->openTime->getTimestamp() + 60][$perpetuals[Rows::int($row, 'instrument_id')]] = $l;
+            }
+        }
+
+        return [$flow, $marks, $premium, $interest, $positioning, $depth, $liquidations];
     }
 
     /**

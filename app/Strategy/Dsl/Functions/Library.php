@@ -88,6 +88,10 @@ final class Library
             $specs[] = new FunctionSpec($name, Group::Perpetual, $plain, [new ParamSpec('band', ParamKind::DepthBand)]);
         }
 
+        foreach (['long_liquidations', 'short_liquidations'] as $name) {
+            $specs[] = new FunctionSpec($name, Group::Perpetual, $plain, isCall: false);
+        }
+
         foreach (['long_short_ratio', 'top_trader_ratio', 'taker_ratio'] as $name) {
             $specs[] = new FunctionSpec($name, Group::Perpetual, $plain, isCall: false);
         }

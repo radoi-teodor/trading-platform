@@ -24,5 +24,7 @@ final readonly class PerpetualView
         public ?Decimal $topTraderRatio = null,
         public ?Decimal $takerRatio = null,
         public ?BookDepth $depth = null,
+        public ?Decimal $longLiquidations = null,
+        public ?Decimal $shortLiquidations = null,
     ) {}
 }
