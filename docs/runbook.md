@@ -19,7 +19,67 @@ created in the phase that needs it and this file is updated with it.
 | simulation worker | `php artisan queue:work simulation --queue=simulation --timeout=3600 --tries=1` | Runs leave `queued` |
 | web | `php artisan serve` (or PHP-FPM behind a reverse proxy) | `/up` answers |
 
-All run under a supervisor with restart on failure. `php artisan platform:health` prints the same checks.
+All run under a supervisor with restart on failure. The Account screen shows each account's last handled minute; a
+health command that prints these checks is not built yet.
+
+A supervisord file for the always-on machine, `/etc/supervisor/conf.d/trading.conf` (change the path and the user;
+`supervisorctl reread && supervisorctl update` loads it). The web server is left out: run it as you serve PHP.
+
+```ini
+[group:trading]
+programs=stream-spot,stream-perp,engine-paper,notifications,simulation
+
+[program:stream-spot]
+command=php artisan market:stream spot
+directory=/srv/trading-platform
+user=trading
+autorestart=true
+startretries=100
+stopwaitsecs=30
+redirect_stderr=true
+stdout_logfile=/srv/trading-platform/storage/logs/stream-spot.log
+
+[program:stream-perp]
+command=php artisan market:stream perp
+directory=/srv/trading-platform
+user=trading
+autorestart=true
+startretries=100
+stopwaitsecs=30
+redirect_stderr=true
+stdout_logfile=/srv/trading-platform/storage/logs/stream-perp.log
+
+[program:engine-paper]
+command=php artisan engine:run paper
+directory=/srv/trading-platform
+user=trading
+autorestart=true
+startretries=100
+stopwaitsecs=30
+redirect_stderr=true
+stdout_logfile=/srv/trading-platform/storage/logs/engine-paper.log
+
+[program:notifications]
+command=php artisan queue:work database --queue=notifications --sleep=1
+directory=/srv/trading-platform
+user=trading
+autorestart=true
+redirect_stderr=true
+stdout_logfile=/srv/trading-platform/storage/logs/notifications.log
+
+[program:simulation]
+command=php artisan queue:work simulation --queue=simulation --timeout=3600 --tries=1
+directory=/srv/trading-platform
+user=trading
+autorestart=true
+stopwaitsecs=3600
+redirect_stderr=true
+stdout_logfile=/srv/trading-platform/storage/logs/simulation.log
+```
+
+A testnet account gets its own `[program:engine-testnet]` with `engine:run testnet`. Without Redis on the machine,
+set `CACHE_STORE=file` (or `database`) in `.env`: the login throttle uses the cache. Notifications use the
+database queue whatever `QUEUE_CONNECTION` says (`NOTIFICATIONS_QUEUE`).
 
 ## 3. Kill switch
 
