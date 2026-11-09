@@ -19,6 +19,7 @@ use App\Support\Timeframe;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Tests\Support\FakeTransport;
@@ -102,6 +103,17 @@ it('writes the forming minute again once a second has passed, and still stores t
     expect((string) app(FormingCandles::class)->latest($btc)?->candle->close)->toBe('102')
         ->and(DB::table('candles')->count())->toBe(1)
         ->and(DB::table('candles')->value('close'))->toStartWith('104');
+});
+
+// On Windows PHP has no pcntl, so SIGTERM is not defined: the command died before streaming anything and
+// start-local.ps1 -Stream restarted it forever. It traps the signals only where they exist.
+it('starts the stream command on a PHP without signal handling', function (): void {
+    [$stream] = streamWith([]);
+    $stream->stop();
+    app()->instance(CandleStream::class, $stream);
+
+    expect(Artisan::call('market:stream', ['market' => 'spot']))->toBe(0)
+        ->and(Artisan::output())->toContain('Streaming spot candles');
 });
 
 it('repairs the gap since the last stored candle when it connects', function (): void {

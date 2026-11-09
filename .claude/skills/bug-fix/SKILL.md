@@ -182,6 +182,9 @@ Add to the list when a fix reveals a new one.
   keeping only open times as integers. Search: `array_map`/`array_filter`/`iterator_to_array` over archive or
   REST data in `app/Market`, `rows(`/`csv(` on large files. Backtests over months still need more than 128 MB:
   `start-local.ps1` runs PHP with 2 GB.
+- **Signals do not exist on Windows.** PHP on Windows has no pcntl, so `SIGTERM` and `SIGINT` are undefined:
+  `market:stream` died with "Undefined constant SIGTERM" before streaming, and `start-local.ps1 -Stream` restarted it
+  forever. Trap signals only `if (defined('SIGTERM'))`. Search: `SIGTERM`, `SIGINT`, `->trap(`, `pcntl_`.
 - **Packages that bring their own `App\` namespace.** `laravel/pint` maps `App\` to its own internal app, which
   merged into ours. Such tools live in `tools/<name>` with their own composer project. Search:
   `grep "'App\\\\\\\\'" vendor/composer/autoload_psr4.php` must list only `app/`.

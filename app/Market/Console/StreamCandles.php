@@ -26,7 +26,12 @@ final class StreamCandles extends Command
         }
 
         $instruments = $universe->instruments($market);
-        $this->trap([SIGTERM, SIGINT], fn () => $stream->stop());
+        // A clean stop on SIGTERM or SIGINT where PHP has pcntl. Windows has neither: there Ctrl+C or the supervisor ends
+        // the process, which loses nothing, since every closed candle is stored as it arrives.
+        if (defined('SIGTERM') && defined('SIGINT')) {
+            $this->trap([SIGTERM, SIGINT], fn () => $stream->stop());
+        }
+
         $this->info("Streaming {$market->value} candles for ".count($instruments).' instruments. Stop with Ctrl+C or SIGTERM.');
 
         $scalping = $market === MarketType::Perp ? $universe->scalping() : [];
