@@ -99,3 +99,12 @@ it('reads back every strategy of the catalog', function (string $file): void {
         ->and($text)->toContain('on the exchange.')
         ->and($text)->not->toContain('$');
 })->with(fn (): array => glob(dirname(__DIR__, 4).'/catalog/strategies/*.strategy.yaml') ?: []);
+
+it('reads the scalping functions in words (D-79)', function (): void {
+    $text = ReadBack::render(readBackSpec((string) file_get_contents(dirname(__DIR__, 4).'/catalog/strategies/oi-momentum-long.strategy.yaml')));
+
+    expect($text)->toContain('if the basis is below 0.05 %, buy at market')
+        ->and($text)->toContain('the change of open interest over 4 candles is above 0.3 %')
+        ->and($text)->toContain('the volume delta of the last 4 candles is above 0')
+        ->and($text)->toContain('the close is above the mark price times 0.999');
+});

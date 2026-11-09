@@ -50,6 +50,9 @@ final class ReadBack
         'hl2' => 'the median price', 'hlc3' => 'the typical price', 'ohlc4' => 'the average price',
         'funding_rate' => 'the funding rate', 'in_position' => 'a position is open', 'bars_in_trade' => 'the candles in the trade',
         'trade_r' => 'the open result in R', 'hour_utc' => 'the UTC hour', 'weekday' => 'the weekday',
+        'buy_volume' => 'the volume bought by takers', 'sell_volume' => 'the volume sold by takers', 'delta' => 'the volume delta',
+        'open_interest' => 'the open interest', 'mark_price' => 'the mark price', 'basis' => 'the basis',
+        'large_buy_volume' => 'the volume of large buys', 'large_sell_volume' => 'the volume of large sells', 'large_delta' => 'the large-trade delta',
     ];
 
     private const array SHORT_NAMES = [
@@ -306,6 +309,8 @@ final class ReadBack
             'supertrend' => "the Supertrend {$field} ({$v('n')}, {$v('k')})",
             'funding_rate_avg' => "the average funding rate of the last {$v('n')} periods",
             'obv' => 'the on-balance volume',
+            'cvd' => "the volume delta of the last {$v('n')} candles",
+            'oi_change' => "the change of open interest over {$v('n')} candles",
             'vp_poc' => "the point of control of the last {$v('n')} candles' volume profile",
             'vp_vah' => "the top of the value area of the last {$v('n')} candles",
             'vp_val' => "the bottom of the value area of the last {$v('n')} candles",
