@@ -13,6 +13,7 @@ use App\Execution\Models\Account;
 use App\Http\Controllers\ReauthController;
 use App\Market\Data\MarketType;
 use App\Market\HistoryImports;
+use App\Market\Instruments\ResearchUniverse;
 use App\Market\Instruments\Universe;
 use App\Market\Models\MarketJob;
 use App\Market\Models\UniverseEntry;
@@ -97,6 +98,44 @@ final class SettingsScreen extends Component
     public bool $importScalping = false;
 
     public string $marketMessage = '';
+
+    /** The research universe (D-89): its size, its first month and what happened. */
+    public string $universeTop = '50';
+
+    public string $universeFrom = '2024-11';
+
+    public string $universeMessage = '';
+
+    /** Ranks the research universe month by month from the daily stats. */
+    public function buildUniverse(ResearchUniverse $research, Clock $clock): void
+    {
+        $from = CarbonImmutable::createFromFormat('Y-m-d', trim($this->universeFrom).'-01', 'UTC');
+        $top = (int) $this->universeTop;
+
+        if ($from === null || $top < 1 || $top > 200) {
+            $this->universeMessage = 'Give the first month as YYYY-MM and a size from 1 to 200.';
+
+            return;
+        }
+
+        $months = $research->build($top, $from->startOfDay(), $clock->now()->startOfMonth());
+        $this->universeMessage = "Research universe: top {$top}, {$months} months, ".count($research->everyMember()).' instruments were members at some time.';
+    }
+
+    /** Queues the history of every member from a month before its first membership, for the indicators' warmup. */
+    public function importUniverse(ResearchUniverse $research, HistoryImports $imports): void
+    {
+        $queued = 0;
+
+        foreach ($research->firstMonths() as $symbol => $first) {
+            $imports->queue($symbol, $first->subMonth(), candles: true, scalping: false);
+            $queued++;
+        }
+
+        $this->universeMessage = $queued === 0
+            ? 'The research universe is empty: build it first.'
+            : "{$queued} imports queued; the simulation worker runs them one after another, a few minutes each.";
+    }
 
     public function hydrate(): void
     {
@@ -377,6 +416,8 @@ final class SettingsScreen extends Component
             'risk' => RiskPolicy::account(is_array($risk) ? $risk : [])->toArray(),
             'universe' => UniverseEntry::query()->orderBy('market')->orderBy('id')->get(),
             'marketJobs' => MarketJob::query()->orderByDesc('id')->limit(5)->get(),
+            'universeMembers' => app(ResearchUniverse::class)->membersOf(app(Clock::class)->now()),
+            'importsOpen' => MarketJob::query()->whereIn('status', ['queued', 'running'])->count(),
             'breakers' => [
                 'Price sanity' => sprintf('a close more than %s %% from the median close of the %d minutes before it rejects entries on the instrument while it lasts', (string) Decimal::of(MarketBreakers::PRICE_BAND)->times(Decimal::of('100'))->roundedTo(0), MarketBreakers::MEDIAN_MINUTES),
                 'Volatility shock' => sprintf('a minute whose true range is above %d times the mean true range of the %d minutes before it pauses entries for %d minutes', MarketBreakers::SHOCK_MULTIPLE, MarketBreakers::ATR_MINUTES, MarketBreakers::SHOCK_PAUSE_MINUTES),

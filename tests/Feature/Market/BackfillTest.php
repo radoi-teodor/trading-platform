@@ -195,6 +195,21 @@ it('takes funding from monthly archives', function (): void {
         ->and(DB::table('funding_rates')->count())->toBe(90);
 });
 
+it('takes funding only inside a delisted perpetual\'s lifetime, never from REST (D-89)', function (): void {
+    Http::fake([
+        '*/monthly/fundingRate/BTCUSDT/BTCUSDT-fundingRate-2026-09.zip.CHECKSUM' => Http::response(binanceFixture('archive/perp-BTCUSDT-fundingRate-2026-09.zip.CHECKSUM')),
+        '*/monthly/fundingRate/BTCUSDT/BTCUSDT-fundingRate-2026-09.zip' => Http::response(binanceFixture('archive/perp-BTCUSDT-fundingRate-2026-09.zip')),
+    ]);
+    app()->instance(Clock::class, new SimClock(CarbonImmutable::parse('2026-11-03 12:00:00', 'UTC')));
+    $perp = Instrument::register('binance', MarketType::Perp, Symbol::parse('BTC/USDT:USDT'), CarbonImmutable::parse('2026-11-03', 'UTC'), InstrumentStatus::Delisted);
+    $perp->update(['listed_at' => CarbonImmutable::parse('2026-09-01', 'UTC'), 'delisted_at' => CarbonImmutable::parse('2026-10-01', 'UTC')]);
+
+    $report = app(Backfill::class)->funding($perp, CarbonImmutable::parse('2026-07-01', 'UTC'), CarbonImmutable::parse('2026-11-03 12:00:00', 'UTC'));
+
+    expect(array_map(fn ($step): string => $step->source, $report->steps))->toBe(['funding monthly 2026-09'])
+        ->and($report->failure)->toBeNull();
+});
+
 it('fills through REST the minutes a published archive does not have', function (): void {
     // Binance's USD-M archives for October 2026 have no 2026-10-28; the same gap is simulated here on one day.
     $day = ArchiveFactory::make('BTCUSDT-1m-2026-10-31.zip', [

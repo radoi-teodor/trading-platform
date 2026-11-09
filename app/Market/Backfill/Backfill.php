@@ -139,6 +139,9 @@ final readonly class Backfill
     public function funding(Instrument $perp, CarbonImmutable $from, CarbonImmutable $to): BackfillReport
     {
         $currentMonth = $this->clock->now()->startOfMonth();
+        // The lifetime bounds funding too (D-89); a delisted perpetual has archives only.
+        $from = $perp->listed_at === null ? $from : $from->max($perp->listed_at);
+        $to = $perp->delisted_at === null ? $to : $to->min($perp->delisted_at->subMinute());
         $cursor = $from->utc()->startOfMonth();
         $steps = [];
 
@@ -150,6 +153,10 @@ final readonly class Backfill
                     $cursor = $cursor->addMonth();
 
                     continue;
+                }
+
+                if ($perp->status === InstrumentStatus::Delisted) {
+                    break;
                 }
 
                 $rates = iterator_to_array($this->rest->fundingRates($perp->venue_symbol, $cursor->max($from), $to), false);

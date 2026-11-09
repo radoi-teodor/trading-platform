@@ -158,6 +158,7 @@ journal of the halt. Resume only with a written reason in the journal.
 | Load or refresh instruments and filters | `php artisan market:instruments all` |
 | Also know every delisted perpetual (D-89) | `php artisan market:instruments perp --history` |
 | Daily candles of every USDT crypto perpetual, for the universe and screens (D-90) | `php artisan market:daily --from=2024-10-01` (after the line above; sets the lifetime of archive-only ones) |
+| Build the research universe, month by month (D-89) | `php artisan market:universe:build --top=50 --from=2024-11` (after `market:daily`), or Settings, Research universe, where **Import history of every member** queues the 1-minute history of each member from a month before its first membership |
 | Fill history | `php artisan market:backfill --universe --from=YYYY-MM [--to=...] --funding` |
 | Keep candles current | `php artisan market:stream spot` and `php artisan market:stream perp`, under the supervisor |
 | Look for gaps and bad rows | `php artisan market:check --universe --from=... --to=...` (`--strict` fails on warnings) |

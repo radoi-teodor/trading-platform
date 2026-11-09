@@ -249,6 +249,34 @@
         @endif
     </section>
 
+    {{-- The research universe (D-89): the top N crypto perpetuals by 30-day volume, month by month, delisted ones included. --}}
+    <section class="{{ $card }}" aria-labelledby="research-heading" @if ($importsOpen > 0) wire:poll.5s @endif>
+        <h2 id="research-heading" class="{{ $heading }}">Research universe</h2>
+        <p class="mb-2 text-sm text-muted">Ranked on the first day of each month from the daily candles (<span class="font-mono">market:daily</span>), so a backtest sees the coins of its time, delisted ones included.</p>
+        <div class="flex flex-wrap items-end gap-2">
+            <form wire:submit="buildUniverse" class="flex flex-wrap items-end gap-2">
+                <label class="block w-24 min-w-0"><span class="{{ $label }}">Top</span><input wire:model="universeTop" inputmode="numeric" class="{{ $input }}"></label>
+                <label class="block w-32 min-w-0"><span class="{{ $label }}">From month</span><input wire:model="universeFrom" placeholder="2024-11" class="{{ $input }}"></label>
+                <x-button>Build</x-button>
+            </form>
+            <x-button variant="secondary" type="button" wire:click="importUniverse">Import history of every member</x-button>
+        </div>
+        @if ($universeMessage !== '')<p class="mt-2 text-sm text-muted" role="status">{{ $universeMessage }}</p>@endif
+        @if ($importsOpen > 0)<p class="mt-1 font-mono text-xs text-muted">{{ $importsOpen }} imports waiting or running.</p>@endif
+        @if ($universeMembers !== [])
+            <div class="mt-3 max-h-96 overflow-auto">
+                <table class="w-full font-mono text-xs" aria-label="Members this month">
+                    <thead class="sticky top-0 bg-surface-2 text-muted"><tr><th class="px-2 py-1 text-right">#</th><th class="px-2 py-1 text-left">Symbol</th><th class="px-2 py-1 text-left">Status</th><th class="px-2 py-1 text-left">Listed</th><th class="px-2 py-1 text-right">30-day volume</th></tr></thead>
+                    <tbody>
+                        @foreach ($universeMembers as $m)
+                            <tr class="border-t border-border"><td class="px-2 py-1 text-right">{{ $m->rank }}</td><td class="px-2 py-1">{{ $m->symbol }}</td><td class="px-2 py-1">{{ $m->status }}</td><td class="px-2 py-1">{{ $m->listed_at === null ? 'n/a' : substr($m->listed_at, 0, 10) }}</td><td class="px-2 py-1 text-right">{{ \App\Support\Number\Decimal::of($m->quote_volume_30d)->roundedTo(0) }}</td></tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @endif
+    </section>
+
     {{-- Risk, read-only: raising a limit is a code change with a test (D-19). --}}
     <section class="{{ $card }}" aria-labelledby="risk-heading">
         <h2 id="risk-heading" class="{{ $heading }}">Risk limits</h2>

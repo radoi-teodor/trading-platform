@@ -16,6 +16,7 @@ use App\Support\Number\Decimal;
 use App\Support\Symbol;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
 use Livewire\Livewire;
 use Tests\Support\ScalpingFixtures;
@@ -61,6 +62,34 @@ it('adds a delisted perpetual for its history only, never streamed (D-89)', func
 
     expect(UniverseEntry::query()->where('symbol', 'SRM/USDT:USDT')->sole()->streamed)->toBeFalse()
         ->and(array_map(fn (Instrument $i): string => $i->symbol, app(Universe::class)->instruments(MarketType::Perp)))->not->toContain('SRM/USDT:USDT');
+});
+
+it('builds the research universe and imports the history of every member (D-89)', function (): void {
+    app()->instance(Clock::class, new SimClock(CarbonImmutable::parse('2025-03-15 12:00:00', 'UTC')));
+    Queue::fake();
+
+    foreach (['BIG' => '900', 'MID' => '500', 'LOW' => '100'] as $base => $volume) {
+        $perp = Instrument::register('binance', MarketType::Perp, Symbol::parse("{$base}/USDT:USDT"), CarbonImmutable::parse('2025-01-01', 'UTC'));
+        $perp->update(['underlying_type' => 'COIN', 'listed_at' => CarbonImmutable::parse('2024-06-01', 'UTC')]);
+
+        for ($day = CarbonImmutable::parse('2025-01-01', 'UTC'); $day->lessThan(CarbonImmutable::parse('2025-03-15', 'UTC')); $day = $day->addDay()) {
+            DB::table('daily_stats')->insert(['instrument_id' => $perp->id, 'day' => $day->format('Y-m-d'), 'open' => '1', 'high' => '1', 'low' => '1', 'close' => '1', 'volume' => $volume, 'quote_volume' => $volume, 'trades' => 1]);
+        }
+    }
+
+    Livewire::test(SettingsScreen::class)
+        ->set('universeTop', '2')->set('universeFrom', '2025-02')
+        ->call('buildUniverse')
+        ->assertSee('Research universe: top 2, 2 months, 2 instruments')
+        ->assertSee('BIG/USDT:USDT')
+        ->assertDontSee('LOW/USDT:USDT')
+        ->call('importUniverse')
+        ->assertSee('2 imports queued');
+
+    // From a month before the first membership, for the indicators' warmup.
+    expect(MarketJob::query()->orderBy('symbol')->get()->map(fn (MarketJob $j): string => "{$j->symbol} {$j->from->format('Y-m-d')}")->all())
+        ->toBe(['BIG/USDT:USDT 2025-01-01', 'MID/USDT:USDT 2025-01-01']);
+    Queue::assertPushed(ImportMarketData::class, 2);
 });
 
 it('switches streaming, the scalping data and the large-trade notional, and says a restart is needed', function (): void {
