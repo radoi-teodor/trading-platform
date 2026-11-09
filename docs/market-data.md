@@ -135,7 +135,7 @@ so in its file name. The opt-in `network` group (`composer test:network`) reads 
 |-------|---------------------------------------------|------|------------|
 | `trade_flow` (instrument, minute): large-trade volume bought and sold, their count, the largest trade's notional | `daily/aggTrades/{SYM}/{SYM}-aggTrades-{day}.zip`, read as a stream and reduced to minutes | `<sym>@aggTrade`, reduced in memory | the minute's close |
 | `open_interest` (instrument, 5-minute time): contracts and quote value | `daily/metrics/{SYM}/{SYM}-metrics-{day}.zip` (`create_time` is text, UTC) | `GET /futures/data/openInterestHist?period=5m` | its time plus 5 minutes |
-| `perp_minutes` (instrument, minute): mark close, high, low; premium index close | `daily/markPriceKlines/{SYM}/1m/...` and `daily/premiumIndexKlines/{SYM}/1m/...` | `<sym>@markPrice@1s`; `GET /fapi/v1/premiumIndexKlines` | the minute's close |
+| `mark_price_minutes` and `premium_index_minutes` (instrument, minute): open, high, low, close | `daily/markPriceKlines/{SYM}/1m/...` and `daily/premiumIndexKlines/{SYM}/1m/...` | `<sym>@markPrice@1s`; `GET /fapi/v1/premiumIndexKlines` | the minute's close |
 
 The large-trade notional is set per instrument in the universe (BTC 100,000 USDT, ETH 50,000 by default) and applied
 at import, so changing it means importing again. Sources rank as for candles (archive, then REST, then stream).
@@ -144,6 +144,7 @@ are the largest download: a day of BTC is 5.6 MB zipped on a quiet Sunday (439,2
 24 MB on a weekday (BTC and ETH on 2026-11-04), so twelve months of both is roughly 10 to 15 GB, read as a stream
 and deleted day by day; only the minutes are kept. Some days are not published (2026-10-28 is missing).
 
-`php artisan market:backfill BTC/USDT:USDT --from=2025-11 --flow --oi --mark` imports them; the Settings screen
-starts the same import as a job.
+`php artisan market:backfill BTC/USDT:USDT --from=2025-11 --flow --oi --mark` imports them (`--candles=no` leaves the
+candles out, `--large=` overrides the notional); the Settings screen starts the same import as a job. A day Binance has
+not published yet is reported and skipped.
 

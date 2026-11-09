@@ -9,7 +9,10 @@ use App\Market\Backfill\BackfillReport;
 use App\Market\Data\MarketType;
 use App\Market\Instruments\Universe;
 use App\Support\Clock\Clock;
+use App\Support\Number\Decimal;
+use App\Support\Symbol;
 use Illuminate\Console\Command;
+use Illuminate\Contracts\Config\Repository;
 use InvalidArgumentException;
 
 final class BackfillMarketData extends Command
@@ -21,16 +24,26 @@ final class BackfillMarketData extends Command
         {--universe : Every instrument of config/market.php}
         {--from= : First day or month, YYYY-MM-DD or YYYY-MM}
         {--to= : Last moment, YYYY-MM-DD [HH:MM] in UTC; default the last closed minute}
-        {--funding : Also funding rates, for perpetuals}';
+        {--funding : Also funding rates, for perpetuals}
+        {--flow : Also the trade flow from aggregated trades, for perpetuals (D-79)}
+        {--oi : Also open interest, for perpetuals}
+        {--mark : Also the mark price and the premium index, for perpetuals}
+        {--large= : The notional from which a trade is large, in quote (default config/market.php)}
+        {--candles=yes : no to leave the candles out}';
 
     protected $description = 'Fill candle history from Binance archives, then REST (docs/market-data.md)';
 
-    public function handle(Backfill $backfill, Universe $universe, Clock $clock): int
+    public function handle(Backfill $backfill, Universe $universe, Clock $clock, Repository $config): int
     {
         try {
             $symbols = $this->selectedSymbols($universe);
             $from = $this->momentOption('from');
             $to = $this->momentOption('to', $clock->now());
+            $option = $this->option('large');
+
+            if (is_string($option) && preg_match('/^\d+(\.\d+)?$/', $option) !== 1) {
+                throw new InvalidArgumentException('--large is an amount of quote, such as 100000.');
+            }
         } catch (InvalidArgumentException $invalid) {
             $this->error($invalid->getMessage());
 
@@ -38,18 +51,48 @@ final class BackfillMarketData extends Command
         }
 
         $failed = false;
+        $scalping = (bool) $this->option('flow') || (bool) $this->option('oi') || (bool) $this->option('mark');
+
+        if ($scalping && is_string($this->argument('symbol')) && ! Symbol::parse($this->argument('symbol'))->isPerpetual()) {
+            $this->error('--flow, --oi and --mark are for perpetuals, such as BTC/USDT:USDT.');
+
+            return self::INVALID;
+        }
 
         foreach ($symbols as $symbol) {
             $instrument = $universe->instrument($symbol);
             $this->line("{$instrument->symbol} {$instrument->market->value}");
-            $failed = $this->print($backfill->candles($instrument, $from, $to)) || $failed;
+
+            if ($this->option('candles') !== 'no') {
+                $failed = $this->print($backfill->candles($instrument, $from, $to)) || $failed;
+            }
 
             if ($this->option('funding') && $instrument->market === MarketType::Perp) {
                 $failed = $this->print($backfill->funding($instrument, $from, $to)) || $failed;
             }
+
+            if ($scalping && $instrument->market === MarketType::Perp) {
+                $failed = $this->print($backfill->scalping(
+                    $instrument, $from, $to, (bool) $this->option('flow'), (bool) $this->option('oi'), (bool) $this->option('mark'), $this->largeNotional($instrument->base, $config),
+                )) || $failed;
+            }
         }
 
         return $failed ? self::FAILURE : self::SUCCESS;
+    }
+
+    private function largeNotional(string $base, Repository $config): Decimal
+    {
+        $option = $this->option('large');
+
+        if (is_string($option)) {
+            return Decimal::of($option);
+        }
+
+        $defaults = $config->get('market.large_trade_notional');
+        $value = is_array($defaults) ? ($defaults[$base] ?? $defaults['default'] ?? null) : null;
+
+        return is_string($value) ? Decimal::of($value) : throw new InvalidArgumentException('config/market.php has no large_trade_notional for '.$base.' and no default.');
     }
 
     private function print(BackfillReport $report): bool

@@ -14,10 +14,15 @@ use App\Market\CandleRepository;
 use App\Market\Data\Candle;
 use App\Market\Data\CandleSource;
 use App\Market\Data\FundingRate;
+use App\Market\Data\OpenInterest;
+use App\Market\Data\PriceMinute;
+use App\Market\Data\TradeFlow;
 use App\Market\Data\UpsertResult;
 use App\Market\FundingRateRepository;
 use App\Market\Models\Instrument;
+use App\Market\ScalpingRepository;
 use App\Support\Clock\Clock;
+use App\Support\Number\Decimal;
 use App\Support\Timeframe;
 use Carbon\CarbonImmutable;
 use InvalidArgumentException;
@@ -36,7 +41,43 @@ final readonly class Backfill
         private CandleRepository $candles,
         private FundingRateRepository $fundingRates,
         private Clock $clock,
+        private ScalpingRepository $scalping,
     ) {}
+
+    /**
+     * The data for scalping of a perpetual (D-79), day by day from the daily archives: the trade flow above
+     * $largeNotional, open interest, and the mark price with the premium index. A day Binance has not published yet
+     * is reported and skipped; the live stream and its REST repair fill recent days (D-81).
+     */
+    public function scalping(Instrument $perp, CarbonImmutable $from, CarbonImmutable $to, bool $flow, bool $openInterest, bool $marks, Decimal $largeNotional): BackfillReport
+    {
+        $steps = [];
+        $within = fn (CarbonImmutable $t): bool => ! $t->lessThan($from) && ! $t->greaterThan($to);
+
+        try {
+            for ($day = $from->utc()->startOfDay(); ! $day->greaterThan($to) && $day->lessThan($this->clock->now()->startOfDay()); $day = $day->addDay()) {
+                $label = $day->format('Y-m-d');
+                $jobs = array_filter([
+                    'flow' => $flow ? fn (): UpsertResult => $this->scalping->upsertFlow($perp, CandleSource::Archive, array_filter($this->archive->tradeFlow($perp->venue_symbol, $day, $largeNotional), fn (TradeFlow $f): bool => $within($f->openTime))) : null,
+                    'open interest' => $openInterest ? fn (): UpsertResult => $this->scalping->upsertOpenInterest($perp, CandleSource::Archive, array_filter($this->archive->openInterest($perp->venue_symbol, $day), fn (OpenInterest $o): bool => $within($o->time))) : null,
+                    'mark price' => $marks ? fn (): UpsertResult => $this->scalping->upsertMarks($perp, CandleSource::Archive, array_filter($this->archive->markPrices($perp->venue_symbol, $day), fn (PriceMinute $m): bool => $within($m->openTime))) : null,
+                    'premium index' => $marks ? fn (): UpsertResult => $this->scalping->upsertPremium($perp, CandleSource::Archive, array_filter($this->archive->premiumIndex($perp->venue_symbol, $day), fn (PriceMinute $m): bool => $within($m->openTime))) : null,
+                ]);
+
+                foreach ($jobs as $name => $job) {
+                    try {
+                        $steps[] = new BackfillStep("{$name} {$label}", $job());
+                    } catch (ArchiveMissing) {
+                        $steps[] = new BackfillStep("{$name} {$label}: not published yet", new UpsertResult);
+                    }
+                }
+            }
+        } catch (BinanceRequestFailed|ChecksumMismatch|InvalidArgumentException|UnexpectedValueException $failure) {
+            return new BackfillReport($steps, $failure->getMessage());
+        }
+
+        return new BackfillReport($steps, null);
+    }
 
     public function candles(Instrument $instrument, CarbonImmutable $from, CarbonImmutable $to): BackfillReport
     {

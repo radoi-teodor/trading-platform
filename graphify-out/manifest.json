@@ -253,10 +253,10 @@
     "semantic_hash": "bdc07eb4af862872b83af6a57d453d90"
   },
   "app/Market/Backfill/Backfill.php": {
-    "mtime": 1794151114.6239877,
-    "seen": 1794165296.7191873,
-    "ast_hash": "8862c0075cda4662f2da6daf22611628",
-    "semantic_hash": "8862c0075cda4662f2da6daf22611628"
+    "mtime": 1794223356.4624505,
+    "seen": 1794223905.4537797,
+    "ast_hash": "16b64e799681336a768e956d7872c2be",
+    "semantic_hash": ""
   },
   "app/Market/Backfill/BackfillReport.php": {
     "mtime": 1794149971.8841445,
@@ -343,10 +343,10 @@
     "semantic_hash": "1e823c1bbd5348d3c82496283a5b70a6"
   },
   "app/Market/Console/BackfillMarketData.php": {
-    "mtime": 1794151081.297246,
-    "seen": 1794165296.7194557,
-    "ast_hash": "36530a1d2bf2acbbe9d7deb3b06389ec",
-    "semantic_hash": "36530a1d2bf2acbbe9d7deb3b06389ec"
+    "mtime": 1794223356.5592623,
+    "seen": 1794223905.4541643,
+    "ast_hash": "12eeb6bccb22aa6ace40ba0ef555553b",
+    "semantic_hash": ""
   },
   "app/Market/Console/CheckMarketData.php": {
     "mtime": 1794150804.349701,
@@ -1213,10 +1213,10 @@
     "semantic_hash": "d13cb5a869ad8af1dfed4aa3fedbe75b"
   },
   "config/market.php": {
-    "mtime": 1794149601.5476391,
-    "seen": 1794165296.7231731,
-    "ast_hash": "df8a1bdc95eb916496bd934f06648dc2",
-    "semantic_hash": "df8a1bdc95eb916496bd934f06648dc2"
+    "mtime": 1794223314.2126658,
+    "seen": 1794223905.4604375,
+    "ast_hash": "1ee416c5789974b98dbcbe2a2e685482",
+    "semantic_hash": ""
   },
   "config/queue.php": {
     "mtime": 1794172705.7348816,
@@ -1864,9 +1864,9 @@
     "semantic_hash": ""
   },
   "docs/decisions.md": {
-    "mtime": 1794220474.596004,
-    "seen": 1794221506.738803,
-    "ast_hash": "32e7e2f755b7759608e9060490d5794e",
+    "mtime": 1794223899.412646,
+    "seen": 1794223905.4648364,
+    "ast_hash": "8477a731189f23c87acabe224af6c927",
     "semantic_hash": ""
   },
   "docs/engine.md": {
@@ -1882,9 +1882,9 @@
     "semantic_hash": ""
   },
   "docs/market-data.md": {
-    "mtime": 1794223212.9832487,
-    "seen": 1794223231.2273846,
-    "ast_hash": "c68c119d933d26d1ef5160d9f7c615d8",
+    "mtime": 1794223384.359264,
+    "seen": 1794223905.464876,
+    "ast_hash": "cdbe734f0a833c1c3968968e7a796dee",
     "semantic_hash": ""
   },
   "docs/risk-policy.md": {
@@ -3535,6 +3535,24 @@
     "mtime": 1794223163.1360807,
     "seen": 1794223231.227562,
     "ast_hash": "33fa84a15807f8a9c8e5a9df686f9646",
+    "semantic_hash": ""
+  },
+  "app/Market/ScalpingRepository.php": {
+    "mtime": 1794223314.1969526,
+    "seen": 1794223905.4550455,
+    "ast_hash": "1f45fd25bd5115ce278ce425c9699867",
+    "semantic_hash": ""
+  },
+  "database/migrations/2026_11_09_000015_create_scalping_tables.php": {
+    "mtime": 1794223305.8552592,
+    "seen": 1794223905.460984,
+    "ast_hash": "c8daf0c17b4cbb01ea4099638935fc66",
+    "semantic_hash": ""
+  },
+  "tests/Feature/Market/ScalpingBackfillTest.php": {
+    "mtime": 1794223373.2788963,
+    "seen": 1794223905.4621115,
+    "ast_hash": "44667fb8930aaa22d7a67fcd7bcd9d05",
     "semantic_hash": ""
   },
   "package-lock.json": {

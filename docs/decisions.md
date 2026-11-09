@@ -504,8 +504,9 @@ Three stores, filled from Binance's archives and, live, from the stream (D-81). 
 reduced to one row per minute (volume bought and sold by trades of at least the instrument's large-trade notional,
 their count, the largest trade's notional); raw trades are never stored (the operator's answer). `open_interest`:
 the futures `metrics` archive, one row per 5 minutes, open interest in contracts and in quote; a row stamped T is
-known from T + 5 minutes, so a backtest never reads it earlier than live could. `perp_minutes`: the mark price
-(close, high, low) and the premium index (close) of every minute, from `markPriceKlines` and `premiumIndexKlines`.
+known from T + 5 minutes, so a backtest never reads it earlier than live could. `mark_price_minutes` and
+`premium_index_minutes`: the mark price and the premium index of every minute (open, high, low, close), from
+`markPriceKlines` and `premiumIndexKlines`.
 DSL functions: `open_interest` (the latest known value, contracts), `oi_change(n)` (open interest now over n candles
 ago, minus 1), `mark_price` (the mark's close), `basis` (the premium index close, Binance's own basis for funding);
 from the candles already stored, `buy_volume`, `sell_volume`, `delta` (bought minus sold) and `cvd(n)` (delta summed
