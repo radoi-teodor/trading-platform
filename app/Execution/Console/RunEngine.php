@@ -190,7 +190,7 @@ final class RunEngine extends Command
         }
 
         foreach ($feed->minutes($runtime->symbols, $cursor, $to) as $minute) {
-            if (! $minute->closedAt->equalTo($cursor->addMinute()) || count($minute->candles) < count($runtime->symbols)) {
+            if (! $minute->closedAt->equalTo($cursor->addMinute()) || count($minute->candles) < count($runtime->symbols) || ! $runtime->hasScalpingData($minute)) {
                 if ($replay) {
                     throw new ReplayDivergence("The minute closing at {$cursor->addMinute()->toIso8601ZuluString()} was handled before and is incomplete now.");
                 }

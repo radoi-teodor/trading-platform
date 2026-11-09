@@ -19,7 +19,8 @@ use UnexpectedValueException;
 
 /**
  * Stores and reads the data for scalping (D-79): trade flow, open interest, mark price and premium index. A row is
- * replaced only by a higher-ranked source (archive above REST above stream), as for candles.
+ * written once, by whichever source comes first; a later one only fills what is missing, so a paper engine's
+ * replay reads what it read live (D-84).
  */
 final readonly class ScalpingRepository
 {
@@ -132,35 +133,33 @@ final readonly class ScalpingRepository
     {
         [$key, $columns] = self::COLUMNS[$table];
         $receivedAt = Rows::timestamp($this->clock->now());
-        $inserted = $replaced = $kept = 0;
+        $inserted = $kept = 0;
 
         foreach (array_chunk($values, 1000) as $chunk) {
             $times = array_map(fn (array $v): string => Rows::timestamp($v[0] instanceof CarbonImmutable ? $v[0] : throw new UnexpectedValueException('A row without its time.')), $chunk);
             $existing = [];
 
-            foreach ($this->db->table($table)->where('instrument_id', $instrument->id)->whereIn($key, $times)->get([$key, 'source']) as $row) {
-                $existing[Rows::timestamp(Rows::time($row, $key))] = Rows::int($row, 'source');
+            foreach ($this->db->table($table)->where('instrument_id', $instrument->id)->whereIn($key, $times)->get([$key]) as $row) {
+                $existing[Rows::timestamp(Rows::time($row, $key))] = true;
             }
 
             $placeholders = $bindings = [];
 
             foreach ($chunk as $i => $value) {
-                $before = $existing[$times[$i]] ?? null;
-                $before === null ? $inserted++ : ($before < $source->value ? $replaced++ : $kept++);
+                isset($existing[$times[$i]]) ? $kept++ : $inserted++;
                 $placeholders[] = '('.implode(', ', array_fill(0, count($columns) + 4, '?')).')';
                 array_push($bindings, $instrument->id, $times[$i], ...array_slice($value, 1));
                 array_push($bindings, $source->value, $receivedAt);
             }
 
-            $set = implode(', ', array_map(fn (string $c): string => "{$c} = EXCLUDED.{$c}", [...$columns, 'source', 'received_at']));
             $this->db->statement(
                 "INSERT INTO {$table} (instrument_id, {$key}, ".implode(', ', $columns).', source, received_at) VALUES '.implode(', ', $placeholders)
-                ." ON CONFLICT (instrument_id, {$key}) DO UPDATE SET {$set} WHERE {$table}.source < EXCLUDED.source",
+                ." ON CONFLICT (instrument_id, {$key}) DO NOTHING",
                 $bindings,
             );
         }
 
-        return new UpsertResult($inserted, $replaced, $kept);
+        return new UpsertResult($inserted, 0, $kept);
     }
 
     /** @return list<object> */

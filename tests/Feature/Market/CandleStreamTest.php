@@ -12,6 +12,7 @@ use App\Market\Stream\CandleStream;
 use App\Market\Stream\StreamTransport;
 use App\Support\Clock\Clock;
 use App\Support\Clock\SimClock;
+use App\Support\Number\Decimal;
 use App\Support\Symbol;
 use App\Support\Timeframe;
 use Carbon\CarbonImmutable;
@@ -100,4 +101,16 @@ it('keeps streaming when the gap cannot be repaired, and says so in its heartbea
 
     expect(DB::table('candles')->where('source', CandleSource::Stream->value)->count())->toBe(1)
         ->and(is_string($heartbeat->details) ? $heartbeat->details : '')->toContain('451');
+});
+
+it('collects the scalping data of the perpetuals it is given on the same connection (D-81)', function (): void {
+    $trade = json_encode(['stream' => 'btcusdt@aggTrade', 'data' => ['e' => 'aggTrade', 'E' => 0, 's' => 'BTCUSDT', 'a' => 1, 'p' => '80000', 'q' => '2', 'f' => 1, 'l' => 1, 'T' => 1794150000000, 'm' => false]], JSON_THROW_ON_ERROR);
+    [$stream, $transport] = streamWith([[$trade]], '2026-11-08 15:00:30');
+    $perp = Instrument::register('binance', MarketType::Perp, Symbol::parse('BTC/USDT:USDT'), CarbonImmutable::parse('2026-11-08', 'UTC'));
+    Http::fake(['*' => Http::response([])]);
+
+    $stream->run(MarketType::Perp, [$perp], maxSessions: 1, scalping: ['BTCUSDT' => $perp], thresholds: ['BTCUSDT' => Decimal::of('100000')]);
+
+    expect($transport->connectedTo)->toBe(['wss://fstream.binance.com/stream?streams=btcusdt@kline_1m/btcusdt@aggTrade/btcusdt@markPrice@1s'])
+        ->and(DB::table('candles')->count())->toBe(0);
 });

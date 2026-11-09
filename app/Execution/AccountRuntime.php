@@ -72,6 +72,9 @@ final class AccountRuntime
     /** @var array<string, string> each strategy's label by its identity key */
     private array $labels = [];
 
+    /** @var array<string, list<string>> the stores of data for scalping each perpetual's strategies read (D-79), by symbol */
+    private array $scalping = [];
+
     /** Round trips already written to `account_trades` by this process. */
     private int $publishedTrips = 0;
 
@@ -92,6 +95,14 @@ final class AccountRuntime
 
         foreach ($strategies as $strategy) {
             $this->labels[$strategy->identity()->key()] = $strategy->identity()->label();
+
+            foreach ($strategy instanceof CompiledStrategy ? $strategy->scalpingData() : [] as $table) {
+                foreach ($strategy->subscriptions() as $subscription) {
+                    if ($subscription->symbol->isPerpetual()) {
+                        $this->scalping[(string) $subscription->symbol][] = $table;
+                    }
+                }
+            }
         }
         $symbols = [];
 
@@ -186,6 +197,32 @@ final class AccountRuntime
         $this->venue?->advance($minute);
         $this->engine->handle($minute, $commands);
         $this->recordHour($minute->closedAt);
+    }
+
+    /**
+     * Whether the minute carries the data for scalping its strategies read (D-84): the flow, mark and premium of the
+     * minute, and at each 5-minute mark the open interest that became known. Without it the engine waits, so a replay
+     * reads what the live engine read.
+     */
+    public function hasScalpingData(MinuteCandles $minute): bool
+    {
+        foreach ($this->scalping as $symbol => $tables) {
+            foreach (array_unique($tables) as $table) {
+                $present = match ($table) {
+                    'trade_flow' => isset($minute->flow[$symbol]),
+                    'mark_price_minutes' => isset($minute->marks[$symbol]),
+                    'premium_index_minutes' => isset($minute->premium[$symbol]),
+                    'open_interest' => $minute->closedAt->getTimestamp() % 300 !== 0 || isset($minute->openInterest[$symbol]),
+                    default => true,
+                };
+
+                if (! $present) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
     /** Writes what the UI reads (D-70): the snapshot, the trades closed since the last publish and the hours' equity (D-76). */

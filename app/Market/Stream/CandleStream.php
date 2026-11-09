@@ -14,6 +14,7 @@ use App\Market\Data\MarketType;
 use App\Market\Heartbeats;
 use App\Market\Models\Instrument;
 use App\Support\Clock\Clock;
+use App\Support\Number\Decimal;
 use App\Support\Timeframe;
 use Carbon\CarbonImmutable;
 use Psr\Log\LoggerInterface;
@@ -48,11 +49,17 @@ final class CandleStream
         private readonly Clock $clock,
         private readonly Sleeper $sleeper,
         private readonly LoggerInterface $logger,
+        private readonly ScalpingCollector $scalping,
     ) {}
 
-    /** @param list<Instrument> $instruments */
-    public function run(MarketType $market, array $instruments, ?int $maxSessions = null): void
+    /**
+     * @param  list<Instrument>  $instruments
+     * @param  array<string, Instrument>  $scalping  perpetuals whose data for scalping is collected too, by venue symbol (D-81)
+     * @param  array<string, Decimal>  $thresholds  their large-trade notional, by venue symbol
+     */
+    public function run(MarketType $market, array $instruments, ?int $maxSessions = null, array $scalping = [], array $thresholds = []): void
     {
+        $this->scalping->follow($scalping, $thresholds);
         $byVenue = [];
 
         foreach ($instruments as $instrument) {
@@ -69,6 +76,7 @@ final class CandleStream
             try {
                 $this->transport->connect($url);
                 $this->repairGaps($instruments);
+                $this->scalping->repair();
                 $endedOnPurpose = $this->listen($byVenue, $process, $session);
             } catch (StreamFailed $failure) {
                 $this->logger->warning("{$process}: stream failed", ['error' => $failure->getMessage(), 'session' => $session]);
@@ -113,6 +121,7 @@ final class CandleStream
                 return true;
             }
 
+            $this->scalping->tick();
             $payload = $this->transport->receive();
 
             if ($payload === null) {
@@ -131,6 +140,15 @@ final class CandleStream
     /** @param array<string, Instrument> $byVenue */
     private function store(string $payload, array $byVenue, string $process): void
     {
+        $decoded = json_decode($payload, true);
+        $data = is_array($decoded) && is_array($decoded['data'] ?? null) ? $decoded['data'] : null;
+
+        if ($data !== null && in_array($data['e'] ?? null, ['aggTrade', 'markPriceUpdate'], true)) {
+            $this->scalping->message($data);
+
+            return;
+        }
+
         try {
             $message = KlineMessage::parse($payload);
         } catch (UnexpectedValueException $unreadable) {
@@ -183,7 +201,7 @@ final class CandleStream
     /** @param list<string> $venueSymbols */
     private function url(MarketType $market, array $venueSymbols): string
     {
-        $streams = implode('/', array_map(static fn (string $symbol): string => mb_strtolower($symbol).'@kline_1m', $venueSymbols));
+        $streams = implode('/', [...array_map(static fn (string $symbol): string => mb_strtolower($symbol).'@kline_1m', $venueSymbols), ...$this->scalping->streams()]);
 
         return $this->endpoints->stream($market).'/stream?streams='.$streams;
     }

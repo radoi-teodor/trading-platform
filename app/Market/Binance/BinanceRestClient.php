@@ -9,6 +9,10 @@ use App\Market\Data\FundingRate;
 use App\Market\Data\InstrumentDefinition;
 use App\Market\Data\InstrumentStatus;
 use App\Market\Data\MarketType;
+use App\Market\Data\OpenInterest;
+use App\Market\Data\PriceMinute;
+use App\Market\Data\TradeFlow;
+use App\Market\Data\TradeFlowBuilder;
 use App\Support\Asset;
 use App\Support\Clock\Clock;
 use App\Support\Number\Decimal;
@@ -130,6 +134,91 @@ final readonly class BinanceRestClient
             }
 
             $start = $previous->addSecond();
+        }
+    }
+
+    /**
+     * A perpetual's closed 1-minute mark price or premium index candles from $from to $to (D-81).
+     *
+     * @param  'markPriceKlines'|'premiumIndexKlines'  $kind
+     * @return list<PriceMinute>
+     */
+    public function priceMinutes(string $kind, string $venueSymbol, CarbonImmutable $from, CarbonImmutable $to): array
+    {
+        $now = $this->clock->now();
+        $minutes = [];
+
+        for ($start = $from; $start <= $to; $start = $start->addMinutes(1500)) {
+            $rows = Json::array($this->get(MarketType::Perp, "/fapi/v1/{$kind}", [
+                'symbol' => $venueSymbol, 'interval' => '1m', 'limit' => 1500,
+                'startTime' => EpochTime::milliseconds($start), 'endTime' => EpochTime::milliseconds($to->addSeconds(59)),
+            ]), $kind);
+
+            foreach ($rows as $row) {
+                $open = EpochTime::parse((string) Json::int($row, 0));
+
+                if ($open->addMinute() <= $now && $open <= $to) {
+                    $minutes[$open->getTimestamp()] = new PriceMinute(
+                        $open, Decimal::of(ExchangeNumber::plain(Json::string($row, 1))), Decimal::of(ExchangeNumber::plain(Json::string($row, 2))),
+                        Decimal::of(ExchangeNumber::plain(Json::string($row, 3))), Decimal::of(ExchangeNumber::plain(Json::string($row, 4))),
+                    );
+                }
+            }
+        }
+
+        ksort($minutes);
+
+        return array_values($minutes);
+    }
+
+    /** @return list<OpenInterest> a perpetual's open interest every 5 minutes from $from to $to, the last 30 days only (D-81) */
+    public function openInterestHistory(string $venueSymbol, CarbonImmutable $from, CarbonImmutable $to): array
+    {
+        $rows = Json::array($this->get(MarketType::Perp, '/futures/data/openInterestHist', [
+            'symbol' => $venueSymbol, 'period' => '5m', 'limit' => 500,
+            'startTime' => EpochTime::milliseconds($from), 'endTime' => EpochTime::milliseconds($to),
+        ]), 'openInterestHist');
+        $values = [];
+
+        foreach ($rows as $row) {
+            $time = EpochTime::parse((string) Json::int($row, 'timestamp'));
+            $values[$time->getTimestamp()] = new OpenInterest($time, Decimal::of(Json::number($row, 'sumOpenInterest')), Decimal::of(Json::number($row, 'sumOpenInterestValue')));
+        }
+
+        ksort($values);
+
+        return array_values($values);
+    }
+
+    /**
+     * A perpetual's aggregated trades from $from to $to, at most an hour, reduced to minutes as the archive is (D-79).
+     *
+     * @return list<TradeFlow>
+     */
+    public function tradeFlow(string $venueSymbol, CarbonImmutable $from, CarbonImmutable $to, Decimal $largeNotional): array
+    {
+        $builder = new TradeFlowBuilder($largeNotional);
+        $end = EpochTime::milliseconds($to);
+        $query = ['symbol' => $venueSymbol, 'startTime' => EpochTime::milliseconds($from), 'endTime' => $end, 'limit' => 1000];
+
+        while (true) {
+            $rows = Json::array($this->get(MarketType::Perp, '/fapi/v1/aggTrades', $query), 'aggTrades');
+            $last = null;
+
+            foreach ($rows as $row) {
+                if (Json::int($row, 'T') > $end) {
+                    return $builder->finish();
+                }
+
+                $builder->add(Json::int($row, 'T'), Decimal::of(Json::number($row, 'p')), Decimal::of(Json::number($row, 'q')), is_array($row) && ($row['m'] ?? null) === true);
+                $last = Json::int($row, 'a');
+            }
+
+            if ($last === null || count($rows) < 1000) {
+                return $builder->finish();
+            }
+
+            $query = ['symbol' => $venueSymbol, 'fromId' => $last + 1, 'limit' => 1000];
         }
     }
 

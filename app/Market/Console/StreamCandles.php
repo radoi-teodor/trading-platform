@@ -29,7 +29,14 @@ final class StreamCandles extends Command
         $this->trap([SIGTERM, SIGINT], fn () => $stream->stop());
         $this->info("Streaming {$market->value} candles for ".count($instruments).' instruments. Stop with Ctrl+C or SIGTERM.');
 
-        $stream->run($market, $instruments);
+        $scalping = $market === MarketType::Perp ? $universe->scalping() : [];
+        $thresholds = array_map(fn ($instrument) => $universe->largeNotional($instrument), $scalping);
+
+        if ($scalping !== []) {
+            $this->info('With the trade flow, mark price, premium index and open interest of '.implode(', ', array_keys($scalping)).'.');
+        }
+
+        $stream->run($market, $instruments, scalping: $scalping, thresholds: $thresholds);
 
         return self::SUCCESS;
     }

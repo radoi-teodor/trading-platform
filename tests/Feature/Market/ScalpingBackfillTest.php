@@ -62,7 +62,7 @@ it('stores the trade flow, open interest, mark price and premium index of each a
         ->and((string) $repository->openInterest($btc, CarbonImmutable::parse('2026-11-01 00:00', 'UTC'), CarbonImmutable::parse('2026-11-01 00:05', 'UTC'))[1]->contracts)->not->toBe('');
 });
 
-it('stores nothing twice, and lets the archive replace what the stream wrote', function (): void {
+it('stores nothing twice, and keeps what the stream wrote first so a replay reads it again (D-84)', function (): void {
     $btc = Instrument::query()->sole();
     $repository = app(ScalpingRepository::class);
     $at = CarbonImmutable::parse('2026-11-01 00:00', 'UTC');
@@ -71,7 +71,8 @@ it('stores nothing twice, and lets the archive replace what the stream wrote', f
     scalpingBackfill(['--candles' => 'no']);
     [, $again] = scalpingBackfill(['--candles' => 'no']);
 
-    expect((string) $repository->marks($btc, $at, $at)[0]->close)->toBe('77483.75088333')
+    expect((string) $repository->marks($btc, $at, $at)[0]->close)->toBe('1')
+        ->and((string) $repository->marks($btc, $at->addMinute(), $at->addMinute())[0]->close)->toBe('77485.8')
         ->and($again)->toContain('+0 new')
         ->and(DB::table('mark_price_minutes')->count())->toBe(1440);
 });

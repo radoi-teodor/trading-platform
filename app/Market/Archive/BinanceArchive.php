@@ -13,6 +13,7 @@ use App\Market\Data\MarketType;
 use App\Market\Data\OpenInterest;
 use App\Market\Data\PriceMinute;
 use App\Market\Data\TradeFlow;
+use App\Market\Data\TradeFlowBuilder;
 use App\Support\Number\Decimal;
 use App\Support\Timeframe;
 use Carbon\CarbonImmutable;
@@ -86,47 +87,18 @@ final readonly class BinanceArchive
     public function tradeFlow(string $venueSymbol, CarbonImmutable $day, Decimal $largeNotional): array
     {
         $local = $this->archive("futures/um/daily/aggTrades/{$venueSymbol}/{$venueSymbol}-aggTrades-{$day->utc()->format('Y-m-d')}.zip");
-        $flows = [];
-        $minute = null;
-        $empty = ['buy' => Decimal::zero(), 'sell' => Decimal::zero(), 'buys' => 0, 'sells' => 0, 'largest' => Decimal::zero()];
-        $sums = $empty;
+        $builder = new TradeFlowBuilder($largeNotional);
 
         try {
             foreach (self::lines($local, 7) as $fields) {
                 // agg_trade_id, price, quantity, first_trade_id, last_trade_id, transact_time, is_buyer_maker
-                $at = intdiv(self::integer($fields[5]), 60_000) * 60;
-
-                if ($at !== $minute) {
-                    if ($minute !== null) {
-                        $flows[] = self::flow($minute, $sums, $largeNotional);
-                    }
-
-                    $minute = $at;
-                    $sums = $empty;
-                }
-
-                $quantity = Decimal::of(ExchangeNumber::plain($fields[2]));
-                $notional = Decimal::of(ExchangeNumber::plain($fields[1]))->times($quantity);
-                $sums['largest'] = $notional->isGreaterThan($sums['largest']) ? $notional : $sums['largest'];
-
-                // The buyer was the maker: the aggressor sold.
-                if (! $notional->isLessThan($largeNotional) && $fields[6] === 'true') {
-                    $sums['sell'] = $sums['sell']->plus($quantity);
-                    $sums['sells']++;
-                } elseif (! $notional->isLessThan($largeNotional)) {
-                    $sums['buy'] = $sums['buy']->plus($quantity);
-                    $sums['buys']++;
-                }
+                $builder->add(self::integer($fields[5]), Decimal::of(ExchangeNumber::plain($fields[1])), Decimal::of(ExchangeNumber::plain($fields[2])), $fields[6] === 'true');
             }
         } finally {
             @unlink($local);
         }
 
-        if ($minute !== null) {
-            $flows[] = self::flow($minute, $sums, $largeNotional);
-        }
-
-        return $flows;
+        return $builder->finish();
     }
 
     /** @return list<OpenInterest> the day's open interest every 5 minutes, oldest first (the file is not in order) */
@@ -173,12 +145,6 @@ final readonly class BinanceArchive
         }
 
         return $rows;
-    }
-
-    /** @param array{buy: Decimal, sell: Decimal, buys: int, sells: int, largest: Decimal} $sums */
-    private static function flow(int $minute, array $sums, Decimal $threshold): TradeFlow
-    {
-        return new TradeFlow(CarbonImmutable::createFromTimestampUTC($minute), $sums['buy'], $sums['sell'], $sums['buys'], $sums['sells'], $sums['largest'], $threshold);
     }
 
     /** The verified archive's local path: downloaded, or the cached copy when its checksum still matches. */

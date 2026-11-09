@@ -545,6 +545,16 @@ previous step for each live step), asks for re-authentication and the operator's
 hours later. A deployment's `size_multiplier` (0.25 with notional at most 5 % of equity for live micro, 0.5, then
 1.0) only tightens the strategy's limits; at 1.0 nothing changes, so the golden reports do not move.
 
+**D-84. Scalping rows are written once** (2026-11-09, found while building D-81; amends D-79)
+A paper engine restarts by replaying what it read (D-68). Candles from the stream and from the archive are the same
+numbers, but the live mark price, premium index and open interest come from other endpoints than the archives and
+can differ in the last digits; an archive replacing them the next day would make a replay decide differently and
+halt the account. So a row of `trade_flow`, `open_interest`, `mark_price_minutes` or `premium_index_minutes` is
+written once, by whichever source comes first, and a later source only fills what is missing. History imported
+from the archives is unaffected; the days the stream recorded keep the stream's values. `engine:run` waits for the
+minute's flow, mark and premium, and at each 5-minute mark for the open interest, on the instruments where a
+strategy reads them, as it waits for candles (D-67).
+
 ## Open
 
 | Id | Question | Blocks |

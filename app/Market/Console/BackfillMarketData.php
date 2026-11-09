@@ -8,11 +8,11 @@ use App\Market\Backfill\Backfill;
 use App\Market\Backfill\BackfillReport;
 use App\Market\Data\MarketType;
 use App\Market\Instruments\Universe;
+use App\Market\Models\Instrument;
 use App\Support\Clock\Clock;
 use App\Support\Number\Decimal;
 use App\Support\Symbol;
 use Illuminate\Console\Command;
-use Illuminate\Contracts\Config\Repository;
 use InvalidArgumentException;
 
 final class BackfillMarketData extends Command
@@ -33,7 +33,7 @@ final class BackfillMarketData extends Command
 
     protected $description = 'Fill candle history from Binance archives, then REST (docs/market-data.md)';
 
-    public function handle(Backfill $backfill, Universe $universe, Clock $clock, Repository $config): int
+    public function handle(Backfill $backfill, Universe $universe, Clock $clock): int
     {
         try {
             $symbols = $this->selectedSymbols($universe);
@@ -73,7 +73,7 @@ final class BackfillMarketData extends Command
 
             if ($scalping && $instrument->market === MarketType::Perp) {
                 $failed = $this->print($backfill->scalping(
-                    $instrument, $from, $to, (bool) $this->option('flow'), (bool) $this->option('oi'), (bool) $this->option('mark'), $this->largeNotional($instrument->base, $config),
+                    $instrument, $from, $to, (bool) $this->option('flow'), (bool) $this->option('oi'), (bool) $this->option('mark'), $this->largeNotional($instrument, $universe),
                 )) || $failed;
             }
         }
@@ -81,18 +81,11 @@ final class BackfillMarketData extends Command
         return $failed ? self::FAILURE : self::SUCCESS;
     }
 
-    private function largeNotional(string $base, Repository $config): Decimal
+    private function largeNotional(Instrument $instrument, Universe $universe): Decimal
     {
         $option = $this->option('large');
 
-        if (is_string($option)) {
-            return Decimal::of($option);
-        }
-
-        $defaults = $config->get('market.large_trade_notional');
-        $value = is_array($defaults) ? ($defaults[$base] ?? $defaults['default'] ?? null) : null;
-
-        return is_string($value) ? Decimal::of($value) : throw new InvalidArgumentException('config/market.php has no large_trade_notional for '.$base.' and no default.');
+        return is_string($option) ? Decimal::of($option) : $universe->largeNotional($instrument);
     }
 
     private function print(BackfillReport $report): bool

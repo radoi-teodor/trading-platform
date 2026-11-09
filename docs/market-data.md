@@ -138,7 +138,8 @@ so in its file name. The opt-in `network` group (`composer test:network`) reads 
 | `mark_price_minutes` and `premium_index_minutes` (instrument, minute): open, high, low, close | `daily/markPriceKlines/{SYM}/1m/...` and `daily/premiumIndexKlines/{SYM}/1m/...` | `<sym>@markPrice@1s`; `GET /fapi/v1/premiumIndexKlines` | the minute's close |
 
 The large-trade notional is set per instrument in the universe (BTC 100,000 USDT, ETH 50,000 by default) and applied
-at import, so changing it means importing again. Sources rank as for candles (archive, then REST, then stream).
+at import, so changing it means importing again. Unlike candles, a row is written once, by whichever source comes
+first, and later sources only fill gaps (D-84): a paper engine's replay must read what it read live.
 Volume bought and sold per minute needs no new data: the candles carry `taker_buy_volume`. The aggregated trades
 are the largest download: a day of BTC is 5.6 MB zipped on a quiet Sunday (439,279 trades on 2026-11-01) and about
 24 MB on a weekday (BTC and ETH on 2026-11-04), so twelve months of both is roughly 10 to 15 GB, read as a stream
@@ -147,4 +148,13 @@ and deleted day by day; only the minutes are kept. Some days are not published (
 `php artisan market:backfill BTC/USDT:USDT --from=2025-11 --flow --oi --mark` imports them (`--candles=no` leaves the
 candles out, `--large=` overrides the notional); the Settings screen starts the same import as a job. A day Binance has
 not published yet is reported and skipped.
+
+**Live (D-81).** `market:stream perp` subscribes to `@aggTrade` and `@markPrice@1s` for the perpetuals in
+`config/market.php` (`scalping`, BTC and ETH by default), reduces them to minutes and writes each minute once it is
+over. Every 10 seconds it reads the premium index and open interest over REST; on every reconnect it refills the last
+hour of marks, premium, open interest and missing trade flow over REST. A gap longer than an hour stays until
+`market:backfill --flow --oi --mark` fills it from the next day's archive; an engine that reads the data waits for
+it meanwhile and its stale-data breaker and the health check tell you. `fapi.binance.com` could not be reached
+where this was built (451), so the live path is tested on Binance's documented message shapes and still has to be
+watched once on the operator's machine.
 
