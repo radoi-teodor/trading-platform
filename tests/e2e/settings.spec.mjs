@@ -110,3 +110,55 @@ test('shows a new MCP token once and revokes it', async ({ page }, info) => {
     await expect(page.getByText('risk_per_trade')).toBeVisible();
     expect(errors).toEqual([]);
 });
+
+test('opens a live account, approves it for live trading and withdraws the approval', async ({ page }, info) => {
+    const errors = watchConsole(page);
+    const name = `live-${info.project.name}`;
+    await confirmed(page);
+
+    await page.getByLabel('Name', { exact: true }).first().fill(name);
+    await page.getByLabel('Mode').selectOption('live');
+    await page.getByRole('button', { name: 'Open account' }).click();
+    await expect(page.getByRole('status').filter({ hasText: `${name} (live) is open` })).toBeVisible();
+
+    const box = page.getByLabel(`Live approval of ${name}`);
+    await expect(box).toContainText('not approved for live trading');
+    page.once('dialog', (dialog) => dialog.accept());
+    await box.getByRole('button', { name: 'Approve live trading' }).click();
+    await expect(page.getByRole('status').filter({ hasText: `${name} is approved for live trading; it takes effect at` })).toBeVisible();
+    await expect(box).toContainText('takes effect');
+    await checkLayout(page);
+
+    await box.getByRole('button', { name: 'Withdraw' }).click();
+    await expect(page.getByRole('status').filter({ hasText: `The live approval of ${name} is withdrawn` })).toBeVisible();
+    await expect(box).toContainText('not approved for live trading');
+    expect(errors).toEqual([]);
+});
+
+test('adds an instrument to the universe, queues its import and removes it', async ({ page }) => {
+    const errors = watchConsole(page);
+    await page.goto('/settings');
+
+    await page.getByLabel('Add an instrument').fill('NOPE/USDT:USDT');
+    await page.getByRole('button', { name: 'Add', exact: true }).click();
+    await expect(page.getByRole('status').filter({ hasText: 'NOPE/USDT:USDT is not a stored instrument; run market:instruments first.' })).toBeVisible();
+
+    await page.getByLabel('Add an instrument').fill('DOGE/USDT:USDT');
+    await page.getByRole('button', { name: 'Add', exact: true }).click();
+    await expect(page.getByRole('status').filter({ hasText: 'DOGE/USDT:USDT joins the universe' })).toBeVisible();
+    await expect(page.getByLabel('Scalping data of DOGE/USDT:USDT')).not.toBeChecked();
+
+    await page.getByLabel('Instrument to import').selectOption({ label: 'DOGE/USDT:USDT' });
+    await page.getByPlaceholder('2025-11-01').fill('2026-11-01');
+    await page.getByRole('button', { name: 'Import', exact: true }).last().click();
+    await expect(page.getByRole('status').filter({ hasText: /Import of DOGE\/USDT:USDT from 2026-11-01 queued as job \d+: \d+ days, about [\d.]+ MB/ })).toBeVisible();
+    await expect(page.getByLabel('Imports')).toContainText('DOGE/USDT:USDT from 2026-11-01');
+    await checkLayout(page);
+
+    const row = page.getByRole('row').filter({ hasText: 'DOGE/USDT:USDT' });
+    page.once('dialog', (dialog) => dialog.accept());
+    await row.getByRole('button', { name: 'Remove' }).click();
+    await expect(page.getByRole('status').filter({ hasText: 'DOGE/USDT:USDT leaves the universe; its stored history stays.' })).toBeVisible();
+    await expect(page.getByRole('row').filter({ hasText: 'DOGE/USDT:USDT' })).toHaveCount(0);
+    expect(errors).toEqual([]);
+});

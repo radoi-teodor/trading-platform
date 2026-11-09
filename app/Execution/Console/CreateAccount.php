@@ -12,7 +12,7 @@ use Illuminate\Contracts\Hashing\Hasher;
 use InvalidArgumentException;
 use Laravel\Fortify\Contracts\TwoFactorAuthenticationProvider;
 
-/** Creates a paper or testnet account (docs/engine.md, section 9). Live accounts come with phase 6 (D-16). */
+/** Creates a paper, testnet or live account (docs/engine.md, sections 9 and 10); live only after the operator confirms (D-82). */
 final class CreateAccount extends Command
 {
     use ConfirmsOperator;

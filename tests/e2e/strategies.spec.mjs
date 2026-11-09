@@ -1,6 +1,6 @@
 // The editor: errors with line and column while typing, the read-back, a new version and a backtest in the queue.
 import { test, expect } from '@playwright/test';
-import { checkLayout, watchConsole } from './support.mjs';
+import { checkLayout, reauthenticate, watchConsole } from './support.mjs';
 
 const SEEDED = 'ema-cross-e2e@v1';
 
@@ -37,6 +37,32 @@ test('compiles while typing, saves a version and queues a backtest', async ({ pa
     // No worker runs in this suite, so after two waiting runs the queue refuses a third (D-62).
     await expect(page.getByRole('status')).toContainText(/Backtest \d+ queued\.|operator already has 2 runs waiting or running; wait for one to finish\./);
 
+    await checkLayout(page);
+    expect(errors).toEqual([]);
+});
+
+test('promotes a qualified paper deployment to live micro after re-authentication', async ({ page }) => {
+    const errors = watchConsole(page);
+    await page.goto('/strategies');
+    const ladder = page.getByLabel('Ladder');
+    const paper = ladder.locator('div').filter({ hasText: `${SEEDED}` }).filter({ hasText: 'paper · paper · size 1' }).first();
+    await expect(paper).toContainText(/40 days, 32 trades, in band/);
+    await checkLayout(page);
+
+    const promote = paper.getByRole('button', { name: 'Promote to live micro, a quarter of the size' });
+    page.once('dialog', (dialog) => dialog.accept());
+    await promote.click();
+    const done = page.getByRole('status').filter({ hasText: /It goes live micro from \d{4}-\d\d-\d\d \d\d:\d\d UTC at 0\.25 of its size; restart the engine of live/ });
+    await expect(done.or(page.getByRole('heading', { name: 'Confirm it is you' }))).toBeVisible();
+
+    if (page.url().endsWith('/confirm')) {
+        await reauthenticate(page, '/strategies');
+        page.once('dialog', (dialog) => dialog.accept());
+        await page.getByLabel('Ladder').getByRole('button', { name: 'Promote to live micro, a quarter of the size' }).first().click();
+    }
+
+    await expect(done).toBeVisible();
+    await expect(page.getByLabel('Ladder')).toContainText(/live · live micro · size 0\.25\s*Takes effect/);
     await checkLayout(page);
     expect(errors).toEqual([]);
 });

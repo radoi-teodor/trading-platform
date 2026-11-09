@@ -60,7 +60,7 @@
         </section>
     </div>
 
-    {{-- Accounts: paper and testnet; live comes with phase 6 (D-16). --}}
+    {{-- Accounts: paper, testnet and live; live trades only after the approval and its 24 hours (D-82). --}}
     <section class="{{ $card }}" aria-labelledby="accounts-heading">
         <h2 id="accounts-heading" class="{{ $heading }}">Accounts</h2>
         <div class="mb-3 overflow-x-auto">
@@ -112,7 +112,7 @@
     </section>
 
     <div class="grid grid-cols-1 gap-3 xl:grid-cols-2">
-        {{-- Testnet keys: stored encrypted, the secret never shown back (D-20, D-75). --}}
+        {{-- Exchange keys: stored encrypted, the secret never shown back (D-20, D-75). --}}
         <section class="{{ $card }}" aria-labelledby="keys-heading">
             <h2 id="keys-heading" class="{{ $heading }}">Exchange keys</h2>
             @if ($testnet->isEmpty())

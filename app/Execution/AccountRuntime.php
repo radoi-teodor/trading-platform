@@ -10,6 +10,7 @@ use App\Execution\Data\EngineCommand;
 use App\Execution\Data\EngineMode;
 use App\Execution\Data\EngineRecord;
 use App\Execution\Data\FeeSchedule;
+use App\Execution\Deployments\SizedStrategy;
 use App\Execution\Journal\DatabaseDecisionLog;
 use App\Execution\Models\Account;
 use App\Execution\Models\AccountEquity;
@@ -49,6 +50,9 @@ use Stringable;
  */
 final class AccountRuntime
 {
+    /** Live micro's cap on a position's notional, as a share of equity (docs/risk-policy.md, section 6). */
+    public const string MICRO_NOTIONAL = '0.05';
+
     /** @var list<Symbol> */
     public readonly array $symbols;
 
@@ -276,11 +280,15 @@ final class AccountRuntime
         $limits = new PolicyLimits($policy->riskPerTrade, $policy->notionalPerInstrument, $policy->maxOpenPositions);
         $strategies = [];
 
-        foreach (Deployment::query()->where('account_id', $account->id)->where('active', true)->orderBy('id')->with('version')->get() as $deployment) {
+        foreach (Deployment::inForce($account->id, $this->clock->now())->orderBy('id')->with('version')->get() as $deployment) {
             $version = $deployment->version ?? throw new LogicException("Deployment {$deployment->id} has no version.");
             $result = DocumentChecker::check($version->document, new StoredInstruments, $limits);
             $spec = $result->spec ?? throw new InvalidArgumentException("{$version->label()} no longer compiles: ".implode(' ', array_map(fn ($e): string => $e->getMessage(), $result->errors)));
-            $strategies[] = CompiledStrategy::fromSpec($spec, $deployment->parameters, $version->version);
+            $strategy = CompiledStrategy::fromSpec($spec, $deployment->parameters, $version->version);
+            $multiplier = Decimal::of($deployment->size_multiplier);
+            // A step of the ladder below full size, or live micro's notional cap, tightens the strategy's limits (D-83).
+            $cap = $deployment->stage === 'live_micro' ? Decimal::of(self::MICRO_NOTIONAL) : null;
+            $strategies[] = $multiplier->equals(Decimal::of(1)) && $cap === null ? $strategy : new SizedStrategy($strategy, $multiplier, $cap, $policy);
         }
 
         return $strategies;

@@ -21,7 +21,7 @@ final readonly class TelegramNotifier implements Notifier
     /** Events always worth a message; a breaker counts when it is the feed, the venue or the clock (D-75). */
     public const array KINDS = [
         'daily_loss_halt', 'weekly_loss_halt', 'drawdown_halt', 'drawdown_flatten', 'liquidation',
-        'reconciliation_mismatch', 'reconciliation_halt', 'replay_divergence', 'venue_error', 'clock_skew',
+        'reconciliation_mismatch', 'reconciliation_halt', 'replay_divergence', 'venue_error', 'clock_skew', 'demotion', 'promotion',
     ];
 
     public function __construct(private Dispatcher $dispatcher, private Repository $config, private LoggerInterface $log, private TelegramSettings $settings) {}

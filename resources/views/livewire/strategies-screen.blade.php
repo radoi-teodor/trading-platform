@@ -65,6 +65,32 @@
                 @endif
             </div>
         @endif
+        <div class="rounded-card border border-border bg-surface" aria-label="Ladder">
+            <h2 class="border-b border-border px-3 py-2 text-2xs uppercase tracking-wider text-muted">Ladder to live</h2>
+            @forelse ($ladder as $row)
+                <div class="border-b border-border px-3 py-2 text-xs" wire:key="ladder-{{ $row['id'] }}">
+                    <div class="flex flex-wrap items-baseline justify-between gap-x-2">
+                        <span class="font-mono">{{ $row['label'] }}</span>
+                        <span class="text-muted">{{ $row['account'] }} · {{ $row['stage'] }} · size {{ $row['size'] }}</span>
+                    </div>
+                    @if ($row['from'] !== null)
+                        <p class="text-warn">Takes effect {{ $row['from'] }} UTC</p>
+                    @else
+                        <p class="text-muted">{{ $row['days'] }} days, {{ $row['trades'] }} trades,
+                            @if ($row['breaches'] === [])<span class="text-up">in band</span>@else<span class="text-down">{{ implode('; ', $row['breaches']) }}</span>@endif
+                        </p>
+                        @if ($row['next'] !== null)
+                            <p class="text-subtle">Next: {{ $row['next'] }}{{ $row['missing'] !== null ? ' ('.$row['missing'].')' : '' }}</p>
+                            @if ($row['ready'])
+                                <x-button type="button" class="mt-1 w-full" wire:click="promoteDeployment({{ $row['id'] }})" wire:confirm="Approve {{ $row['label'] }} for {{ $row['next'] }}? It takes effect 24 hours from now.">Promote to {{ $row['next'] }}</x-button>
+                            @endif
+                        @endif
+                    @endif
+                </div>
+            @empty
+                <p class="px-3 py-2 text-xs text-muted">No deployment yet.</p>
+            @endforelse
+        </div>
         <div class="rounded-card border border-border bg-surface">
             <h2 class="border-b border-border px-3 py-2 text-2xs uppercase tracking-wider text-muted">Background runs</h2>
             <table class="w-full text-xs">

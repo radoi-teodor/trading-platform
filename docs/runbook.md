@@ -302,3 +302,38 @@ notification switches, accounts, testnet keys and MCP tokens (a new token is sho
 breaker thresholds are shown and change only in code (D-19). Changing Telegram, a key or creating a token asks for
 your password and a fresh code. Halt is on every screen and stays on screen when you scroll.
 
+
+## 14. Live (Phase 6, D-82, D-83)
+
+Live is built and stays off until a strategy qualifies. Nothing in this section is ever done by an agent.
+
+| Task | Command |
+|------|---------|
+| See where each deployment stands | Strategies, Ladder to live: stage, size, days, trades, band, the next step and what it still needs |
+| Review the band now | `php artisan strategy:review` (the scheduler runs it every day at 00:41 UTC) |
+| Create the live account | Settings, Accounts, mode live, after your password and a fresh code (or `php artisan account:create live --mode=live`) |
+| Store its key | Settings, Exchange keys (or `php artisan account:keys live`) |
+| Approve it | Settings, "Approve live trading", after your password and a fresh code (or `php artisan account:approve-live live`); it takes effect 24 hours later |
+| Withdraw the approval | Settings, Withdraw (or `php artisan account:approve-live live --withdraw`); at once |
+| Promote a deployment one step | Strategies, Ladder to live, "Promote to ...", after your password and a fresh code; it takes effect 24 hours later |
+
+**Starting live micro, step by step**, once the Ladder shows a paper deployment ready (30 days and 30 trades, in band):
+
+1. On binance.com create an API key for this machine only: enable spot or futures trading as the strategy needs,
+   leave withdrawals off, restrict it to this machine's IP address. Never paste it anywhere else.
+2. Create the live account with a small balance you accept to lose, then store the key on it.
+3. Approve the account. The 24 hours start now.
+4. Promote the paper deployment from Strategies. It becomes a live micro deployment on the live account at a
+   quarter of the size, with a 5 % of equity cap on each position's notional, effective 24 hours later.
+5. Run `php artisan engine:run live` under supervisor (as in section 2) after both delays are over. It refuses to
+   start, and says why, while the approval is younger than 24 hours, when the key can withdraw, is not limited to
+   an IP address or cannot trade the account's markets, or when a deployment on it is not at a live stage.
+6. Close every order and position for the account's instruments on Binance before the first start: the engine
+   starts from the exchange as it is (D-74).
+7. Watch the daily report and the Account screen. The next steps (half size, then full size) need 30 days and 20
+   trades in band each and your approval again.
+
+**Demotion.** A deployment out of band is demoted at once, without asking: the deployment ends, the running
+engine pauses the strategy at its next minute, the stage is written, the journal and Telegram say why. A live
+deployment drops to live micro and live micro to paper; the smaller step applies from the engine's next start, and
+resuming the strategy is your decision after you read why it left the band. Halting is always allowed (section 3).
