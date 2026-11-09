@@ -133,17 +133,17 @@ it('opens an account and says what the service refuses', function (): void {
 it('stores a testnet key only after re-authentication and shows its last characters, never the secret', function (): void {
     $account = app(OpenAccount::class)->open('net', 'testnet', '0', '0', [], null);
 
-    Livewire::test(SettingsScreen::class)->set('keyAccount', $account->id)->set('apiKey', 'abcdefghijklmnop1234')->set('apiSecret', 'secretsecretsecret5678')
+    Livewire::test(SettingsScreen::class)->set('keyAccount', $account->id)->set('apiKey', 'FAKEKEYFAKEKEY1234')->set('apiSecret', 'secretsecretsecret5678')
         ->call('saveKey')->assertRedirect(route('reauth'));
     expect(ExchangeKey::query()->count())->toBe(0);
 
     confirmed();
-    $screen = Livewire::test(SettingsScreen::class)->set('keyAccount', $account->id)->set('apiKey', 'abcdefghijklmnop1234')->set('apiSecret', 'secretsecretsecret5678')
+    $screen = Livewire::test(SettingsScreen::class)->set('keyAccount', $account->id)->set('apiKey', 'FAKEKEYFAKEKEY1234')->set('apiSecret', 'secretsecretsecret5678')
         ->call('saveKey')
         ->assertSee('ends in 1234')
         ->assertSee('used from the engine\'s next start');
 
-    expect(received($screen))->not->toContain('secretsecretsecret5678')->and(received($screen))->not->toContain('abcdefghijklmnop1234')
+    expect(received($screen))->not->toContain('secretsecretsecret5678')->and(received($screen))->not->toContain('FAKEKEYFAKEKEY1234')
         ->and(ExchangeKey::query()->count())->toBe(1);
 
     $screen->call('forgetKey', $account->id);

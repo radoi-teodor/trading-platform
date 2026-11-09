@@ -88,7 +88,7 @@ it('stores a key asked without echo, encrypted', function (): void {
         throw new LogicException('Expected a pending command.');
     }
 
-    $command->expectsQuestion('API key (hidden)', 'abcdefghijklmnop1234')
+    $command->expectsQuestion('API key (hidden)', 'FAKEKEYFAKEKEY1234')
         ->expectsQuestion('API secret (hidden)', 'qrstuvwxyzABCDEF5678')
         ->assertSuccessful()
         ->run();

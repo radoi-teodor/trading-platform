@@ -48,10 +48,10 @@ it('stores a testnet key encrypted, shows only its last characters, and forgets 
     $service = app(OpenAccount::class);
     $account = $service->open('net', 'testnet', '0', '0', [], null);
 
-    $service->storeKey($account, 'abcdefghijklmnop1234', 'secretsecretsecret5678');
+    $service->storeKey($account, 'FAKEKEYFAKEKEY1234', 'secretsecretsecret5678');
 
     $row = json_encode((array) DB::table('exchange_keys')->first());
-    expect($row)->not->toContain('abcdefghijklmnop1234')->and($row)->not->toContain('secretsecretsecret5678')
+    expect($row)->not->toContain('FAKEKEYFAKEKEY1234')->and($row)->not->toContain('secretsecretsecret5678')
         ->and($service->keyHint($account))->toBe('ends in 1234, stored 2026-11-09 10:00 UTC');
 
     $service->forgetKey($account);
@@ -63,6 +63,6 @@ it('stores keys for testnet accounts only, and only in their shape', function ()
     $paper = $service->open('paper', 'paper', '1', '0', [], null);
     $net = $service->open('net', 'testnet', '0', '0', [], null);
 
-    expect(fn () => $service->storeKey($paper, 'abcdefghijklmnop1234', 'secretsecretsecret5678'))->toThrow(InvalidArgumentException::class, 'paper is not a testnet account; keys for live accounts come with phase 6.')
+    expect(fn () => $service->storeKey($paper, 'FAKEKEYFAKEKEY1234', 'secretsecretsecret5678'))->toThrow(InvalidArgumentException::class, 'paper is not a testnet account; keys for live accounts come with phase 6.')
         ->and(fn () => $service->storeKey($net, 'short', 'secretsecretsecret5678'))->toThrow(InvalidArgumentException::class, 'A Binance key and secret are letters and digits; nothing was stored.');
 });
