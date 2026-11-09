@@ -48,6 +48,19 @@ it('reads spot instruments and their filters from exchangeInfo', function (): vo
     Http::assertSent(fn (Request $request): bool => str_starts_with($request->url(), 'https://data-api.binance.vision/api/v3/exchangeInfo'));
 });
 
+// The full spot exchangeInfo is 17.8 MB, two thirds of it permission sets nothing reads: a slow line timed out
+// after 15 s and, when it arrived, decoding it passed a 128 MB memory limit. Compressed and without them it is
+// about 150 KB on the wire and the same symbols and filters.
+it('asks for the spot exchangeInfo compressed and without permission sets', function (): void {
+    Http::fake(['data-api.binance.vision/api/v3/exchangeInfo*' => Http::response(binanceFixture('spot-exchange-info.json'))]);
+    [$client] = binanceClient();
+
+    $client->exchangeInfo(MarketType::Spot);
+
+    Http::assertSent(fn (Request $request): bool => ($request->data()['showPermissionSets'] ?? null) === 'false'
+        && $request->hasHeader('Accept-Encoding', 'gzip'));
+});
+
 it('pages through klines and keeps only closed candles up to the end of the range', function (): void {
     $rows = json_decode(binanceFixture('spot-klines-btcusdt.json'), true);
     expect($rows)->toBeArray()->toHaveCount(5);

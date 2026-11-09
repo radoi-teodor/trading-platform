@@ -171,6 +171,11 @@ Add to the list when a fix reveals a new one.
   letters and digits of any script (`\p{L}\p{N}`, `/u`). Search: `A-Z`, `strtoupper` in `app/`.
 - **`api.binance.com` answers 451 from restricted locations** (cloud sandboxes, some regions). It is not an
   outage; use the configured public-data hosts (`*.binance.vision`) or run from the operator's machine.
+- **A large answer under a whole-transfer timeout.** The spot `exchangeInfo` is 17.8 MB uncompressed, two thirds
+  of it permission sets nothing reads; the 15 s HTTP timeout covers the whole transfer, so on a slow line
+  `market:instruments spot` timed out, and decoding it passed Herd's 128 MB memory limit. REST answers travel
+  gzip-compressed and the spot `exchangeInfo` asks `showPermissionSets=false` (147 KB, same filters). Search:
+  `->timeout(` on downloads whose size grows (`BinanceArchive::fetch`, 120 s for daily archives of up to 25 MB).
 - **Packages that bring their own `App\` namespace.** `laravel/pint` maps `App\` to its own internal app, which
   merged into ours. Such tools live in `tools/<name>` with their own composer project. Search:
   `grep "'App\\\\\\\\'" vendor/composer/autoload_psr4.php` must list only `app/`.

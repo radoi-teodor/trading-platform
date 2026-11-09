@@ -43,9 +43,11 @@ final readonly class BinanceRestClient
     public function exchangeInfo(MarketType $market): array
     {
         $path = $market === MarketType::Spot ? '/api/v3/exchangeInfo' : '/fapi/v1/exchangeInfo';
+        // Spot permission sets are two thirds of the 17.8 MB answer and nothing reads them.
+        $query = $market === MarketType::Spot ? ['showPermissionSets' => 'false'] : [];
         $definitions = [];
 
-        foreach (Json::arrayAt($this->get($market, $path), 'symbols') as $symbol) {
+        foreach (Json::arrayAt($this->get($market, $path, $query), 'symbols') as $symbol) {
             $definition = $market === MarketType::Spot ? $this->spotDefinition($symbol) : $this->perpDefinition($symbol);
 
             if ($definition !== null) {
@@ -226,7 +228,9 @@ final readonly class BinanceRestClient
     private function get(MarketType $market, string $path, array $query = []): mixed
     {
         try {
+            // The timeout covers the whole transfer, so the answer travels compressed (D-30).
             $response = $this->http->timeout($this->endpoints->timeoutSeconds)
+                ->withOptions(['decode_content' => 'gzip'])
                 ->acceptJson()
                 ->get($this->endpoints->rest($market).$path, $query);
         } catch (ConnectionException $failure) {
