@@ -42,6 +42,7 @@ return [
         'token' => env('TELEGRAM_BOT_TOKEN'),
         'chat_id' => env('TELEGRAM_CHAT_ID'),
         'queue_connection' => env('NOTIFICATIONS_QUEUE', 'database'),
+        'base_url' => env('TELEGRAM_BASE_URL', 'https://api.telegram.org'),
     ],
 
 ];
