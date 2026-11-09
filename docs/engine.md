@@ -21,9 +21,10 @@ candle of every instrument the account follows whose minute ended at `t` (open t
 ## 2. Order of work in one event
 
 1. **Stamp.** The clock is set to `t` (`SimClock` in a backtest) and every record of this event carries `t`.
-2. **Commands.** Pause, resume, halt and flatten, queued since the last event (section 9).
-3. **Reconcile.** Read the venue's order updates since the last event, its open orders and its balances. Apply
+2. **Reconcile.** Read the venue's order updates since the last event, its open orders and its balances. Apply
    every new fill to the ledger. Compare the ledger with the venue (section 6).
+3. **Commands.** Pause, resume, halt and flatten, queued since the last event (section 9), applied once the venue
+   is reconciled. Then the market breakers see the minute (D-73).
 4. **Mark.** Value every asset at the last close of its instrument. Equity is in the account's quote asset
    (USDT). An asset without a price is an error, never a zero.
 5. **Risk state.** Update equity peak, day and week start equity, and the halts of `risk-policy.md`, section 1.

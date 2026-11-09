@@ -32,10 +32,10 @@ mutates(ReportBuilder::class, PerformanceMetrics::class, TradeStatistics::class)
 const GOLDEN_HASHES = [
     'buy-and-hold-btc' => '8aad85b739a1896ed0cf32756be6e56c8275be1c1c2526c1c19a316fbc2891b0',
     'ma-trend-btc-1h' => '672640af16f7b6bf6c92c4bcdb03899a1da9d701d3bf5aa5d650ed5df0d835d3',
-    'donchian-eth-1h' => 'f9bc685879731c16b824ddc59dc94f044748700d1acd091cbda823d7a5fea9e1',
-    'funding-carry-btc-1h' => '2345e99333bba095e4ee599721d7640b9d1c184e6813e9d87ee7f72137328136',
+    'donchian-eth-1h' => 'e411a2c744f7bc832f60051219c0bed7211c525441d9aac5fc1ff58192cfef4c',
+    'funding-carry-btc-1h' => 'f6db132619c24521df703e7edcee714c4ca0b4476604cb12f77c99cf9ab03b54',
     'ma-trend-short-btc-1h' => '17cb552426f7c5e344ca778fb2f067946b3e89b920773839505f8eca0a5ff3e9',
-    'donchian-short-btc-1h' => 'ef940bcc809bb120b3e9213a33f07f2f605846640b6dafea5ad33340c60ffb13',
+    'donchian-short-btc-1h' => '5dcce5d43d8a04b446e63ead09c2c4713ef4ffe94c10103ab01c414d7ef012d0',
 ];
 
 /** @return array<string, Closure(): Report> */

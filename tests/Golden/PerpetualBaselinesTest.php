@@ -156,7 +156,8 @@ it('shorts the 12/48 hourly trend rule on the perpetual exactly as an independen
 it('carries funding exactly as the closed form says: spot and perpetual legs, funding and fees', function (): void {
     $from = CarbonImmutable::parse('2026-10-04', 'UTC');
     $strategy = FundingCarry::build([...FundingCarry::defaults(), 'entry' => '0.00003'], [Symbol::parse('BTC/USDT:USDT')]);
-    $report = GoldenData::run($strategy, RiskPolicy::account(config()->array('risk.account')), '2026-10-04');
+    // The closed form enters at the first hour the rule allows; the market breakers have their own tests (D-73).
+    $report = GoldenData::run($strategy, RiskPolicy::account([...config()->array('risk.account'), 'market_breakers' => false]), '2026-10-04');
 
     $spotMinutes = goldenMinutes(MarketType::Spot);
     $perpMinutes = goldenMinutes(MarketType::Perp);

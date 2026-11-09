@@ -23,5 +23,8 @@ return [
         'carry_extra_margin' => '0.50',
         // Not in the policy document: the share of cash kept free for slippage and gaps when sizing an entry.
         'cash_buffer' => '0.01',
+        // Section 3: price sanity and volatility shock on every account engine, backtests included (D-73).
+        // Benchmarks run without them.
+        'market_breakers' => true,
     ],
 ];

@@ -28,4 +28,6 @@ enum RejectionReason: string
     case TradesPerDay = 'trades_per_day';
     case Cooldown = 'cooldown';
     case EntryWorking = 'entry_working';
+    case Paused = 'paused';
+    case Breaker = 'breaker';
 }

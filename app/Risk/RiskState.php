@@ -35,6 +35,8 @@ final class RiskState
 
     private bool $flattened = false;
 
+    private bool $operatorHalt = false;
+
     public function __construct(private readonly RiskPolicy $policy)
     {
         $this->dayStart = $this->weekStart = Decimal::zero();
@@ -96,11 +98,28 @@ final class RiskState
     public function entryBlock(CarbonImmutable $time): ?string
     {
         return match (true) {
+            $this->operatorHalt => 'operator',
             $this->drawdownHalt || $this->flattened => 'drawdown',
             $this->weeklyHalt => 'weekly_loss',
             $this->dailyHaltUntil !== null && $time->lessThan($this->dailyHaltUntil) => 'daily_loss',
             default => null,
         };
+    }
+
+    /** The operator's halt, a breaker's or a reconciliation's: no new entries until the operator resumes. */
+    public function halt(): void
+    {
+        $this->operatorHalt = true;
+    }
+
+    /**
+     * The operator resumes the account (docs/risk-policy.md, section 5): every halt but the day's loss lifts, and the
+     * equity peak starts again from the next update, so a drawdown halt does not trip again at once.
+     */
+    public function resume(): void
+    {
+        $this->operatorHalt = $this->weeklyHalt = $this->drawdownHalt = $this->flattened = false;
+        $this->peak = null;
     }
 
     public function peak(): ?Decimal

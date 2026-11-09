@@ -23,8 +23,10 @@
     "decisions": {
         "approved": 5,
         "count": 240,
-        "intents": 5,
-        "rejected": []
+        "intents": 6,
+        "rejected": {
+            "breaker": 1
+        }
     },
     "definition": {
         "benchmarks": [
@@ -62,6 +64,7 @@
             "drawdown_flatten": "0.15",
             "drawdown_halt": "0.1",
             "gross_exposure": "1.5",
+            "market_breakers": "on",
             "max_open_positions": 6,
             "net_exposure": "1",
             "notional_per_instrument": "0.25",
@@ -116,19 +119,19 @@
                 "time": "2026-10-07 00:00"
             },
             {
-                "equity": "9976.404438243006",
+                "equity": "9961.456615893006",
                 "time": "2026-10-08 00:00"
             },
             {
-                "equity": "9990.633110860811",
+                "equity": "9998.020650610811",
                 "time": "2026-10-09 00:00"
             },
             {
-                "equity": "9975.765628360811",
+                "equity": "9983.153168110811",
                 "time": "2026-10-10 00:00"
             },
             {
-                "equity": "9975.765628360811",
+                "equity": "9983.153168110811",
                 "time": "2026-10-11 00:00"
             }
         ],
@@ -622,428 +625,2824 @@
                 "time": "2026-10-07 02:00"
             },
             {
-                "equity": "9960.971815718493",
+                "equity": "9947.790064368493",
                 "time": "2026-10-07 03:00"
             },
             {
-                "equity": "9952.622715718493",
+                "equity": "9937.674893368493",
                 "time": "2026-10-07 04:00"
             },
             {
-                "equity": "9953.919015718493",
+                "equity": "9938.971193368493",
                 "time": "2026-10-07 05:00"
             },
             {
-                "equity": "9947.388215718493",
+                "equity": "9932.440393368493",
                 "time": "2026-10-07 06:00"
             },
             {
-                "equity": "9950.372315718493",
+                "equity": "9935.424493368493",
                 "time": "2026-10-07 07:00"
             },
             {
-                "equity": "9952.829330766302",
+                "equity": "9937.881508416302",
                 "time": "2026-10-07 08:00"
             },
             {
-                "equity": "9958.188530766302",
+                "equity": "9943.240708416302",
                 "time": "2026-10-07 09:00"
             },
             {
-                "equity": "9962.431230766302",
+                "equity": "9947.483408416302",
                 "time": "2026-10-07 10:00"
             },
             {
-                "equity": "9964.058130766302",
+                "equity": "9949.110308416302",
                 "time": "2026-10-07 11:00"
             },
             {
-                "equity": "9964.084230766302",
+                "equity": "9949.136408416302",
                 "time": "2026-10-07 12:00"
             },
             {
-                "equity": "9971.299430766302",
+                "equity": "9956.351608416302",
                 "time": "2026-10-07 13:00"
             },
             {
-                "equity": "9980.367730766302",
+                "equity": "9965.419908416302",
                 "time": "2026-10-07 14:00"
             },
             {
-                "equity": "9985.210730766302",
+                "equity": "9970.262908416302",
                 "time": "2026-10-07 15:00"
             },
             {
-                "equity": "9972.678696779998",
+                "equity": "9957.730874429998",
                 "time": "2026-10-07 16:00"
             },
             {
-                "equity": "9974.627496779998",
+                "equity": "9959.679674429998",
                 "time": "2026-10-07 17:00"
             },
             {
-                "equity": "9981.120596779998",
+                "equity": "9966.172774429998",
                 "time": "2026-10-07 18:00"
             },
             {
-                "equity": "9973.600896779998",
+                "equity": "9958.653074429998",
                 "time": "2026-10-07 19:00"
             },
             {
-                "equity": "9973.023796779998",
+                "equity": "9958.075974429998",
                 "time": "2026-10-07 20:00"
             },
             {
-                "equity": "9973.339896779998",
+                "equity": "9958.392074429998",
                 "time": "2026-10-07 21:00"
             },
             {
-                "equity": "9981.158296779998",
+                "equity": "9966.210474429998",
                 "time": "2026-10-07 22:00"
             },
             {
-                "equity": "9978.977496779998",
+                "equity": "9964.029674429998",
                 "time": "2026-10-07 23:00"
             },
             {
-                "equity": "9976.404438243006",
+                "equity": "9961.456615893006",
                 "time": "2026-10-08 00:00"
             },
             {
-                "equity": "9974.954438243006",
+                "equity": "9960.006615893006",
                 "time": "2026-10-08 01:00"
             },
             {
-                "equity": "9982.738038243006",
+                "equity": "9967.790215893006",
                 "time": "2026-10-08 02:00"
             },
             {
-                "equity": "9980.719638243006",
+                "equity": "9965.771815893006",
                 "time": "2026-10-08 03:00"
             },
             {
-                "equity": "9992.777838243006",
+                "equity": "9977.830015893006",
                 "time": "2026-10-08 04:00"
             },
             {
-                "equity": "9995.828638243006",
+                "equity": "9980.880815893006",
                 "time": "2026-10-08 05:00"
             },
             {
-                "equity": "9995.106538243006",
+                "equity": "9980.158715893006",
                 "time": "2026-10-08 06:00"
             },
             {
-                "equity": "9989.216638243006",
+                "equity": "9974.268815893006",
                 "time": "2026-10-08 07:00"
             },
             {
-                "equity": "9986.050333059711",
+                "equity": "9971.102510709711",
                 "time": "2026-10-08 08:00"
             },
             {
-                "equity": "9989.483933059711",
+                "equity": "9974.536110709711",
                 "time": "2026-10-08 09:00"
             },
             {
-                "equity": "9982.231033059711",
+                "equity": "9967.283210709711",
                 "time": "2026-10-08 10:00"
             },
             {
-                "equity": "9993.688933059711",
+                "equity": "9978.741110709711",
                 "time": "2026-10-08 11:00"
             },
             {
-                "equity": "10000.086333059711",
+                "equity": "9985.138510709711",
                 "time": "2026-10-08 12:00"
             },
             {
-                "equity": "10013.911407359711",
+                "equity": "9990.657210709711",
                 "time": "2026-10-08 13:00"
             },
             {
-                "equity": "10013.911407359711",
+                "equity": "9994.412710709711",
                 "time": "2026-10-08 14:00"
             },
             {
-                "equity": "10013.911407359711",
+                "equity": "9979.448710709711",
                 "time": "2026-10-08 15:00"
             },
             {
-                "equity": "10013.911407359711",
+                "equity": "10021.298947109711",
                 "time": "2026-10-08 16:00"
             },
             {
-                "equity": "10014.442795859711",
+                "equity": "10021.830335609711",
                 "time": "2026-10-08 17:00"
             },
             {
-                "equity": "10020.376795859711",
+                "equity": "10027.764335609711",
                 "time": "2026-10-08 18:00"
             },
             {
-                "equity": "9997.912795859711",
+                "equity": "10005.300335609711",
                 "time": "2026-10-08 19:00"
             },
             {
-                "equity": "9989.929795859711",
+                "equity": "9997.317335609711",
                 "time": "2026-10-08 20:00"
             },
             {
-                "equity": "9988.981795859711",
+                "equity": "9996.369335609711",
                 "time": "2026-10-08 21:00"
             },
             {
-                "equity": "9991.834795859711",
+                "equity": "9999.222335609711",
                 "time": "2026-10-08 22:00"
             },
             {
-                "equity": "9985.939795859711",
+                "equity": "9993.327335609711",
                 "time": "2026-10-08 23:00"
             },
             {
-                "equity": "9990.633110860811",
+                "equity": "9998.020650610811",
                 "time": "2026-10-09 00:00"
             },
             {
-                "equity": "9988.743110860811",
+                "equity": "9996.130650610811",
                 "time": "2026-10-09 01:00"
             },
             {
-                "equity": "9983.586110860811",
+                "equity": "9990.973650610811",
                 "time": "2026-10-09 02:00"
             },
             {
-                "equity": "9975.765628360811",
+                "equity": "9983.153168110811",
                 "time": "2026-10-09 03:00"
             },
             {
-                "equity": "9975.765628360811",
+                "equity": "9983.153168110811",
                 "time": "2026-10-09 04:00"
             },
             {
-                "equity": "9975.765628360811",
+                "equity": "9983.153168110811",
                 "time": "2026-10-09 05:00"
             },
             {
-                "equity": "9975.765628360811",
+                "equity": "9983.153168110811",
                 "time": "2026-10-09 06:00"
             },
             {
-                "equity": "9975.765628360811",
+                "equity": "9983.153168110811",
                 "time": "2026-10-09 07:00"
             },
             {
-                "equity": "9975.765628360811",
+                "equity": "9983.153168110811",
                 "time": "2026-10-09 08:00"
             },
             {
-                "equity": "9975.765628360811",
+                "equity": "9983.153168110811",
                 "time": "2026-10-09 09:00"
             },
             {
-                "equity": "9975.765628360811",
+                "equity": "9983.153168110811",
                 "time": "2026-10-09 10:00"
             },
             {
-                "equity": "9975.765628360811",
+                "equity": "9983.153168110811",
                 "time": "2026-10-09 11:00"
             },
             {
-                "equity": "9975.765628360811",
+                "equity": "9983.153168110811",
                 "time": "2026-10-09 12:00"
             },
             {
-                "equity": "9975.765628360811",
+                "equity": "9983.153168110811",
                 "time": "2026-10-09 13:00"
             },
             {
-                "equity": "9975.765628360811",
+                "equity": "9983.153168110811",
                 "time": "2026-10-09 14:00"
             },
             {
-                "equity": "9975.765628360811",
+                "equity": "9983.153168110811",
                 "time": "2026-10-09 15:00"
             },
             {
-                "equity": "9975.765628360811",
+                "equity": "9983.153168110811",
                 "time": "2026-10-09 16:00"
             },
             {
-                "equity": "9975.765628360811",
+                "equity": "9983.153168110811",
                 "time": "2026-10-09 17:00"
             },
             {
-                "equity": "9975.765628360811",
+                "equity": "9983.153168110811",
                 "time": "2026-10-09 18:00"
             },
             {
-                "equity": "9975.765628360811",
+                "equity": "9983.153168110811",
                 "time": "2026-10-09 19:00"
             },
             {
-                "equity": "9975.765628360811",
+                "equity": "9983.153168110811",
                 "time": "2026-10-09 20:00"
             },
             {
-                "equity": "9975.765628360811",
+                "equity": "9983.153168110811",
                 "time": "2026-10-09 21:00"
             },
             {
-                "equity": "9975.765628360811",
+                "equity": "9983.153168110811",
                 "time": "2026-10-09 22:00"
             },
             {
-                "equity": "9975.765628360811",
+                "equity": "9983.153168110811",
                 "time": "2026-10-09 23:00"
             },
             {
-                "equity": "9975.765628360811",
+                "equity": "9983.153168110811",
                 "time": "2026-10-10 00:00"
             },
             {
-                "equity": "9975.765628360811",
+                "equity": "9983.153168110811",
                 "time": "2026-10-10 01:00"
             },
             {
-                "equity": "9975.765628360811",
+                "equity": "9983.153168110811",
                 "time": "2026-10-10 02:00"
             },
             {
-                "equity": "9975.765628360811",
+                "equity": "9983.153168110811",
                 "time": "2026-10-10 03:00"
             },
             {
-                "equity": "9975.765628360811",
+                "equity": "9983.153168110811",
                 "time": "2026-10-10 04:00"
             },
             {
-                "equity": "9975.765628360811",
+                "equity": "9983.153168110811",
                 "time": "2026-10-10 05:00"
             },
             {
-                "equity": "9975.765628360811",
+                "equity": "9983.153168110811",
                 "time": "2026-10-10 06:00"
             },
             {
-                "equity": "9975.765628360811",
+                "equity": "9983.153168110811",
                 "time": "2026-10-10 07:00"
             },
             {
-                "equity": "9975.765628360811",
+                "equity": "9983.153168110811",
                 "time": "2026-10-10 08:00"
             },
             {
-                "equity": "9975.765628360811",
+                "equity": "9983.153168110811",
                 "time": "2026-10-10 09:00"
             },
             {
-                "equity": "9975.765628360811",
+                "equity": "9983.153168110811",
                 "time": "2026-10-10 10:00"
             },
             {
-                "equity": "9975.765628360811",
+                "equity": "9983.153168110811",
                 "time": "2026-10-10 11:00"
             },
             {
-                "equity": "9975.765628360811",
+                "equity": "9983.153168110811",
                 "time": "2026-10-10 12:00"
             },
             {
-                "equity": "9975.765628360811",
+                "equity": "9983.153168110811",
                 "time": "2026-10-10 13:00"
             },
             {
-                "equity": "9975.765628360811",
+                "equity": "9983.153168110811",
                 "time": "2026-10-10 14:00"
             },
             {
-                "equity": "9975.765628360811",
+                "equity": "9983.153168110811",
                 "time": "2026-10-10 15:00"
             },
             {
-                "equity": "9975.765628360811",
+                "equity": "9983.153168110811",
                 "time": "2026-10-10 16:00"
             },
             {
-                "equity": "9975.765628360811",
+                "equity": "9983.153168110811",
                 "time": "2026-10-10 17:00"
             },
             {
-                "equity": "9975.765628360811",
+                "equity": "9983.153168110811",
                 "time": "2026-10-10 18:00"
             },
             {
-                "equity": "9975.765628360811",
+                "equity": "9983.153168110811",
                 "time": "2026-10-10 19:00"
             },
             {
-                "equity": "9975.765628360811",
+                "equity": "9983.153168110811",
                 "time": "2026-10-10 20:00"
             },
             {
-                "equity": "9975.765628360811",
+                "equity": "9983.153168110811",
                 "time": "2026-10-10 21:00"
             },
             {
-                "equity": "9975.765628360811",
+                "equity": "9983.153168110811",
                 "time": "2026-10-10 22:00"
             },
             {
-                "equity": "9975.765628360811",
+                "equity": "9983.153168110811",
                 "time": "2026-10-10 23:00"
             },
             {
-                "equity": "9975.765628360811",
+                "equity": "9983.153168110811",
                 "time": "2026-10-11 00:00"
             }
         ]
     },
-    "events": [],
+    "events": [
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 184.72 against a mean of 31.099",
+            "kind": "breaker_tripped",
+            "time": "2026-10-01T04:47:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 201 against a mean of 37.04666667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-01T04:47:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-01T05:02:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-01T05:02:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 196.87 against a mean of 37.67283333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-01T07:25:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-01T07:40:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 588 against a mean of 103.53516667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-01T15:06:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-01T15:21:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 124 against a mean of 23.87566667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-02T00:17:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-02T00:32:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 142.08 against a mean of 23.17816667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-02T01:52:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-02T02:07:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 217.85 against a mean of 37.25283333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-02T03:02:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-02T03:17:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 380.54 against a mean of 41.59466667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-02T04:20:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 408.6 against a mean of 46.76333333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-02T04:20:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 494.01 against a mean of 47.65116667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-02T04:21:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 537.1 against a mean of 53.22666667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-02T04:21:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-02T04:36:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-02T04:36:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 464 against a mean of 37.71",
+            "kind": "breaker_tripped",
+            "time": "2026-10-02T12:31:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 568.8 against a mean of 45.835",
+            "kind": "breaker_tripped",
+            "time": "2026-10-02T12:31:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 471.49 against a mean of 45.44316667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-02T12:32:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 541.9 against a mean of 55.27166667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-02T12:32:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-02T12:47:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-02T12:47:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 567.84 against a mean of 55.09766667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-02T17:25:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 432.55 against a mean of 63.22816667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-02T17:26:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-02T17:41:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 316.19 against a mean of 53.01233333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-02T18:40:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 301 against a mean of 57.48833333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-02T18:40:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 308 against a mean of 59.81",
+            "kind": "breaker_tripped",
+            "time": "2026-10-02T18:41:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-02T18:55:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-02T18:56:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 51.2 against a mean of 8.3695",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T00:11:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 59.4 against a mean of 9.64166667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T00:11:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 55.3 against a mean of 10.88166667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T00:13:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-03T00:26:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-03T00:28:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 60.62 against a mean of 11.87316667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T00:39:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-03T00:54:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 84.58 against a mean of 10.931",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T01:18:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 83.7 against a mean of 14.10333333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T01:18:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-03T01:33:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-03T01:33:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 35.61 against a mean of 5.114",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T02:43:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 63.9 against a mean of 6.245",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T02:43:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-03T02:58:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-03T02:58:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 35.91 against a mean of 6.54733333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T03:06:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 48.18 against a mean of 7.64583333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T03:16:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 52.3 against a mean of 9.11333333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T03:16:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-03T03:31:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-03T03:31:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 44.63 against a mean of 4.9595",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T04:17:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 43.7 against a mean of 6.63",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T04:17:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 32 against a mean of 5.4775",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T04:28:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-03T04:32:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-03T04:43:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 24.99 against a mean of 3.35633333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T05:55:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 20.9 against a mean of 4.01",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T06:05:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 22.57 against a mean of 4.408",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T06:10:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 37.2 against a mean of 6.535",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T06:13:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-03T06:25:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-03T06:28:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 63.48 against a mean of 8.27933333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T06:50:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 97.8 against a mean of 11.38",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T06:50:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-03T07:05:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-03T07:05:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 33.81 against a mean of 5.76316667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T09:20:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 37.1 against a mean of 6.14166667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T09:20:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-03T09:35:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-03T09:35:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 20.02 against a mean of 3.3295",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T09:58:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 20.02 against a mean of 3.663",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T09:59:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 27.45 against a mean of 3.2095",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T10:05:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 17.4 against a mean of 3.29166667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T10:05:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 20.38 against a mean of 3.8025",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T10:08:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-03T10:20:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-03T10:23:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 15.28 against a mean of 2.71516667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T10:26:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 20.3 against a mean of 2.275",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T10:26:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 19.68 against a mean of 3.28183333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T10:29:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 23.9 against a mean of 2.9",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T10:29:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 36.29 against a mean of 3.60966667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T10:30:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 25.2 against a mean of 3.29666667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T10:30:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 29.21 against a mean of 3.90466667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T10:32:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 47.5 against a mean of 3.65833333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T10:32:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-03T10:47:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-03T10:47:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 28.47 against a mean of 4.79216667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T11:05:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-03T11:20:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 36.58 against a mean of 3.33766667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T11:50:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 25.2 against a mean of 4.62333333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T11:50:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 26.57 against a mean of 3.94716667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T11:51:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 28.5 against a mean of 4.99",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T11:51:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-03T12:06:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-03T12:06:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 26.4 against a mean of 5.12833333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T12:08:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 26.5 against a mean of 5.055",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T12:16:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 61.33 against a mean of 4.21066667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T12:19:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 68.8 against a mean of 5.92833333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T12:19:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 45.26 against a mean of 5.32483333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T12:21:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 46.6 against a mean of 7.015",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T12:21:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 41.1 against a mean of 6.00683333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T12:22:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 38.8 against a mean of 7.6",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T12:22:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 60.75 against a mean of 7.81733333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T12:26:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 66.6 against a mean of 9.42",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T12:26:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-03T12:41:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-03T12:41:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 84.01 against a mean of 12.73116667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T13:35:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 84.5 against a mean of 15.66166667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T13:35:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-03T13:50:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-03T13:50:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 45.35 against a mean of 6.42383333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T14:49:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 50.01 against a mean of 7.26366667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T15:01:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 58.7 against a mean of 10.99166667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T15:01:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-03T15:16:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 41.05 against a mean of 7.92916667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T15:16:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-03T15:16:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-03T15:31:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 56.77 against a mean of 9.51383333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T15:32:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 66.4 against a mean of 12.99833333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T15:32:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-03T15:47:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-03T15:47:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 36.01 against a mean of 6.545",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T17:31:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 60.17 against a mean of 9.0725",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T17:45:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 52.49 against a mean of 9.87283333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T17:46:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-03T18:01:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 63.69 against a mean of 7.384",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T19:04:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 75.9 against a mean of 9.21666667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T19:04:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-03T19:19:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-03T19:19:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 39.9 against a mean of 7.63",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T19:30:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-03T19:45:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 79.65 against a mean of 5.94316667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T19:48:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 87.5 against a mean of 8.38",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T19:48:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 46.69 against a mean of 8.08566667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T19:55:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-03T20:03:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-03T20:10:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 124.86 against a mean of 5.32",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T20:50:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 107.9 against a mean of 7.33333333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T20:50:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 38 against a mean of 7.26316667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T20:52:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-03T21:05:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 101.64 against a mean of 7.55016667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T21:06:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 158.2 against a mean of 9.98333333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T21:06:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 75.4 against a mean of 13.33666667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T21:10:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-03T21:21:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-03T21:25:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 40.4 against a mean of 3.19516667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T23:23:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 32.5 against a mean of 5.16333333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T23:23:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 66 against a mean of 4.14133333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T23:27:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 54.3 against a mean of 5.71333333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T23:27:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 32.92 against a mean of 5.0745",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T23:28:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 41.1 against a mean of 6.30666667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T23:28:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 29.77 against a mean of 5.37233333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T23:29:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-03T23:43:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-03T23:44:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 41.85 against a mean of 7.0015",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T23:55:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 61.9 against a mean of 8.95333333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T23:55:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 68 against a mean of 7.3495",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T23:57:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 52 against a mean of 9.61",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T23:57:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 50.3 against a mean of 8.48266667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T23:58:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 70.6 against a mean of 10.31666667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T23:58:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 64.01 against a mean of 9.18766667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T23:59:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 66.4 against a mean of 11.37666667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-03T23:59:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 66.08 against a mean of 10.1255",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T00:00:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 56.44 against a mean of 11.20416667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T00:03:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-04T00:14:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-04T00:18:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 31.1 against a mean of 5.2005",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T02:06:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 29.85 against a mean of 5.71866667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T02:07:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 37.9 against a mean of 7.08",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T02:07:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-04T02:22:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-04T02:22:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 27.19 against a mean of 4.62383333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T03:35:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 31.5 against a mean of 4.935",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T03:35:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 45.01 against a mean of 4.619",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T03:36:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 45.9 against a mean of 5.03666667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T03:36:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 29.91 against a mean of 5.30283333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T03:41:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-04T03:51:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-04T03:56:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 5.6 against a mean of 0.95833333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T04:56:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 17.55 against a mean of 0.73166667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T05:02:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 20.1 against a mean of 1.02",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T05:02:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 13.17 against a mean of 0.677",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T05:10:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 11.1 against a mean of 1.02833333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T05:12:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 9.7 against a mean of 1.06666667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T05:16:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 12.8 against a mean of 1.22666667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T05:19:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 30.1 against a mean of 0.67283333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T05:20:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 30.5 against a mean of 1.43833333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T05:20:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 22.76 against a mean of 1.1095",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T05:22:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 15.2 against a mean of 1.94166667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T05:22:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 9.6 against a mean of 1.48866667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T05:25:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 12.9 against a mean of 2.31",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T05:26:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 9.7 against a mean of 1.753",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T05:30:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 9.89 against a mean of 1.9145",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T05:35:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 18.24 against a mean of 2.44983333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T05:39:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-04T05:41:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-04T05:54:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 29.5 against a mean of 3.7705",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T06:22:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 86.03 against a mean of 3.88283333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T06:23:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 121.6 against a mean of 6.03166667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T06:23:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 35.99 against a mean of 5.94366667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T06:27:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 80.83 against a mean of 6.81916667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T06:30:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 103 against a mean of 9.55166667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T06:30:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 85.14 against a mean of 8.629",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T06:33:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 75.8 against a mean of 11.875",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T06:33:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-04T06:48:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-04T06:48:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 46.1 against a mean of 9.02666667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T07:58:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 45.75 against a mean of 9.00616667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T07:59:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 60.1 against a mean of 9.515",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T07:59:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 60.1 against a mean of 11.71166667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T08:03:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-04T08:14:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-04T08:18:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 80.03 against a mean of 15.86433333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T10:19:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-04T10:34:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 59.39 against a mean of 6.52266667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T12:13:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 60.3 against a mean of 8.285",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T12:13:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 51.59 against a mean of 7.70016667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T12:15:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 52 against a mean of 9.63333333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T12:15:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 51.71 against a mean of 8.28383333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T12:17:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 51.6 against a mean of 10.145",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T12:17:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 61.72 against a mean of 9.59716667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T12:19:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 68.9 against a mean of 11.67",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T12:19:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-04T12:34:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-04T12:34:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 101.65 against a mean of 13.73233333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T15:20:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 114.7 against a mean of 17.815",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T15:20:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-04T15:35:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-04T15:35:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 83.17 against a mean of 11.20883333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T16:50:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 93.7 against a mean of 14.03333333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T16:50:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-04T17:05:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-04T17:05:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 56 against a mean of 9.57533333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T17:45:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-04T18:00:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 25.99 against a mean of 4.39533333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T19:00:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 27.47 against a mean of 4.753",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T19:05:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 33.67 against a mean of 4.967",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T19:08:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 45.3 against a mean of 7.30833333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T19:08:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-04T19:23:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-04T19:23:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 63.79 against a mean of 5.584",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T19:28:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 64.2 against a mean of 7.69666667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T19:28:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 87.51 against a mean of 6.46966667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T19:32:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 125.4 against a mean of 8.61166667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T19:32:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 68.02 against a mean of 8.34616667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T19:35:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 90.8 against a mean of 11.53666667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T19:35:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 56.38 against a mean of 10.65616667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T19:42:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-04T19:50:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-04T19:57:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 61.67 against a mean of 12.2165",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T20:34:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 87.85 against a mean of 13.32583333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T20:39:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 104.3 against a mean of 16.74333333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T20:39:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 110.3 against a mean of 14.41183333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T20:44:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 132 against a mean of 18.01833333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T20:44:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 116.85 against a mean of 16.8495",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T20:48:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 122.4 against a mean of 20.55333333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T20:48:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-04T21:03:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-04T21:03:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 263.76 against a mean of 40.9765",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T22:03:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 260.6 against a mean of 44.78",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T22:03:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 299.51 against a mean of 53.826",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T22:17:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 312.5 against a mean of 59.28166667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-04T22:17:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-04T22:32:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-04T22:32:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 175.11 against a mean of 27.13133333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-05T03:58:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 167.4 against a mean of 32.22666667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-05T03:58:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-05T04:13:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-05T04:13:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 230.93 against a mean of 30.62233333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-05T06:48:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 229 against a mean of 40.50833333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-05T06:48:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 192.67 against a mean of 37.47666667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-05T06:54:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-05T07:03:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-05T07:09:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 130.09 against a mean of 25.797",
+            "kind": "breaker_tripped",
+            "time": "2026-10-05T11:28:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-05T11:43:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 313.13 against a mean of 32.61166667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-05T13:31:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 324.8 against a mean of 39.525",
+            "kind": "breaker_tripped",
+            "time": "2026-10-05T13:31:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-05T13:46:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-05T13:46:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 321.14 against a mean of 55.476",
+            "kind": "breaker_tripped",
+            "time": "2026-10-05T13:48:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 346.4 against a mean of 62.785",
+            "kind": "breaker_tripped",
+            "time": "2026-10-05T13:48:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-05T14:03:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-05T14:03:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 117.86 against a mean of 22.37033333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-05T19:19:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-05T19:34:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 87.58 against a mean of 13.81366667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-06T05:08:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 92.3 against a mean of 17.59666667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-06T05:08:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-06T05:23:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-06T05:23:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 144.55 against a mean of 23.23216667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-06T08:07:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 147.7 against a mean of 26.64166667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-06T08:07:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 163.45 against a mean of 25.44116667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-06T08:08:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 171.1 against a mean of 28.77",
+            "kind": "breaker_tripped",
+            "time": "2026-10-06T08:08:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 161.32 against a mean of 27.76533333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-06T08:09:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 162.5 against a mean of 31.26833333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-06T08:09:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-06T08:24:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-06T08:24:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 164.99 against a mean of 31.31233333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-06T09:26:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 336.99 against a mean of 35.0505",
+            "kind": "breaker_tripped",
+            "time": "2026-10-06T09:28:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 335.3 against a mean of 38.63166667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-06T09:28:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-06T09:43:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-06T09:43:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 156.34 against a mean of 28.09066667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-06T11:16:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 182.9 against a mean of 32.23666667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-06T11:16:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-06T11:31:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-06T11:31:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 51.72 against a mean of 10.23383333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-06T22:04:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-06T22:19:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 88.12 against a mean of 9.07483333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-06T23:29:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 85.5 against a mean of 11.57166667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-06T23:29:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 51.07 against a mean of 10.06116667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-06T23:31:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 97.24 against a mean of 10.20766667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-06T23:33:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 135.1 against a mean of 12.49666667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-06T23:33:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-06T23:48:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-06T23:48:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 251.79 against a mean of 32.03566667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-07T01:58:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 270.9 against a mean of 38.96833333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-07T01:58:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 187.3 against a mean of 35.78033333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-07T01:59:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 304.97 against a mean of 38.57133333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-07T02:00:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 299.3 against a mean of 45.66166667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-07T02:00:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 241.71 against a mean of 43.354",
+            "kind": "breaker_tripped",
+            "time": "2026-10-07T02:01:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 267.5 against a mean of 50.355",
+            "kind": "breaker_tripped",
+            "time": "2026-10-07T02:01:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 712.88 against a mean of 46.649",
+            "kind": "breaker_tripped",
+            "time": "2026-10-07T02:02:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 778.8 against a mean of 53.885",
+            "kind": "breaker_tripped",
+            "time": "2026-10-07T02:02:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 347.41 against a mean of 57.871",
+            "kind": "breaker_tripped",
+            "time": "2026-10-07T02:03:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 348.7 against a mean of 66.25166667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-07T02:03:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-07T02:18:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-07T02:18:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 128 against a mean of 23.16683333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-07T08:01:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-07T08:16:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 344.56 against a mean of 37.9315",
+            "kind": "breaker_tripped",
+            "time": "2026-10-07T10:08:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 387.6 against a mean of 43.14333333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-07T10:08:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-07T10:23:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-07T10:23:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 60.67 against a mean of 11.25016667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-07T21:44:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-07T21:59:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 243.02 against a mean of 31.33383333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-08T03:22:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 260 against a mean of 36.18333333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-08T03:22:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-08T03:37:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-08T03:37:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 380.2 against a mean of 51.068",
+            "kind": "breaker_tripped",
+            "time": "2026-10-08T04:21:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 420.2 against a mean of 58.85",
+            "kind": "breaker_tripped",
+            "time": "2026-10-08T04:21:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-08T04:36:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-08T04:36:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 341.26 against a mean of 42.58433333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-08T12:51:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 445.5 against a mean of 52.56166667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-08T12:51:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-08T13:06:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-08T13:06:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 453.5 against a mean of 66.37416667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-08T15:21:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 487.9 against a mean of 74.535",
+            "kind": "breaker_tripped",
+            "time": "2026-10-08T15:21:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 428.33 against a mean of 75.71533333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-08T15:24:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 431.1 against a mean of 84.58",
+            "kind": "breaker_tripped",
+            "time": "2026-10-08T15:24:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-08T15:39:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-08T15:39:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 190.76 against a mean of 36.54666667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-09T11:33:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 240.4 against a mean of 41.92",
+            "kind": "breaker_tripped",
+            "time": "2026-10-09T11:33:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 429.84 against a mean of 49.46016667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-09T11:47:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 441.8 against a mean of 56.19666667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-09T11:47:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-09T12:02:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-09T12:02:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 45.77 against a mean of 8.502",
+            "kind": "breaker_tripped",
+            "time": "2026-10-09T22:01:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 55.7 against a mean of 10.94666667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-09T22:01:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-09T22:16:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-09T22:16:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 51.16 against a mean of 8.60866667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-09T23:14:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 45.02 against a mean of 8.43516667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-09T23:27:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-09T23:42:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 47.33 against a mean of 7.791",
+            "kind": "breaker_tripped",
+            "time": "2026-10-09T23:45:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-10T00:00:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 57.22 against a mean of 9.68216667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T01:28:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 85.7 against a mean of 10.02166667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T01:28:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 109.1 against a mean of 10.346",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T01:29:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 111.4 against a mean of 11.16833333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T01:29:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-10T01:44:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-10T01:44:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 38.3 against a mean of 3.689",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T04:02:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 40 against a mean of 5.54166667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T04:02:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 23.22 against a mean of 4.3025",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T04:03:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 30.5 against a mean of 4.474",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T04:04:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 34.79 against a mean of 5.12416667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T04:10:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-10T04:17:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-10T04:25:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 47.77 against a mean of 5.529",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T05:12:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 54.5 against a mean of 7.64666667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T05:12:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-10T05:27:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-10T05:27:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 35.02 against a mean of 6.90433333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T05:38:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 41 against a mean of 7.37766667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T05:39:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-10T05:54:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 42.45 against a mean of 8.05866667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T06:44:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 53.98 against a mean of 8.98283333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T06:46:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 68.7 against a mean of 12.42333333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T06:46:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 74.05 against a mean of 10.50766667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T06:59:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 78.5 against a mean of 13.81333333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T06:59:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-10T07:14:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-10T07:14:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 282.11 against a mean of 9.905",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T07:36:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 80.4 against a mean of 13.63166667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T07:36:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 232.08 against a mean of 14.60666667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T07:37:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 106 against a mean of 19.69933333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T07:44:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-10T07:51:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-10T07:59:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 47.4 against a mean of 9.13666667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T08:46:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-10T09:01:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 53.74 against a mean of 7.93716667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T09:11:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 75 against a mean of 8.76166667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T09:11:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-10T09:26:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-10T09:26:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 55.18 against a mean of 9.99",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T09:33:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 57.3 against a mean of 11.27333333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T09:33:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-10T09:48:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-10T09:48:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 23.29 against a mean of 4.63216667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T11:12:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-10T11:27:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 27 against a mean of 5.34",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T11:37:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 26.01 against a mean of 4.7805",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T11:40:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-10T11:52:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-10T11:55:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 22.46 against a mean of 4.38283333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T11:55:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 28.3 against a mean of 4.485",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T11:59:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-10T12:14:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 24 against a mean of 3.91866667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T13:20:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 28.4 against a mean of 5.48333333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T13:20:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-10T13:35:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-10T13:35:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 44.2 against a mean of 4.15933333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T13:42:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-10T13:57:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 35.01 against a mean of 6.36516667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T14:20:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 45.44 against a mean of 6.61666667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T14:27:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 49.3 against a mean of 8.15666667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T14:27:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 38.93 against a mean of 7.37383333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T14:28:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 59.1 against a mean of 9.75",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T14:30:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 84.01 against a mean of 8.986",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T14:31:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 98.2 against a mean of 10.70333333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T14:31:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-10T14:46:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-10T14:46:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 46.11 against a mean of 7.08333333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T17:36:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 56.7 against a mean of 9.375",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T17:36:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-10T17:51:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-10T17:51:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 16.02 against a mean of 3.03",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T19:32:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 22.8 against a mean of 4.46833333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T19:32:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 16.27 against a mean of 2.81083333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T19:34:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 23.4 against a mean of 4.31166667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T19:34:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 15.8 against a mean of 2.582",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T19:36:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-10T19:49:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-10T19:51:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 19.83 against a mean of 2.426",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T19:55:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 23.5 against a mean of 4.46333333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T19:55:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 14.57 against a mean of 2.52166667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T20:03:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 16.53 against a mean of 2.9925",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T20:10:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-10T20:10:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 21.03 against a mean of 3.53933333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T20:13:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-10T20:28:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 29.97 against a mean of 5.02183333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T20:29:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 42.5 against a mean of 7.08333333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T20:29:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-10T20:44:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-10T20:44:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 24.34 against a mean of 4.7015",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T20:56:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 50.56 against a mean of 5.46066667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T21:10:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 58.2 against a mean of 8.32333333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T21:10:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-10T21:25:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-10T21:25:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 36.96 against a mean of 6.5415",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T22:27:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-10T22:42:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 60.42 against a mean of 7.58416667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T22:43:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 59.17 against a mean of 8.70216667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T22:46:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 65.3 against a mean of 10.84666667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T22:46:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 58.84 against a mean of 9.56633333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T22:47:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 62.3 against a mean of 11.77166667",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T22:47:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-10T23:02:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: the pause is over",
+            "kind": "breaker_cleared",
+            "time": "2026-10-10T23:02:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 61.8 against a mean of 11.28833333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T23:44:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT: a range of 44.92 against a mean of 6.44883333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T23:55:00Z"
+        },
+        {
+            "detail": "volatility_shock BTC/USDT:USDT: a range of 44.8 against a mean of 8.63833333",
+            "kind": "breaker_tripped",
+            "time": "2026-10-10T23:55:00Z"
+        }
+    ],
     "open_positions": [],
     "result": {
-        "cagr": "-0.093716516016144844",
-        "calmar": "-15.752289926811907341",
-        "final_equity": "9975.765628360811",
+        "cagr": "-0.066095298773322659",
+        "calmar": "-8.879826039664456084",
+        "final_equity": "9983.153168110811",
         "initial_equity": "10000",
-        "max_drawdown": "0.005949389990380405",
-        "max_drawdown_seconds": 492360,
+        "max_drawdown": "0.007443310091671595",
+        "max_drawdown_seconds": 504000,
         "monthly_returns": [
             {
                 "month": "2026-10",
-                "return": "-0.0024234371639189"
+                "return": "-0.0016846831889189"
             }
         ],
-        "net_profit": "-24.234371639189",
+        "net_profit": "-16.846831889189",
         "positive_months_share": "0",
-        "return": "-0.0024234371639189",
-        "sharpe": "-3.329415069712626453",
-        "sortino": "-5.037693498798418832",
-        "time_in_market": "0.377546296296296296",
+        "return": "-0.0016846831889189",
+        "sharpe": "-2.035384322335892685",
+        "sortino": "-3.489844926224059666",
+        "time_in_market": "0.385416666666666666",
         "trades": {
             "average_loss": "-30.118571543469",
-            "average_win": "66.121342991218",
+            "average_win": "73.508882741218",
             "costs_share_of_gross_profit": null,
             "count": 4,
-            "expectancy": "-6.05859290979725",
+            "expectancy": "-4.21170797229725",
             "expectancy_ci95": [
-                "-83.373643969379883671",
-                "71.256458149785383671"
+                "-87.350110782880879196",
+                "78.926694838286379196"
             ],
-            "expectancy_r": "0.001279825463498846",
+            "expectancy_r": "0.004332484320013353",
             "expectancy_r_ci95": [
-                "-2.981284742054494221",
-                "2.983844392981491913"
+                "-2.987865948738128265",
+                "2.996530917378154971"
             ],
-            "fees": "9.79426285",
+            "fees": "9.7756231",
             "funding": "-0.050808789189",
-            "gross_profit": "-14.3893",
-            "profit_factor": "0.73178927599302594",
-            "slippage": "4.1755",
+            "gross_profit": "-7.0204",
+            "profit_factor": "0.813549901540819512",
+            "slippage": "4.2364",
             "win_rate": "0.25",
             "wins": 1
         },
-        "turnover": "1.95885257"
+        "turnover": "1.95512462"
     },
     "trades": [
         {
@@ -1087,23 +3486,23 @@
             "symbol": "BTC/USDT:USDT"
         },
         {
-            "closed_at": "2026-10-08T12:50:00Z",
+            "closed_at": "2026-10-08T15:32:00Z",
             "dust": "0",
-            "entry_price": "84313.7",
-            "exit_price": "81946.6",
+            "entry_price": "83798",
+            "exit_price": "81176.8",
             "exit_reason": "target",
-            "fees": "2.41077435",
+            "fees": "2.3921346",
             "funding": "-0.113782658782",
-            "gross_profit": "68.6459",
-            "initial_risk": "23.698507514350104769322",
-            "mae": "5.3302",
-            "mfe": "62.7473",
-            "net_profit": "66.121342991218",
-            "opened_at": "2026-10-07T02:00:00Z",
+            "gross_profit": "76.0148",
+            "initial_risk": "26.23147126332509728577",
+            "mae": "16.3647",
+            "mfe": "74.6982",
+            "net_profit": "73.508882741218",
+            "opened_at": "2026-10-07T03:00:00Z",
             "quantity": "0.029",
-            "r_multiple": "2.790105788357333879",
+            "r_multiple": "2.802316423783391906",
             "side": "sell",
-            "slippage": "0.9715",
+            "slippage": "1.0324",
             "symbol": "BTC/USDT:USDT"
         },
         {

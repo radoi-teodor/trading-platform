@@ -50,6 +50,7 @@ final readonly class RiskPolicy
         public Decimal $netExposure,
         public int $perpetualLeverage,
         public Decimal $carryExtraMargin,
+        public bool $marketBreakers = true,
     ) {}
 
     /** @param array<mixed> $limits the `account` section of config/risk.php */
@@ -104,6 +105,7 @@ final readonly class RiskPolicy
             $fraction('net_exposure'),
             $leverage,
             $carryMargin,
+            ($limits['market_breakers'] ?? true) !== false,
         );
     }
 
@@ -129,6 +131,7 @@ final readonly class RiskPolicy
             'net_exposure' => (string) $this->netExposure,
             'perpetual_leverage' => $this->perpetualLeverage,
             'carry_extra_margin' => (string) $this->carryExtraMargin,
+            'market_breakers' => $this->marketBreakers ? 'on' : 'off',
         ];
     }
 
@@ -138,6 +141,6 @@ final readonly class RiskPolicy
         $zero = Decimal::zero();
 
         // One position of all free quote (spot) or 99 % of the free USD-M wallet at 1x (perpetual), no limits (D-40, D-50).
-        return new self(RiskProfile::Benchmark, $one, $one, $one, 1, $one, $one, $one, $one, $zero, Decimal::of(2), $one, 1, Decimal::of('0.5'));
+        return new self(RiskProfile::Benchmark, $one, $one, $one, 1, $one, $one, $one, $one, $zero, Decimal::of(2), $one, 1, Decimal::of('0.5'), false);
     }
 }

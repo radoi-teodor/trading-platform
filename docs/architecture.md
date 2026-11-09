@@ -65,10 +65,10 @@ One engine process per account. It reacts to events (a candle closes, a fill arr
 arrives) and handles each one to the end before the next. Order inside one event:
 
 1. **Stamp** the event with the clock (`WallClock` live and paper, `SimClock` in backtests).
-2. **Apply commands** queued since the last event (pause, resume, halt, flatten, promote). Commands are journaled
-   with the event they were applied at.
-3. **Reconcile** with the venue: open orders, fills, balances, positions. The venue wins every disagreement
+2. **Reconcile** with the venue: open orders, fills, balances, positions. The venue wins every disagreement
    (D-10). A disagreement is journaled and alerted.
+3. **Apply commands** queued since the last event (pause, resume, halt, flatten). Commands are journaled with the
+   event they were applied at.
 4. **Update the ledger**: fills, fees in the asset they were charged in, funding payments; positions; equity.
 5. **Update risk state**: daily and weekly loss, drawdown from peak, data freshness, venue error rate. Trip
    circuit breakers if needed.

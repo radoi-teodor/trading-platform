@@ -6,7 +6,9 @@ namespace App\Execution;
 
 use App\Execution\Contracts\DecisionLog;
 use App\Execution\Contracts\Venue;
+use App\Execution\Data\CommandKind;
 use App\Execution\Data\DecisionRecord;
+use App\Execution\Data\EngineCommand;
 use App\Execution\Data\EngineMode;
 use App\Execution\Data\EngineRecord;
 use App\Execution\Data\Income;
@@ -27,6 +29,7 @@ use App\Portfolio\Data\Marks;
 use App\Portfolio\Data\PerpPosition;
 use App\Portfolio\Data\Position;
 use App\Portfolio\Ledger;
+use App\Risk\Breakers\MarketBreakers;
 use App\Risk\Data\AccountView;
 use App\Risk\Data\RejectionReason;
 use App\Risk\Data\RiskEventKind;
@@ -108,6 +111,7 @@ final class Engine
         }
 
         $this->riskState = new RiskState($policy);
+        $this->breakers = new MarketBreakers;
         $this->risk = new RiskEngine($policy, $this->riskState, $maintenanceRate);
         $this->book = new OrderBook;
         $this->orders = new OrderManager($venue, $this->book);
@@ -134,6 +138,14 @@ final class Engine
     /** The time of the event being handled. */
     private ?CarbonImmutable $time = null;
 
+    private MarketBreakers $breakers;
+
+    /** @var array<string, true> strategies paused by the operator, by label */
+    private array $paused = [];
+
+    /** Events in a row whose reconciliation found a difference (testnet and live). */
+    private int $mismatches = 0;
+
     /** @var array<string, StrategyLimits> each limited strategy's own limits, by key (D-54) */
     private array $limits = [];
 
@@ -141,11 +153,16 @@ final class Engine
     private array $entries = [];
 
     /** Handles the minute that closed at $event->closedAt; returns the account's equity marked at that moment. */
-    public function handle(MinuteCandles $event): Decimal
+    /**
+     * Handles the minute that closed at $event->closedAt; returns the account's equity marked at that moment.
+     *
+     * @param  list<EngineCommand>  $commands  applied once the venue is reconciled (docs/engine.md, section 9)
+     */
+    public function handle(MinuteCandles $event, array $commands = []): Decimal
     {
         $time = $event->closedAt;
         $this->time = $time;
-        $this->reconcile();
+        $this->reconcileOrTolerate($time);
 
         foreach ($this->orders->expireEntries($time) as $order) {
             $this->log->event(new EngineRecord($time, 'entry_expired', "{$order->id} of {$order->strategy}"));
@@ -161,12 +178,51 @@ final class Engine
             $this->funding[$symbol] = $rate;
         }
 
+        foreach ($commands as $command) {
+            $this->apply($command, $time);
+        }
+
+        foreach ($this->policy->marketBreakers ? $this->breakers->observe($event) : [] as $breaker) {
+            $this->log->event(new EngineRecord($time, $breaker->tripped ? 'breaker_tripped' : 'breaker_cleared', "{$breaker->kind} {$breaker->symbol}: {$breaker->detail}"));
+        }
+
         $equity = $this->ledger->equity($this->marks);
         $this->applyRiskEvents($time, $equity);
         $this->protectAll($time);
         $this->runStrategies($event);
 
         return $equity;
+    }
+
+    /**
+     * The account as the UI shows it: equity, balances, positions, working orders, halts, paused strategies and the
+     * instruments a breaker blocks.
+     *
+     * @return array<string, mixed>
+     */
+    public function snapshot(): array
+    {
+        $time = $this->time;
+
+        return [
+            'time' => $time,
+            'mode' => $this->mode->value,
+            'equity' => $this->ledger->equity($this->marks),
+            'balances' => $this->ledger->balances(),
+            'futures_wallet' => $this->ledger->futuresWallet(),
+            'positions' => [
+                ...array_map(fn ($p): array => ['strategy' => $p->strategy, 'symbol' => (string) $p->symbol, 'side' => 'buy', 'quantity' => $p->quantity, 'entry' => $p->entryPrice(), 'stop' => $this->orders->plan($p->strategy, $p->symbol)?->stop?->value], $this->ledger->positions()),
+                ...array_map(fn ($p): array => ['strategy' => $p->strategy, 'symbol' => (string) $p->symbol, 'side' => $p->side->value, 'quantity' => $p->quantity, 'entry' => $p->entryPrice, 'stop' => $this->orders->plan($p->strategy, $p->symbol)?->stop?->value], $this->ledger->perpPositions()),
+            ],
+            'orders' => array_map(fn (TrackedOrder $o): array => ['id' => $o->id->value, 'strategy' => $o->strategy, 'symbol' => (string) $o->symbol, 'role' => $o->role->value], $this->book->working()),
+            'halt' => $time === null ? null : $this->riskState->entryBlock($time),
+            'paused' => array_keys($this->paused),
+            'blocked' => $time === null ? [] : array_values(array_filter(array_map(
+                fn (string $symbol): ?string => ($why = $this->breakers->block($symbol, $time)) === null ? null : "{$symbol}: {$why}",
+                array_keys($this->symbols),
+            ))),
+            'trips' => count($this->ledger->roundTrips()),
+        ];
     }
 
     public function ledger(): Ledger
@@ -177,6 +233,76 @@ final class Engine
     public function marks(): Marks
     {
         return $this->marks;
+    }
+
+    /**
+     * A backtest or paper engine and its venue are both our code, so a difference is a bug and stops the run. On
+     * testnet (and later live) the venue is the truth (D-10): a difference is journaled, and one that lasts two
+     * events halts the account (docs/risk-policy.md, section 3).
+     */
+    private function reconcileOrTolerate(CarbonImmutable $time): void
+    {
+        if ($this->mode !== EngineMode::Testnet && $this->mode !== EngineMode::Live) {
+            $this->reconcile();
+
+            return;
+        }
+
+        try {
+            $this->reconcile();
+            $this->mismatches = 0;
+        } catch (ReconciliationMismatch $mismatch) {
+            $this->mismatches++;
+            $this->log->event(new EngineRecord($time, 'reconciliation_mismatch', $mismatch->getMessage()));
+
+            if ($this->mismatches === 2) {
+                $this->riskState->halt();
+                $this->log->event(new EngineRecord($time, 'reconciliation_halt', 'a difference with the venue lasted two events'));
+            }
+        }
+    }
+
+    /** Step 2: a command of the operator or the command line (docs/risk-policy.md, section 5). */
+    private function apply(EngineCommand $command, CarbonImmutable $time): void
+    {
+        $this->log->event(new EngineRecord($time, 'command', $command->describe()));
+
+        match ($command->kind) {
+            CommandKind::Halt => $this->halt($time),
+            CommandKind::Resume => $this->riskState->resume(),
+            CommandKind::Flatten => $this->flatten($time),
+            CommandKind::Pause => $this->paused[$command->strategy ?? ''] = true,
+            CommandKind::ResumeStrategy => (function () use ($command): void {
+                unset($this->paused[$command->strategy ?? '']);
+            })(),
+        };
+    }
+
+    private function halt(CarbonImmutable $time): void
+    {
+        $this->riskState->halt();
+        $this->cancelEntries($time);
+    }
+
+    private function cancelEntries(CarbonImmutable $time): void
+    {
+        foreach ($this->orders->cancelEntries() as $order) {
+            $this->log->event(new EngineRecord($time, 'entry_cancelled', "{$order->id} of {$order->strategy}"));
+        }
+    }
+
+    /** Spot first, then the perpetuals, so a carry's hedge is closed last (docs/risk-policy.md, section 5). */
+    private function flatten(CarbonImmutable $time): void
+    {
+        $this->halt($time);
+
+        foreach ($this->ledger->positions() as $position) {
+            $this->exit($position, OrderRole::Flatten, $time);
+        }
+
+        foreach ($this->ledger->perpPositions() as $position) {
+            $this->orders->exitPerpetual($position, OrderRole::Flatten, $time);
+        }
     }
 
     /** Step 3: book the venue's fills, then require the ledger and the venue to agree (D-10, D-41). */
@@ -304,15 +430,12 @@ final class Engine
             $this->log->event(new EngineRecord($time, $event->kind->value, "equity {$event->equity}"));
 
             // A halt stops new entries: working ones are cancelled, protection stays (docs/engine.md, section 5).
-            foreach ($this->orders->cancelEntries() as $order) {
-                $this->log->event(new EngineRecord($time, 'entry_cancelled', "{$order->id} of {$order->strategy}"));
-            }
+            $this->cancelEntries($time);
 
             if ($event->kind !== RiskEventKind::DrawdownFlatten) {
                 continue;
             }
 
-            // Spot first, then the perpetuals, so a carry's hedge is closed last (docs/risk-policy.md, section 5).
             foreach ($this->ledger->positions() as $position) {
                 $this->exit($position, OrderRole::Flatten, $time);
             }
@@ -407,11 +530,14 @@ final class Engine
         $intents = $strategy->onCandle(new StrategyContext($time, $symbol, $candle, $view, $this->funding[(string) $symbol] ?? null));
         $records = [];
         $entered = [];
+        $paused = isset($this->paused[$strategy->identity()->label()]);
 
         foreach ($intents as $intent) {
-            $records[] = $time < $this->tradingFrom
-                ? $this->record($intent, Verdict::rejected(RejectionReason::Warmup))
-                : $this->act($key, $intent, $candle->close, $time, $entered);
+            $records[] = match (true) {
+                $time < $this->tradingFrom => $this->record($intent, Verdict::rejected(RejectionReason::Warmup)),
+                $paused => $this->record($intent, Verdict::rejected(RejectionReason::Paused)),
+                default => $this->act($key, $intent, $candle->close, $time, $entered),
+            };
         }
 
         $this->log->decision(new DecisionRecord(
@@ -435,6 +561,10 @@ final class Engine
             }
 
             $entered[(string) $symbol] = true;
+
+            if ($this->breakers->block((string) $symbol, $time) !== null) {
+                return $this->record($intent, Verdict::rejected(RejectionReason::Breaker));
+            }
 
             return $intent instanceof OpenCarry ? $this->openCarry($strategy, $intent, $price, $time) : $this->open($strategy, $intent, $price, $time);
         }

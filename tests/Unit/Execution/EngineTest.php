@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use App\Execution\Contracts\Venue;
 use App\Execution\Data\Balance;
+use App\Execution\Data\CommandKind;
+use App\Execution\Data\EngineCommand;
 use App\Execution\Data\EngineMode;
 use App\Execution\Data\EngineRecord;
 use App\Execution\Data\FeeSchedule;
@@ -62,6 +64,9 @@ final class EngineHarness
 {
     public int $minute = 0;
 
+    /** @var list<EngineCommand> applied with the next minute */
+    public array $commands = [];
+
     public function __construct(public SimClock $clock, public SimulatedVenue $venue, public Engine $engine, public InMemoryDecisionLog $log) {}
 
     public function minute(string $open, string $high, string $low, string $close, string $volume = '1000'): Decimal
@@ -74,7 +79,10 @@ final class EngineHarness
         $this->clock->advanceTo($candle->endsAt());
         $this->venue->match(Symbol::parse('BTC/USDT'), $candle);
 
-        return $this->engine->handle(new MinuteCandles($candle->endsAt(), ['BTC/USDT' => $candle]));
+        $commands = $this->commands;
+        $this->commands = [];
+
+        return $this->engine->handle(new MinuteCandles($candle->endsAt(), ['BTC/USDT' => $candle]), $commands);
     }
 
     public function usdt(): string
@@ -99,7 +107,7 @@ function policyWith(array $overrides = []): RiskPolicy
  * @param  Strategy|list<Strategy>  $strategies
  * @param  (Closure(SimulatedVenue): Venue)|null  $wrap
  */
-function engineHarness(Strategy|array $strategies, ?RiskPolicy $policy = null, string $step = '0.001', string $tradingFrom = ENGINE_START, ?Closure $wrap = null, string $minNotional = '5', ?string $decideFrom = null): EngineHarness
+function engineHarness(Strategy|array $strategies, ?RiskPolicy $policy = null, string $step = '0.001', string $tradingFrom = ENGINE_START, ?Closure $wrap = null, string $minNotional = '5', ?string $decideFrom = null, EngineMode $mode = EngineMode::Backtest): EngineHarness
 {
     $clock = new SimClock(CarbonImmutable::parse(ENGINE_START, 'UTC'));
     $rules = ['BTC/USDT' => new RulesHistory(Symbol::parse('BTC/USDT'), [new InstrumentRules(
@@ -114,7 +122,7 @@ function engineHarness(Strategy|array $strategies, ?RiskPolicy $policy = null, s
     );
     $log = new InMemoryDecisionLog;
     $engine = new Engine(
-        EngineMode::Backtest,
+        $mode,
         $wrap === null ? $venue : $wrap($venue),
         new Ledger(Asset::of('USDT'), [Money::of('10000', Asset::of('USDT'))]),
         $policy ?? policyWith(),
@@ -484,4 +492,69 @@ it('cancels working entries when a loss limit halts new entries', function (): v
 
     expect($h->events())->toBe(['daily_loss_halt', 'entry_cancelled'])
         ->and(array_map(fn ($o): string => "{$o->type->value} {$o->side->value}", $h->venue->openOrders()))->toBe(['stop_market sell']);
+});
+
+it('halts, resumes and flattens on the operator\'s commands, applied at the next minute and journaled', function (): void {
+    $h = engineHarness(new ScriptedStrategy(['00:03' => [long()], '00:05' => [long()]]));
+    $h->minute('100', '100', '100', '100');
+    $h->commands = [new EngineCommand(CommandKind::Halt, null, 'operator')];
+    $h->minute('100', '100', '100', '100');
+    $h->minute('100', '100', '100', '100');
+
+    expect($h->log->decisions[0]->intents[0]->rejection)->toBe('halted')
+        ->and($h->events())->toBe(['command']);
+
+    $h->commands = [new EngineCommand(CommandKind::Resume, null, 'operator')];
+    $h->minute('100', '100', '100', '100');
+    $h->minute('100', '100', '100', '100');
+
+    expect($h->log->decisions[1]->intents[0]->approved)->toBeTrue();
+
+    $h->commands = [new EngineCommand(CommandKind::Flatten, null, 'operator')];
+    $h->minute('100', '100', '100', '100');
+    $h->minute('100', '100', '100', '100');
+
+    expect($h->engine->ledger()->positions())->toBe([])
+        ->and($h->engine->ledger()->roundTrips()[0]->exitReason)->toBe(ExitReason::Flatten)
+        ->and($h->engine->snapshot()['halt'])->toBe('operator');
+});
+
+it('rejects every intent of a paused strategy until it is resumed', function (): void {
+    $h = engineHarness(new ScriptedStrategy(['00:02' => [long()], '00:04' => [long()]]));
+    $h->commands = [new EngineCommand(CommandKind::Pause, 'scripted@v1', 'operator')];
+    $h->minute('100', '100', '100', '100');
+    $h->minute('100', '100', '100', '100');
+    $h->commands = [new EngineCommand(CommandKind::ResumeStrategy, 'scripted@v1', 'operator')];
+    $h->minute('100', '100', '100', '100');
+    $h->minute('100', '100', '100', '100');
+
+    expect($h->log->decisions[0]->intents[0]->rejection)->toBe('paused')
+        ->and($h->log->decisions[1]->intents[0]->approved)->toBeTrue();
+});
+
+it('rejects an entry on an instrument a breaker blocks', function (): void {
+    $h = engineHarness(new ScriptedStrategy(['01:02' => [long('95', '110')]]));
+
+    foreach (range(1, 60) as $_) {
+        $h->minute('100', '100.5', '99.5', '100');
+    }
+
+    $h->minute('100', '103.1', '97', '100');
+    $h->minute('100', '100.5', '99.5', '100');
+
+    expect($h->events())->toBe(['breaker_tripped'])
+        ->and($h->log->decisions[0]->intents[0]->rejection)->toBe('breaker');
+});
+
+it('tolerates a difference with a testnet venue for one event and halts on the second (D-10)', function (): void {
+    $h = engineHarness(new ScriptedStrategy(['00:03' => [long()]]), wrap: fn (SimulatedVenue $venue): Venue => new OverReportingVenue($venue), mode: EngineMode::Testnet);
+    $h->minute('100', '100', '100', '100');
+
+    expect($h->events())->toBe(['reconciliation_mismatch']);
+
+    $h->minute('100', '100', '100', '100');
+    $h->minute('100', '100', '100', '100');
+
+    expect($h->events())->toBe(['reconciliation_mismatch', 'reconciliation_mismatch', 'reconciliation_halt', 'reconciliation_mismatch'])
+        ->and($h->log->decisions[0]->intents[0]->rejection)->toBe('halted');
 });

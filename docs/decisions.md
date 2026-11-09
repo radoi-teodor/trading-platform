@@ -438,6 +438,17 @@ its range covers, the point of control the fullest bin's middle (the lower on a 
 it, one bin at a time towards the larger neighbour, until it holds 70 % of the volume. They are checked against the
 Python oracle like every other indicator.
 
+**D-73. Market breakers on every account engine, backtests included** (2026-11-09, with Phase 4 step 3)
+Price sanity and volatility shock (`risk-policy.md`, section 3) are evaluated by the engine on every minute, so a
+backtest pauses entries exactly as paper and live will (D-8). Benchmarks run without them (`market_breakers` is off in
+the benchmark profile) and the closed-form carry test turns them off explicitly. Three golden reports changed
+because a breaker blocked an entry (Donchian on ETH, the short Donchian and the carry); the benchmark reports did
+not. Measured on the golden data (Binance, 2026-10-01 to 10), the volatility shock as written (a minute above 5
+times the hour's mean range) trips 10 to 30 times a day per instrument, each time pausing entries for 15 minutes;
+changing that threshold is a risk decision left to the operator. Wide spread needs the order book and waits for the
+tick stream; stale data, venue errors and clock skew are tripped by `engine:run` and the venue. Commands are applied
+right after the venue is reconciled, so a flatten sees the positions the venue reports.
+
 | Id | Question | Blocks |
 |----|----------|--------|
 | O-6 | Pay Binance fees in BNB (25 % off spot)? Needs a small BNB balance whose price moves. | Live cost model (D-28 reads it from the account either way) |

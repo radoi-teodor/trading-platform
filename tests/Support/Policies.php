@@ -16,7 +16,7 @@ final class Policies
         'perpetual_leverage' => 2, 'carry_extra_margin' => '0.50',
     ];
 
-    /** @param array<string, string|int> $overrides */
+    /** @param array<string, string|int|bool> $overrides */
     public static function account(array $overrides = []): RiskPolicy
     {
         return RiskPolicy::account([...self::DEFAULTS, ...$overrides]);
