@@ -38,6 +38,7 @@ use App\Risk\Data\Verdict;
 use App\Risk\RiskEngine;
 use App\Risk\RiskPolicy;
 use App\Risk\RiskState;
+use App\Strategy\Contracts\CrossSectionalStrategy;
 use App\Strategy\Contracts\LimitedStrategy;
 use App\Strategy\Contracts\Strategy;
 use App\Strategy\Data\Close;
@@ -82,8 +83,14 @@ final class Engine
 
     private int $cursor = 0;
 
-    /** @var array<string, CandleAggregator> by symbol and timeframe */
+    /** @var array<string, array<string, CandleAggregator>> by symbol, then timeframe */
     private array $aggregators = [];
+
+    /** @var array<string, array<string, Symbol>> the candles each universe strategy follows: by strategy key, then "symbol|timeframe" */
+    private array $followed = [];
+
+    /** @var array<string, list<Intent>> a universe strategy's entries waiting for its closes to fill, by strategy key (D-92) */
+    private array $held = [];
 
     /** @var array<string, Symbol> parsed once */
     private array $symbols = [];
@@ -130,7 +137,12 @@ final class Engine
             }
 
             foreach ($strategy->subscriptions() as $subscription) {
-                $this->aggregators["{$subscription->symbol}|{$subscription->timeframe->value}"] ??= new CandleAggregator($subscription->timeframe);
+                $this->aggregators[(string) $subscription->symbol][$subscription->timeframe->value] ??= new CandleAggregator($subscription->timeframe);
+
+                if ($strategy instanceof CrossSectionalStrategy) {
+                    $this->followed[$strategy->identity()->key()]["{$subscription->symbol}|{$subscription->timeframe->value}"] = $subscription->symbol;
+                }
+
                 $owner = $owners[(string) $subscription->symbol] ??= $strategy->identity()->key();
 
                 if ($subscription->symbol->isPerpetual() && $owner !== $strategy->identity()->key()) {
@@ -497,10 +509,8 @@ final class Engine
         $closed = [];
 
         foreach ($event->candles as $symbol => $minute) {
-            foreach ($this->aggregators as $key => $aggregator) {
-                if (str_starts_with($key, "{$symbol}|")) {
-                    $closed[$key] = $aggregator->push($minute);
-                }
+            foreach ($this->aggregators[$symbol] ?? [] as $timeframe => $aggregator) {
+                $closed["{$symbol}|{$timeframe}"] = $aggregator->push($minute);
             }
         }
 
@@ -511,6 +521,13 @@ final class Engine
         }
 
         foreach ($this->strategies as $strategy) {
+            if ($strategy instanceof CrossSectionalStrategy) {
+                $this->release($strategy, $event->closedAt);
+                $this->decideTogether($strategy, $closed, $event->closedAt);
+
+                continue;
+            }
+
             foreach ($strategy->subscriptions() as $subscription) {
                 $candle = $closed["{$subscription->symbol}|{$subscription->timeframe->value}"] ?? null;
 
@@ -521,9 +538,129 @@ final class Engine
         }
     }
 
-    private function decide(Strategy $strategy, Symbol $symbol, Candle $candle, CarbonImmutable $time): void
+    /**
+     * A universe strategy decides for all its instruments at once (D-92): it is given every candle of its own that
+     * closed at this moment, and its closes and stop moves are acted on first. When a close went to the venue, the
+     * entries wait for the next minute, when it has filled, so the position and the risk it frees go to the best
+     * ranked; a batch that closes nothing enters in the same minute. Entries keep the order the strategy gave.
+     *
+     * @param  array<string, ?Candle>  $closed  by "symbol|timeframe"
+     */
+    private function decideTogether(CrossSectionalStrategy $strategy, array $closed, CarbonImmutable $time): void
     {
         $key = $strategy->identity()->key();
+        $contexts = [];
+        $quiet = [];
+
+        foreach ($closed as $candleKey => $candle) {
+            $symbol = $candle === null ? null : ($this->followed[$key][$candleKey] ?? null);
+
+            if ($candle !== null && $symbol !== null) {
+                $contexts[] = $this->context($key, $symbol, $candle, $time);
+                $quiet[(string) $symbol] = $symbol;
+            }
+        }
+
+        if ($contexts === []) {
+            return;
+        }
+
+        $managed = [];
+        $entries = [];
+
+        foreach ($strategy->onCloses($contexts) as $intent) {
+            if ($intent instanceof OpenLong || $intent instanceof OpenShort || $intent instanceof OpenCarry) {
+                $entries[] = $intent;
+            } else {
+                $managed[] = $intent;
+            }
+
+            unset($quiet[(string) $intent->symbol()]);
+        }
+
+        $entered = [];
+        $records = $this->actTogether($strategy, $managed, $time, $entered);
+        $closing = false;
+
+        foreach ($records as [$intent, $record]) {
+            $closing = $closing || ($intent instanceof Close && $record->approved);
+        }
+
+        if ($closing && $entries !== []) {
+            $this->held[$key] = $entries;
+        } else {
+            $records = [...$records, ...$this->actTogether($strategy, $entries, $time, $entered)];
+        }
+
+        $this->logTogether($strategy, $records, $time);
+
+        foreach ($quiet as $symbol) {
+            $this->log->decision(new DecisionRecord(self::decisionId($key, $time), $time, $strategy->identity()->label(), $symbol, (string) $this->mark($symbol), []));
+        }
+    }
+
+    /** Submits the entries a universe strategy's last batch left waiting, at the prices of this minute (D-92). */
+    private function release(CrossSectionalStrategy $strategy, CarbonImmutable $time): void
+    {
+        $key = $strategy->identity()->key();
+        $entries = $this->held[$key] ?? [];
+        unset($this->held[$key]);
+
+        if ($entries !== []) {
+            $entered = [];
+            $this->logTogether($strategy, $this->actTogether($strategy, $entries, $time, $entered), $time);
+        }
+    }
+
+    /**
+     * @param  list<Intent>  $intents
+     * @param  array<string, true>  $entered
+     * @return list<array{Intent, IntentRecord}>
+     */
+    private function actTogether(Strategy $strategy, array $intents, CarbonImmutable $time, array &$entered): array
+    {
+        $key = $strategy->identity()->key();
+        $paused = isset($this->paused[$strategy->identity()->label()]);
+        $records = [];
+
+        foreach ($intents as $intent) {
+            $records[] = [$intent, match (true) {
+                $time < $this->tradingFrom => $this->record($intent, Verdict::rejected(RejectionReason::Warmup)),
+                $paused => $this->record($intent, Verdict::rejected(RejectionReason::Paused)),
+                default => $this->act($key, $intent, $this->mark($intent->symbol()), $time, $entered),
+            }];
+        }
+
+        return $records;
+    }
+
+    /**
+     * One decision record per instrument, in the order its first intent was handled.
+     *
+     * @param  list<array{Intent, IntentRecord}>  $records
+     */
+    private function logTogether(Strategy $strategy, array $records, CarbonImmutable $time): void
+    {
+        $bySymbol = [];
+
+        foreach ($records as [$intent, $record]) {
+            $bySymbol[(string) $intent->symbol()][] = $record;
+        }
+
+        foreach ($bySymbol as $symbol => $list) {
+            $parsed = $this->symbols[$symbol] ??= Symbol::parse($symbol);
+            $this->log->decision(new DecisionRecord(self::decisionId($strategy->identity()->key(), $time), $time, $strategy->identity()->label(), $parsed, (string) $this->mark($parsed), $list));
+        }
+    }
+
+    private static function decisionId(string $key, CarbonImmutable $time): string
+    {
+        return sprintf('%s-%s', $key, base_convert((string) $time->getTimestamp(), 10, 36));
+    }
+
+    /** What a strategy is shown of $symbol when $candle closes: its position, the last funding and the data for scalping. */
+    private function context(string $key, Symbol $symbol, Candle $candle, CarbonImmutable $time): StrategyContext
+    {
         $plan = $this->orders->plan($key, $symbol);
 
         if ($symbol->isPerpetual()) {
@@ -534,10 +671,16 @@ final class Engine
             $view = $position === null ? null : new PositionView($position->quantity, $position->entryPrice(), $plan?->stop, $position->openedAt);
         }
 
-        $intents = $strategy->onCandle(new StrategyContext(
+        return new StrategyContext(
             $time, $symbol, $candle, $view, $this->funding[(string) $symbol] ?? null,
             $symbol->isPerpetual() ? $this->perpetuals->view((string) $symbol, $candle) : null,
-        ));
+        );
+    }
+
+    private function decide(Strategy $strategy, Symbol $symbol, Candle $candle, CarbonImmutable $time): void
+    {
+        $key = $strategy->identity()->key();
+        $intents = $strategy->onCandle($this->context($key, $symbol, $candle, $time));
         $records = [];
         $entered = [];
         $paused = isset($this->paused[$strategy->identity()->label()]);
@@ -551,7 +694,7 @@ final class Engine
         }
 
         $this->log->decision(new DecisionRecord(
-            sprintf('%s-%s', $key, base_convert((string) $time->getTimestamp(), 10, 36)),
+            self::decisionId($key, $time),
             $time,
             $strategy->identity()->label(),
             $symbol,

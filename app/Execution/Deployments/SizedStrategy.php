@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Execution\Deployments;
 
 use App\Risk\RiskPolicy;
+use App\Strategy\Contracts\CrossSectionalStrategy;
 use App\Strategy\Contracts\LimitedStrategy;
 use App\Strategy\Contracts\Strategy;
 use App\Strategy\Data\StrategyContext;
@@ -20,6 +21,14 @@ use App\Support\Number\Decimal;
 final readonly class SizedStrategy implements LimitedStrategy
 {
     public function __construct(private Strategy $strategy, private Decimal $multiplier, private ?Decimal $notionalCap, private RiskPolicy $policy) {}
+
+    /** A strategy at its step of the ladder; one over a universe stays one over a universe (D-92). */
+    public static function of(Strategy $strategy, Decimal $multiplier, ?Decimal $notionalCap, RiskPolicy $policy): LimitedStrategy
+    {
+        $sized = new self($strategy, $multiplier, $notionalCap, $policy);
+
+        return $strategy instanceof CrossSectionalStrategy ? new SizedUniverseStrategy($strategy, $sized) : $sized;
+    }
 
     public function identity(): StrategyIdentity
     {

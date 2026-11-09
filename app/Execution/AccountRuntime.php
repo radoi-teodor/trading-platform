@@ -291,7 +291,7 @@ final class AccountRuntime
             $multiplier = Decimal::of($deployment->size_multiplier);
             // A step of the ladder below full size, or live micro's notional cap, tightens the strategy's limits (D-83).
             $cap = $deployment->stage === 'live_micro' ? Decimal::of(self::MICRO_NOTIONAL) : null;
-            $strategies[] = $multiplier->equals(Decimal::of(1)) && $cap === null ? $strategy : new SizedStrategy($strategy, $multiplier, $cap, $policy);
+            $strategies[] = $multiplier->equals(Decimal::of(1)) && $cap === null ? $strategy : SizedStrategy::of($strategy, $multiplier, $cap, $policy);
         }
 
         return $strategies;
