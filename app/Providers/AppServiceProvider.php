@@ -62,6 +62,7 @@ final class AppServiceProvider extends ServiceProvider
             perpStream: Config::string('exchanges.binance.perp.stream'),
             archive: Config::string('exchanges.binance.archive'),
             timeoutSeconds: Config::integer('exchanges.binance.timeout_seconds'),
+            perpDepthStream: Config::string('exchanges.binance.perp.depth_stream'),
         ));
         $this->app->bind(BinanceArchive::class, fn (): BinanceArchive => new BinanceArchive(
             http: $this->app->make(HttpFactory::class),

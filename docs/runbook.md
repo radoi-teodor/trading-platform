@@ -16,6 +16,7 @@ created in the phase that needs it and this file is updated with it.
 | market-data | `php artisan market:stream spot` and `php artisan market:stream perp` | Every enabled instrument has a candle less than 2 timeframes old |
 | engine | `php artisan engine:run <account>` (the account's mode: paper or testnet) | The account's snapshot is under 2 minutes old, no open reconciliation mismatch |
 | notifications | `php artisan queue:work database --queue=notifications` | No failed jobs |
+| order books | `php artisan market:depth` (`start-local.ps1 -Stream` starts it) | The heartbeat `market:depth` is under 2 minutes old and `book_depth` gains a row per scalping perpetual every 5 minutes (D-91) |
 | simulation worker | `php artisan queue:work simulation --queue=simulation,market --timeout=21600 --tries=1` | Runs and history imports leave `queued` |
 | scheduler | `php artisan schedule:work` | The daily report arrives each morning (D-77); `php artisan schedule:list` shows the jobs |
 | web | `php artisan serve` (or PHP-FPM behind a reverse proxy) | `/up` answers |

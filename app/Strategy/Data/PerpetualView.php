@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Strategy\Data;
 
+use App\Market\Data\BookDepth;
 use App\Support\Number\Decimal;
 
 /**
@@ -22,5 +23,6 @@ final readonly class PerpetualView
         public ?Decimal $longShortRatio = null,
         public ?Decimal $topTraderRatio = null,
         public ?Decimal $takerRatio = null,
+        public ?BookDepth $depth = null,
     ) {}
 }

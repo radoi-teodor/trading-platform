@@ -14,6 +14,8 @@ return [
             // USD-M market streams (klines, aggregated trades, mark price) are served under /market; the bare host
             // still accepts a connection and sends nothing (found 2026-11-09).
             'stream' => env('BINANCE_PERP_STREAM', 'wss://fstream.binance.com/market'),
+            // Order book diffs (<symbol>@depth) are on /public (D-91).
+            'depth_stream' => env('BINANCE_PERP_DEPTH_STREAM', 'wss://fstream.binance.com/public'),
         ],
         'archive' => env('BINANCE_ARCHIVE', 'https://data.binance.vision'),
         // The archive's public S3 listing: every symbol that ever had a file, delisted ones included (D-89).

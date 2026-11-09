@@ -28,6 +28,7 @@ final class BackfillMarketData extends Command
         {--flow : Also the trade flow from aggregated trades, for perpetuals (D-79)}
         {--oi : Also open interest, for perpetuals}
         {--mark : Also the mark price and the premium index, for perpetuals}
+        {--depth : Also the order book depth within 1, 2 and 5 %, for perpetuals (D-91)}
         {--large= : The notional from which a trade is large, in quote (default config/market.php)}
         {--candles=yes : no to leave the candles out}';
 
@@ -51,10 +52,10 @@ final class BackfillMarketData extends Command
         }
 
         $failed = false;
-        $scalping = (bool) $this->option('flow') || (bool) $this->option('oi') || (bool) $this->option('mark');
+        $scalping = (bool) $this->option('flow') || (bool) $this->option('oi') || (bool) $this->option('mark') || (bool) $this->option('depth');
 
         if ($scalping && is_string($this->argument('symbol')) && ! Symbol::parse($this->argument('symbol'))->isPerpetual()) {
-            $this->error('--flow, --oi and --mark are for perpetuals, such as BTC/USDT:USDT.');
+            $this->error('--flow, --oi, --mark and --depth are for perpetuals, such as BTC/USDT:USDT.');
 
             return self::INVALID;
         }
@@ -73,7 +74,7 @@ final class BackfillMarketData extends Command
 
             if ($scalping && $instrument->market === MarketType::Perp) {
                 $failed = $this->print($backfill->scalping(
-                    $instrument, $from, $to, (bool) $this->option('flow'), (bool) $this->option('oi'), (bool) $this->option('mark'), $this->largeNotional($instrument, $universe),
+                    $instrument, $from, $to, (bool) $this->option('flow'), (bool) $this->option('oi'), (bool) $this->option('mark'), $this->largeNotional($instrument, $universe), (bool) $this->option('depth'),
                 )) || $failed;
             }
         }

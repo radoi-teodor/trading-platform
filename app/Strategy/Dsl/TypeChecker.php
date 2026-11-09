@@ -205,6 +205,13 @@ final class TypeChecker
                 }
 
                 return $type;
+            case ParamKind::DepthBand:
+                // The order book is kept within 1, 2 and 5 % of the price (D-91), and nowhere else.
+                if (! $value instanceof PercentLiteral || ! in_array((string) $value->fraction, ['0.01', '0.02', '0.05'], true)) {
+                    throw new DslError($value->position(), "{$param->name} of {$spec->name} must be 1%, 2% or 5%, the bands of the order book that are kept.");
+                }
+
+                return Type::of(Kind::Percent);
             case ParamKind::Anchor:
                 if (! $value instanceof DurationLiteral || Timeframe::tryFrom("{$value->amount}{$value->unit}") === null) {
                     throw $wrong();

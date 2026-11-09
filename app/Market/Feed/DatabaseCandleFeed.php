@@ -6,6 +6,7 @@ namespace App\Market\Feed;
 
 use App\Market\CandleRepository;
 use App\Market\Contracts\CandleFeed;
+use App\Market\Data\BookDepth;
 use App\Market\Data\FundingRate;
 use App\Market\Data\MarketType;
 use App\Market\Data\MinuteCandles;
@@ -54,7 +55,7 @@ final readonly class DatabaseCandleFeed implements CandleFeed
             ksort($minutes);
             $funding = $this->funding($symbolsById, $chunk, $end);
             $perpetuals = array_filter($symbolsById, fn (string $symbol): bool => str_contains($symbol, ':'));
-            [$flow, $marks, $premium, $interest, $positioning] = $perpetuals === [] ? [[], [], [], [], []] : $this->scalping($perpetuals, $chunk, $end);
+            [$flow, $marks, $premium, $interest, $positioning, $depth] = $perpetuals === [] ? [[], [], [], [], [], []] : $this->scalping($perpetuals, $chunk, $end);
 
             foreach ($minutes as $candles) {
                 ksort($candles, SORT_STRING);
@@ -62,7 +63,7 @@ final readonly class DatabaseCandleFeed implements CandleFeed
                 $closedAt = $first->endsAt();
                 $at = $closedAt->getTimestamp();
 
-                yield new MinuteCandles($closedAt, $candles, $funding[$at] ?? [], $flow[$at] ?? [], $marks[$at] ?? [], $premium[$at] ?? [], $interest[$at] ?? [], $positioning[$at] ?? []);
+                yield new MinuteCandles($closedAt, $candles, $funding[$at] ?? [], $flow[$at] ?? [], $marks[$at] ?? [], $premium[$at] ?? [], $interest[$at] ?? [], $positioning[$at] ?? [], $depth[$at] ?? []);
             }
         }
     }
@@ -105,7 +106,7 @@ final readonly class DatabaseCandleFeed implements CandleFeed
      * known at: a minute's flow, mark and premium at its own close, open interest five minutes after its time.
      *
      * @param  array<int, string>  $perpetuals  unified symbol by instrument id
-     * @return array{array<int, array<string, TradeFlow>>, array<int, array<string, PriceMinute>>, array<int, array<string, PriceMinute>>, array<int, array<string, OpenInterest>>, array<int, array<string, Positioning>>}
+     * @return array{array<int, array<string, TradeFlow>>, array<int, array<string, PriceMinute>>, array<int, array<string, PriceMinute>>, array<int, array<string, OpenInterest>>, array<int, array<string, Positioning>>, array<int, array<string, BookDepth>>}
      */
     private function scalping(array $perpetuals, CarbonImmutable $from, CarbonImmutable $to): array
     {
@@ -151,7 +152,16 @@ final readonly class DatabaseCandleFeed implements CandleFeed
             $positioning[$p->knownAt()->getTimestamp()][$perpetuals[Rows::int($row, 'instrument_id')]] = $p;
         }
 
-        return [$flow, $marks, $premium, $interest, $positioning];
+        $depth = [];
+
+        foreach ($this->db->table('book_depth')->whereIn('instrument_id', $ids)
+            ->where('time', '>', Rows::timestamp($from->subSeconds(OpenInterest::KNOWN_AFTER_SECONDS)))
+            ->where('time', '<=', Rows::timestamp($to->subSeconds(OpenInterest::KNOWN_AFTER_SECONDS)))->get() as $row) {
+            $d = ScalpingRepository::depthRow($row);
+            $depth[$d->knownAt()->getTimestamp()][$perpetuals[Rows::int($row, 'instrument_id')]] = $d;
+        }
+
+        return [$flow, $marks, $premium, $interest, $positioning, $depth];
     }
 
     /**

@@ -29,7 +29,7 @@
 param(
     # Port of the web process.
     [int] $Port = 8000,
-    # Also run market:stream spot and market:stream perp (and the scheduler).
+    # Also run market:stream spot and perp, the order books (market:depth, D-91) and the scheduler.
     [switch] $Stream,
     # Also run the scheduler (daily report, health check, ladder review) without the streams.
     [switch] $Scheduler,
@@ -278,8 +278,8 @@ $commands = @(
     'php artisan queue:work database --queue=notifications --sleep=1'
 )
 if ($Stream) {
-    $names += 'stream-spot', 'stream-perp'
-    $commands += 'php artisan market:stream spot', 'php artisan market:stream perp'
+    $names += 'stream-spot', 'stream-perp', 'depth'
+    $commands += 'php artisan market:stream spot', 'php artisan market:stream perp', 'php artisan market:depth'
 }
 # The scheduler runs platform:health every minute (D-78); without the streams every check fails and is logged
 # with a stack trace, so it starts with the streams, or on request.
@@ -313,7 +313,7 @@ if (-not $NoBrowser) {
 # supervisor of runbook section 2). It is called through node, not the .cmd shim, so Ctrl+C does not ask
 # "Terminate batch job?".
 $arguments = @('node_modules\concurrently\dist\bin\index.js', '--names', ($names -join ','),
-    '--prefix-colors', 'cyan,magenta,yellow,green,blue,white,red,red',
+    '--prefix-colors', 'cyan,magenta,yellow,green,blue,white,gray,red,red,red,red',
     '--restart-tries', '-1', '--restart-after', '5000') + ($commands | ForEach-Object { '"' + $_ + '"' })
 $process = Start-Process -FilePath 'node' -ArgumentList $arguments -NoNewWindow -PassThru
 Set-Content -LiteralPath $PidFile -Value $process.Id

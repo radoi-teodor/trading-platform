@@ -197,6 +197,23 @@ final readonly class BinanceRestClient
     }
 
     /**
+     * A snapshot of a perpetual's order book, the start of a local copy (D-91): its last update id, then bids and asks
+     * as price and quantity. 1,000 levels a side, weight 20.
+     *
+     * @return array{int, list<array{Decimal, Decimal}>, list<array{Decimal, Decimal}>}
+     */
+    public function depthSnapshot(string $venueSymbol): array
+    {
+        $book = $this->get(MarketType::Perp, '/fapi/v1/depth', ['symbol' => $venueSymbol, 'limit' => 1000]);
+        $side = fn (string $key): array => array_values(array_map(
+            fn (mixed $level): array => [Decimal::of(Json::number(Json::array($level, 'depth level'), 0)), Decimal::of(Json::number(Json::array($level, 'depth level'), 1))],
+            Json::arrayAt($book, $key),
+        ));
+
+        return [Json::int($book, 'lastUpdateId'), $side('bids'), $side('asks')];
+    }
+
+    /**
      * A perpetual's positioning every 5 minutes from $from to $to (D-91), joined by time from three endpoints that
      * match the metrics archive's columns: accounts, top traders' positions and taker volume. A ratio an endpoint
      * did not give for a time is null.

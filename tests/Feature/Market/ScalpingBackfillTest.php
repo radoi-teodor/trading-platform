@@ -87,5 +87,5 @@ it('refuses scalping data for a spot instrument', function (): void {
     Instrument::register('binance', MarketType::Spot, Symbol::parse('BTC/USDT'), CarbonImmutable::parse('2026-11-01', 'UTC'));
 
     expect(Artisan::call('market:backfill', ['symbol' => 'BTC/USDT', '--from' => '2026-11-01', '--flow' => true]))->toBe(2)
-        ->and(Artisan::output())->toContain('--flow, --oi and --mark are for perpetuals');
+        ->and(Artisan::output())->toContain('--flow, --oi, --mark and --depth are for perpetuals');
 });

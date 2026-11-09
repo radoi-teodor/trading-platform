@@ -7,6 +7,7 @@ namespace App\Market\Archive;
 use App\Market\Binance\EpochTime;
 use App\Market\Binance\ExchangeNumber;
 use App\Market\Binance\RequestFailed;
+use App\Market\Data\BookDepth;
 use App\Market\Data\Candle;
 use App\Market\Data\FundingRate;
 use App\Market\Data\MarketType;
@@ -147,6 +148,48 @@ final readonly class BinanceArchive
         ksort($rows);
 
         return array_values($rows);
+    }
+
+    /**
+     * The day's order book depth every 5 minutes, oldest first (D-91): of the snapshots Binance took about every 30
+     * seconds (timestamp, percentage, depth, notional), the last of each 5 minutes, its quote notional within 1, 2
+     * and 5 % (negative percentages are bids). A 5 minutes without every band is left out.
+     *
+     * @return list<BookDepth>
+     */
+    public function bookDepth(string $venueSymbol, CarbonImmutable $day): array
+    {
+        $local = $this->archive("futures/um/daily/bookDepth/{$venueSymbol}/{$venueSymbol}-bookDepth-{$day->utc()->format('Y-m-d')}.zip");
+        $snapshots = [];
+
+        foreach (self::lines($local, 4) as $fields) {
+            $time = CarbonImmutable::createFromFormat('Y-m-d H:i:s', $fields[0], 'UTC') ?: throw new UnexpectedValueException("Binance bookDepth: '{$fields[0]}' is not a time.");
+            $bucket = intdiv($time->getTimestamp(), OpenInterest::KNOWN_AFTER_SECONDS) * OpenInterest::KNOWN_AFTER_SECONDS;
+            $snapshot = $snapshots[$bucket] ?? ['at' => 0, 'levels' => []];
+
+            // A later snapshot of the same 5 minutes replaces the earlier one.
+            if ($time->getTimestamp() > $snapshot['at']) {
+                $snapshot = ['at' => $time->getTimestamp(), 'levels' => []];
+            }
+
+            $snapshot['levels'][(string) Decimal::of(ExchangeNumber::plain($fields[1]))] = Decimal::of(ExchangeNumber::plain($fields[3]));
+            $snapshots[$bucket] = $snapshot;
+        }
+
+        ksort($snapshots);
+        $rows = [];
+
+        foreach ($snapshots as $bucket => ['levels' => $levels]) {
+            $band = fn (string $percent): ?Decimal => $levels[$percent] ?? null;
+            $values = [$band('-1'), $band('-2'), $band('-5'), $band('1'), $band('2'), $band('5')];
+
+            if (! in_array(null, $values, true)) {
+                /** @var array{Decimal, Decimal, Decimal, Decimal, Decimal, Decimal} $values */
+                $rows[] = new BookDepth(CarbonImmutable::createFromTimestampUTC($bucket), ...$values);
+            }
+        }
+
+        return $rows;
     }
 
     /** @return list<PriceMinute> the day's 1-minute mark price candles of a USD-M perpetual, oldest first */

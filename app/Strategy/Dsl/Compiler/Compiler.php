@@ -327,6 +327,7 @@ final class Compiler
             'funding_rate_avg' => $this->fundingAverage($count('n')),
             'cvd' => $this->cumulativeDelta($count('n')),
             'oi_change' => $this->openInterestChange($count('n')),
+            'bid_depth', 'ask_depth', 'depth_imbalance' => $this->depth($node->name, (int) (string) $number('band')->times(Decimal::of('100'))->truncatedTo(0)),
             'level' => $series('series'),
             'chandelier' => $this->chandelier($count('n'), $number('k')),
             'atr_trail' => $this->atrTrail($count('n'), $number('k')),
@@ -362,6 +363,27 @@ final class Compiler
     }
 
     /** @return Closure(Frame): ?Decimal open interest now over its value n candles ago, minus 1 (D-79) */
+    /** Order book depth within a band (D-91), or its imbalance: (bids - asks) / (bids + asks). */
+    private function depth(string $name, int $band): Closure
+    {
+        return function (Frame $f) use ($name, $band): ?Decimal {
+            $depth = $f->perpetual?->depth;
+
+            if ($depth === null) {
+                return null;
+            }
+
+            $bid = $depth->bid($band);
+            $ask = $depth->ask($band);
+
+            return match ($name) {
+                'bid_depth' => $bid,
+                'ask_depth' => $ask,
+                default => $bid->plus($ask)->isPositive() ? $bid->minus($ask)->dividedBy($bid->plus($ask), 18) : null,
+            };
+        };
+    }
+
     private function openInterestChange(int $periods): Closure
     {
         $values = [];

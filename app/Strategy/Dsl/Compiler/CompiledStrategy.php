@@ -340,6 +340,7 @@ final class CompiledStrategy implements LimitedStrategy
             'open_interest' => 'open_interest', 'oi_change' => 'open_interest', 'mark_price' => 'mark_price_minutes', 'basis' => 'premium_index_minutes',
             'large_buy_volume' => 'trade_flow', 'large_sell_volume' => 'trade_flow', 'large_delta' => 'trade_flow',
             'long_short_ratio' => 'positioning', 'top_trader_ratio' => 'positioning', 'taker_ratio' => 'positioning',
+            'bid_depth' => 'book_depth', 'ask_depth' => 'book_depth', 'depth_imbalance' => 'book_depth',
         ];
         $exits = $this->spec->exits;
         $expressions = [...$this->spec->filters, ...array_map(fn (EntrySpec $entry) => $entry->when, array_values($this->spec->entries)), $exits->stopLoss, $exits->trailing, $exits->when];

@@ -11,6 +11,7 @@ use App\Market\Archive\ChecksumMismatch;
 use App\Market\Binance\BinanceRequestFailed;
 use App\Market\Binance\BinanceRestClient;
 use App\Market\CandleRepository;
+use App\Market\Data\BookDepth;
 use App\Market\Data\CandleSource;
 use App\Market\Data\FundingRate;
 use App\Market\Data\InstrumentStatus;
@@ -51,7 +52,7 @@ final readonly class Backfill
      * $largeNotional, open interest, and the mark price with the premium index. A day Binance has not published yet
      * is reported and skipped; the live stream and its REST repair fill recent days (D-81).
      */
-    public function scalping(Instrument $perp, CarbonImmutable $from, CarbonImmutable $to, bool $flow, bool $openInterest, bool $marks, Decimal $largeNotional): BackfillReport
+    public function scalping(Instrument $perp, CarbonImmutable $from, CarbonImmutable $to, bool $flow, bool $openInterest, bool $marks, Decimal $largeNotional, bool $depth = false): BackfillReport
     {
         $steps = [];
         $within = fn (CarbonImmutable $t): bool => ! $t->lessThan($from) && ! $t->greaterThan($to);
@@ -63,6 +64,7 @@ final readonly class Backfill
                     'flow' => $flow ? fn (): UpsertResult => $this->scalping->upsertFlow($perp, CandleSource::Archive, array_filter($this->archive->tradeFlow($perp->venue_symbol, $day, $largeNotional), fn (TradeFlow $f): bool => $within($f->openTime))) : null,
                     'open interest' => $openInterest ? fn (): UpsertResult => $this->scalping->upsertOpenInterest($perp, CandleSource::Archive, array_filter($this->archive->openInterest($perp->venue_symbol, $day), fn (OpenInterest $o): bool => $within($o->time))) : null,
                     'positioning' => $openInterest ? fn (): UpsertResult => $this->scalping->upsertPositioning($perp, CandleSource::Archive, array_filter($this->archive->positioning($perp->venue_symbol, $day), fn (Positioning $p): bool => $within($p->time))) : null,
+                    'order book depth' => $depth ? fn (): UpsertResult => $this->scalping->upsertDepth($perp, CandleSource::Archive, array_filter($this->archive->bookDepth($perp->venue_symbol, $day), fn (BookDepth $d): bool => $within($d->time))) : null,
                     'mark price' => $marks ? fn (): UpsertResult => $this->scalping->upsertMarks($perp, CandleSource::Archive, array_filter($this->archive->markPrices($perp->venue_symbol, $day), fn (PriceMinute $m): bool => $within($m->openTime))) : null,
                     'premium index' => $marks ? fn (): UpsertResult => $this->scalping->upsertPremium($perp, CandleSource::Archive, array_filter($this->archive->premiumIndex($perp->venue_symbol, $day), fn (PriceMinute $m): bool => $within($m->openTime))) : null,
                 ]);

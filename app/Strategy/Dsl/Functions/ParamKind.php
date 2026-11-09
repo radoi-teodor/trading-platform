@@ -12,4 +12,5 @@ enum ParamKind: string
     case Anchor = 'a timeframe';
     case Duration = 'a duration';
     case Percent = 'a percent';
+    case DepthBand = 'a band of the order book: 1%, 2% or 5%';
 }

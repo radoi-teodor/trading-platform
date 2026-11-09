@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Market;
 
+use App\Market\Data\BookDepth;
 use App\Market\Data\CandleSource;
 use App\Market\Data\OpenInterest;
 use App\Market\Data\Positioning;
@@ -29,6 +30,7 @@ final readonly class ScalpingRepository
         'trade_flow' => ['open_time', ['large_buy_volume', 'large_sell_volume', 'large_buy_count', 'large_sell_count', 'largest_notional', 'threshold']],
         'open_interest' => ['time', ['contracts', 'value']],
         'positioning' => ['time', ['long_short_ratio', 'top_trader_ratio', 'taker_ratio']],
+        'book_depth' => ['time', ['bid_1', 'bid_2', 'bid_5', 'ask_1', 'ask_2', 'ask_5']],
         'mark_price_minutes' => ['open_time', ['open', 'high', 'low', 'close']],
         'premium_index_minutes' => ['open_time', ['open', 'high', 'low', 'close']],
     ];
@@ -71,6 +73,18 @@ final readonly class ScalpingRepository
         return $this->upsert('positioning', $instrument, $source, $values);
     }
 
+    /** @param iterable<BookDepth> $rows */
+    public function upsertDepth(Instrument $instrument, CandleSource $source, iterable $rows): UpsertResult
+    {
+        $values = [];
+
+        foreach ($rows as $d) {
+            $values[] = [$d->time, (string) $d->bid1, (string) $d->bid2, (string) $d->bid5, (string) $d->ask1, (string) $d->ask2, (string) $d->ask5];
+        }
+
+        return $this->upsert('book_depth', $instrument, $source, $values);
+    }
+
     /** @param iterable<PriceMinute> $rows */
     public function upsertMarks(Instrument $instrument, CandleSource $source, iterable $rows): UpsertResult
     {
@@ -110,6 +124,19 @@ final readonly class ScalpingRepository
         $ratio = fn (string $column): ?Decimal => ($value = Rows::nullableString($r, $column)) === null ? null : Decimal::of($value);
 
         return new Positioning(Rows::time($r, 'time'), $ratio('long_short_ratio'), $ratio('top_trader_ratio'), $ratio('taker_ratio'));
+    }
+
+    /** @return list<BookDepth> 5-minute times from $from to $to, oldest first */
+    public function depth(Instrument $instrument, CarbonImmutable $from, CarbonImmutable $to): array
+    {
+        return array_map(self::depthRow(...), $this->rows('book_depth', $instrument, $from, $to));
+    }
+
+    public static function depthRow(object $r): BookDepth
+    {
+        $d = fn (string $column): Decimal => Decimal::of(Rows::string($r, $column));
+
+        return new BookDepth(Rows::time($r, 'time'), $d('bid_1'), $d('bid_2'), $d('bid_5'), $d('ask_1'), $d('ask_2'), $d('ask_5'));
     }
 
     /** @return list<PriceMinute> */

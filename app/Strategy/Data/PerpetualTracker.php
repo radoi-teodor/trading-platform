@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Strategy\Data;
 
+use App\Market\Data\BookDepth;
 use App\Market\Data\Candle;
 use App\Market\Data\MinuteCandles;
 use App\Market\Data\OpenInterest;
@@ -30,6 +31,9 @@ final class PerpetualTracker
     /** @var array<string, OpenInterest> */
     private array $openInterest = [];
 
+    /** @var array<string, BookDepth> */
+    private array $depth = [];
+
     /** @var array<string, Positioning> */
     private array $positioning = [];
 
@@ -48,6 +52,10 @@ final class PerpetualTracker
 
         foreach ($minute->openInterest as $symbol => $interest) {
             $this->openInterest[$symbol] = $interest;
+        }
+
+        foreach ($minute->depth as $symbol => $depth) {
+            $this->depth[$symbol] = $depth;
         }
 
         foreach ($minute->positioning as $symbol => $positioning) {
@@ -77,6 +85,6 @@ final class PerpetualTracker
         }
 
         return new PerpetualView($this->marks[$symbol]->close ?? null, $this->premium[$symbol]->close ?? null, $this->openInterest[$symbol]->contracts ?? null, $buy, $sell,
-            $this->positioning[$symbol]->longShortRatio ?? null, $this->positioning[$symbol]->topTraderRatio ?? null, $this->positioning[$symbol]->takerRatio ?? null);
+            $this->positioning[$symbol]->longShortRatio ?? null, $this->positioning[$symbol]->topTraderRatio ?? null, $this->positioning[$symbol]->takerRatio ?? null, $this->depth[$symbol] ?? null);
     }
 }

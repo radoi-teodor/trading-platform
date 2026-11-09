@@ -240,8 +240,8 @@ trait PreparesBacktests
             return null;
         }
 
-        $names = ['trade_flow' => 'trade flow', 'open_interest' => 'open interest', 'mark_price_minutes' => 'mark price', 'premium_index_minutes' => 'premium index', 'positioning' => 'positioning ratios'];
-        $flag = ['trade_flow' => '--flow', 'open_interest' => '--oi', 'mark_price_minutes' => '--mark', 'premium_index_minutes' => '--mark', 'positioning' => '--oi'];
+        $names = ['trade_flow' => 'trade flow', 'open_interest' => 'open interest', 'mark_price_minutes' => 'mark price', 'premium_index_minutes' => 'premium index', 'positioning' => 'positioning ratios', 'book_depth' => 'order book depth'];
+        $flag = ['trade_flow' => '--flow', 'open_interest' => '--oi', 'mark_price_minutes' => '--mark', 'premium_index_minutes' => '--mark', 'positioning' => '--oi', 'book_depth' => '--depth'];
 
         foreach ($strategy->scalpingData() as $table) {
             $missing = $this->laravel->make(ScalpingRepository::class)->missingDays($table, $instrument, $from, $to);
