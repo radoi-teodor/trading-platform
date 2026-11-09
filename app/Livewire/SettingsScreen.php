@@ -127,8 +127,9 @@ final class SettingsScreen extends Component
     {
         $queued = 0;
 
-        foreach ($research->firstMonths() as $symbol => $first) {
-            $imports->queue($symbol, $first->subMonth(), candles: true, scalping: false);
+        // Only the months each coin was a member, from a month before: a coin that left the top is not imported to today.
+        foreach ($research->spans() as [$symbol, $from, $to]) {
+            $imports->queue($symbol, $from, candles: true, scalping: false, to: $to);
             $queued++;
         }
 

@@ -51,4 +51,12 @@ it('ranks the top N by 30-day quote volume each month, point in time (D-89)', fu
         ->and($members->symbolsAt(CarbonImmutable::parse('2025-05-01', 'UTC')))->toBe([])
         ->and($members->everyMember())->toBe(['BIG/USDT:USDT', 'GONE/USDT:USDT', 'NEW/USDT:USDT'])
         ->and(Artisan::output())->toContain('3 months, 3 instruments');
+
+    // What to import: each instrument over the months it was a member, from a month before for the warmup, and no
+    // further, so a coin that left the top is not downloaded to today.
+    expect(array_map(fn (array $s): string => "{$s[0]} {$s[1]->format('Y-m-d')} {$s[2]->format('Y-m-d')}", $members->spans()))->toBe([
+        'BIG/USDT:USDT 2025-01-01 2025-04-30',
+        'GONE/USDT:USDT 2025-01-01 2025-03-31',
+        'NEW/USDT:USDT 2025-03-01 2025-04-30',
+    ]);
 });

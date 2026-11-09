@@ -23,8 +23,12 @@ reads all of it over MCP. Decisions: D-89 to D-94.
 
 A universe is a rule, not a list: the top N USDT-quoted crypto perpetuals by 30-day quote volume, re-ranked on the
 first day of each month (UTC). `market:universe:build --top=50 --from=2024-11` computes it from `daily_stats` and
-stores dated rows in `universe_members` (instrument, from, to). A backtest at time t only sees the members at t. A
+stores dated rows in `universe_members` (month, instrument, rank). A backtest at time t only sees the members at t. A
 coin that was in the top 50 in 2025 and was delisted later is in the 2025 backtest.
+
+The top churns: from 2024-11 to 2026-11, 300 coins were members at some time, 26 of them delisted since. Each is
+imported only over its runs of member months, from the month before (the indicators' warmup): 435 runs, about 74
+million minutes, about 15 GB, instead of about 40 GB to today.
 
 ## 3. Storage at scale (D-90)
 

@@ -86,9 +86,9 @@ it('builds the research universe and imports the history of every member (D-89)'
         ->call('importUniverse')
         ->assertSee('2 imports queued');
 
-    // From a month before the first membership, for the indicators' warmup.
-    expect(MarketJob::query()->orderBy('symbol')->get()->map(fn (MarketJob $j): string => "{$j->symbol} {$j->from->format('Y-m-d')}")->all())
-        ->toBe(['BIG/USDT:USDT 2025-01-01', 'MID/USDT:USDT 2025-01-01']);
+    // From a month before the first membership, for the indicators' warmup, to the end of the last.
+    expect(MarketJob::query()->orderBy('symbol')->get()->map(fn (MarketJob $j): string => "{$j->symbol} {$j->from->format('Y-m-d')} {$j->to?->format('Y-m-d')}")->all())
+        ->toBe(['BIG/USDT:USDT 2025-01-01 2025-03-31', 'MID/USDT:USDT 2025-01-01 2025-03-31']);
     Queue::assertPushed(ImportMarketData::class, 2);
 });
 

@@ -3292,9 +3292,9 @@
     "semantic_hash": ""
   },
   "app/Livewire/SettingsScreen.php": {
-    "mtime": 1794254302.0074444,
-    "seen": 1794254877.3436139,
-    "ast_hash": "ae29a25ced3c673c19521d14e836f1ce",
+    "mtime": 1794257598.7337618,
+    "seen": 1794258045.0985801,
+    "ast_hash": "e4d435f0b3f90287256efe463226b18c",
     "semantic_hash": ""
   },
   "resources/views/livewire/settings-screen.blade.php": {
@@ -3610,15 +3610,15 @@
     "semantic_hash": ""
   },
   "app/Market/Jobs/ImportMarketData.php": {
-    "mtime": 1794256159.110317,
-    "seen": 1794256860.3110275,
-    "ast_hash": "3ef362767de5870f1d227b72e1b63dfc",
+    "mtime": 1794257592.1934533,
+    "seen": 1794258045.114645,
+    "ast_hash": "eed8250d253f2ba6c6f86e7d1839eb20",
     "semantic_hash": ""
   },
   "app/Market/Models/MarketJob.php": {
-    "mtime": 1794234536.700518,
-    "seen": 1794237954.258479,
-    "ast_hash": "19a588bd44052cbdbde7718c7f8dbf8c",
+    "mtime": 1794257592.1901674,
+    "seen": 1794258045.1152248,
+    "ast_hash": "819ca9285652712b4cd167d7a3bc9e97",
     "semantic_hash": ""
   },
   "app/Market/Models/UniverseEntry.php": {
@@ -3634,9 +3634,9 @@
     "semantic_hash": ""
   },
   "tests/Feature/Web/MarketDataSettingsTest.php": {
-    "mtime": 1794254277.975855,
-    "seen": 1794254877.4360387,
-    "ast_hash": "2b578cd23b94d43bc14bdd7bcd7a4b1e",
+    "mtime": 1794257570.586099,
+    "seen": 1794258045.1952622,
+    "ast_hash": "7188cbeb6cc55dd190760cfdb81a26fa",
     "semantic_hash": ""
   },
   "app/Execution/Accounts/LiveGate.php": {
@@ -3784,9 +3784,9 @@
     "semantic_hash": ""
   },
   "app/Market/HistoryImports.php": {
-    "mtime": 1794244849.8320243,
-    "seen": 1794246201.1568284,
-    "ast_hash": "1b19c954f878f33772d164f39c559d54",
+    "mtime": 1794257592.1917484,
+    "seen": 1794258045.1134667,
+    "ast_hash": "cc581e6bc93d81ccbd73fb018700c83a",
     "semantic_hash": ""
   },
   "app/Simulation/Charts/ChartHistoryMissing.php": {
@@ -3814,9 +3814,9 @@
     "semantic_hash": ""
   },
   "docs/universe.md": {
-    "mtime": 1794251538.3598855,
-    "seen": 1794252493.6518393,
-    "ast_hash": "91b35e2534c26839b8b8abdec33e8ecb",
+    "mtime": 1794258037.1314383,
+    "seen": 1794258045.2215278,
+    "ast_hash": "57ba2052bdf45c8fa9f54a036050f0ba",
     "semantic_hash": ""
   },
   "app/Market/Console/FillDailyStats.php": {
@@ -3868,9 +3868,9 @@
     "semantic_hash": ""
   },
   "app/Market/Instruments/ResearchUniverse.php": {
-    "mtime": 1794254354.1155255,
-    "seen": 1794254877.3562698,
-    "ast_hash": "55ad1282bbe0ce1e8886d4a2ecaad1c8",
+    "mtime": 1794257595.936393,
+    "seen": 1794258045.1140306,
+    "ast_hash": "26f5b4416b9f32e7cfcf6d10cf64c3c7",
     "semantic_hash": ""
   },
   "database/migrations/2026_11_09_000023_create_universe_members_table.php": {
@@ -3880,9 +3880,9 @@
     "semantic_hash": ""
   },
   "tests/Feature/Market/ResearchUniverseTest.php": {
-    "mtime": 1794254182.126423,
-    "seen": 1794254877.431791,
-    "ast_hash": "578669a7cf6b30778f6c0f60fb63d4a0",
+    "mtime": 1794257567.7263658,
+    "seen": 1794258045.19089,
+    "ast_hash": "62a74fee5268d31591d54d49186af128",
     "semantic_hash": ""
   },
   "app/Market/Data/Positioning.php": {
@@ -3985,6 +3985,12 @@
     "mtime": 1794257024.8574102,
     "seen": 1794257535.1840537,
     "ast_hash": "328c7772add32a67afdc1d605334f718",
+    "semantic_hash": ""
+  },
+  "database/migrations/2026_11_09_000027_add_to_to_market_jobs.php": {
+    "mtime": 1794257585.2148046,
+    "seen": 1794258045.1790667,
+    "ast_hash": "bd3761c9c7f6867bd5e6050ea88506c8",
     "semantic_hash": ""
   },
   "package-lock.json": {

@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property int $id
  * @property string $symbol
  * @property CarbonImmutable $from
+ * @property CarbonImmutable|null $to the last day imported; null means up to now
  * @property bool $candles
  * @property bool $scalping
  * @property string $status queued, running, done or failed
@@ -25,10 +26,10 @@ final class MarketJob extends Model
 {
     public const UPDATED_AT = null;
 
-    protected $fillable = ['symbol', 'from', 'candles', 'scalping', 'status', 'output', 'created_at', 'started_at', 'finished_at'];
+    protected $fillable = ['symbol', 'from', 'to', 'candles', 'scalping', 'status', 'output', 'created_at', 'started_at', 'finished_at'];
 
     protected function casts(): array
     {
-        return ['from' => 'immutable_date', 'candles' => 'boolean', 'scalping' => 'boolean', 'created_at' => 'immutable_datetime', 'started_at' => 'immutable_datetime', 'finished_at' => 'immutable_datetime'];
+        return ['from' => 'immutable_date', 'to' => 'immutable_date', 'candles' => 'boolean', 'scalping' => 'boolean', 'created_at' => 'immutable_datetime', 'started_at' => 'immutable_datetime', 'finished_at' => 'immutable_datetime'];
     }
 }

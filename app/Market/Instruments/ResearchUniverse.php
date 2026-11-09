@@ -64,6 +64,42 @@ final readonly class ResearchUniverse
             ->map(fn (mixed $symbol): string => is_string($symbol) ? $symbol : '')->all());
     }
 
+    /**
+     * What to import: each instrument over its runs of consecutive member months, from the month before (the
+     * indicators' warmup) to the last day of the run, by symbol then time.
+     *
+     * @return list<array{string, CarbonImmutable, CarbonImmutable}>
+     */
+    public function spans(): array
+    {
+        $spans = [];
+        $open = null;
+
+        foreach ($this->db->table('universe_members as u')->join('instruments as i', 'i.id', '=', 'u.instrument_id')
+            ->orderBy('i.symbol')->orderBy('u.month')->get(['i.symbol', 'u.month']) as $row) {
+            $symbol = is_string($row->symbol ?? null) ? $row->symbol : '';
+            $month = CarbonImmutable::parse(is_string($row->month ?? null) ? $row->month : '', 'UTC')->startOfMonth();
+
+            if ($open !== null && $open[0] === $symbol && $open[2]->equalTo($month)) {
+                $open[2] = $month->addMonth();
+
+                continue;
+            }
+
+            if ($open !== null) {
+                $spans[] = [$open[0], $open[1], $open[2]->subDay()];
+            }
+
+            $open = [$symbol, $month->subMonth(), $month->addMonth()];
+        }
+
+        if ($open !== null) {
+            $spans[] = [$open[0], $open[1], $open[2]->subDay()];
+        }
+
+        return $spans;
+    }
+
     /** @return array<string, CarbonImmutable> the first month each instrument was a member, by symbol */
     public function firstMonths(): array
     {

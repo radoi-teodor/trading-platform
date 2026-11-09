@@ -30,7 +30,7 @@ final class ImportMarketData implements ShouldQueue
 
         try {
             $exit = $console->call('market:backfill', [
-                'symbol' => $job->symbol, '--from' => $job->from->format('Y-m-d'), '--candles' => $job->candles ? 'yes' : 'no',
+                'symbol' => $job->symbol, '--from' => $job->from->format('Y-m-d'), ...($job->to === null ? [] : ['--to' => $job->to->format('Y-m-d').' 23:59']), '--candles' => $job->candles ? 'yes' : 'no',
                 '--funding' => $perpetual && $job->candles, '--flow' => $perpetual && $job->scalping, '--oi' => $perpetual && $job->scalping, '--mark' => $perpetual && $job->scalping, '--depth' => $perpetual && $job->scalping,
             ]);
             $job->update(['status' => $exit === 0 ? 'done' : 'failed', 'output' => $console->output(), 'finished_at' => $clock->now()]);

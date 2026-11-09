@@ -18,10 +18,10 @@ final readonly class HistoryImports
 {
     public function __construct(private Dispatcher $bus, private Clock $clock) {}
 
-    public function queue(string $symbol, CarbonImmutable $from, bool $candles, bool $scalping): MarketJob
+    public function queue(string $symbol, CarbonImmutable $from, bool $candles, bool $scalping, ?CarbonImmutable $to = null): MarketJob
     {
         $job = MarketJob::query()->create([
-            'symbol' => $symbol, 'from' => $from->startOfDay(), 'candles' => $candles, 'scalping' => $scalping,
+            'symbol' => $symbol, 'from' => $from->startOfDay(), 'to' => $to?->startOfDay(), 'candles' => $candles, 'scalping' => $scalping,
             'status' => 'queued', 'created_at' => $this->clock->now(),
         ]);
         $this->bus->dispatch((new ImportMarketData($job->id))->onConnection('simulation')->onQueue('market'));
