@@ -140,8 +140,9 @@ so in its file name. The opt-in `network` group (`composer test:network`) reads 
 The large-trade notional is set per instrument in the universe (BTC 100,000 USDT, ETH 50,000 by default) and applied
 at import, so changing it means importing again. Sources rank as for candles (archive, then REST, then stream).
 Volume bought and sold per minute needs no new data: the candles carry `taker_buy_volume`. The aggregated trades
-are the largest download: about 100 to 300 MB a day for BTC, so twelve months of BTC and ETH means 50 to 100 GB
-read once and deleted day by day; only the minutes are kept.
+are the largest download: a day of BTC is 5.6 MB zipped on a quiet Sunday (439,279 trades on 2026-11-01) and about
+24 MB on a weekday (BTC and ETH on 2026-11-04), so twelve months of both is roughly 10 to 15 GB, read as a stream
+and deleted day by day; only the minutes are kept. Some days are not published (2026-10-28 is missing).
 
 `php artisan market:backfill BTC/USDT:USDT --from=2025-11 --flow --oi --mark` imports them; the Settings screen
 starts the same import as a job.

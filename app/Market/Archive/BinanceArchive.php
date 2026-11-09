@@ -10,9 +10,13 @@ use App\Market\Binance\RequestFailed;
 use App\Market\Data\Candle;
 use App\Market\Data\FundingRate;
 use App\Market\Data\MarketType;
+use App\Market\Data\OpenInterest;
+use App\Market\Data\PriceMinute;
+use App\Market\Data\TradeFlow;
 use App\Support\Number\Decimal;
 use App\Support\Timeframe;
 use Carbon\CarbonImmutable;
+use Generator;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Factory as HttpFactory;
 use UnexpectedValueException;
@@ -71,6 +75,168 @@ final readonly class BinanceArchive
             ),
             self::rows($this->csv($path), 3),
         );
+    }
+
+    /**
+     * The day's aggregated trades of a USD-M perpetual, read as a stream and reduced to one row a minute (D-79). The
+     * archive is deleted once read: a day of BTC is tens of megabytes and only the minutes are kept.
+     *
+     * @return list<TradeFlow> the minutes that had trades, oldest first
+     */
+    public function tradeFlow(string $venueSymbol, CarbonImmutable $day, Decimal $largeNotional): array
+    {
+        $local = $this->archive("futures/um/daily/aggTrades/{$venueSymbol}/{$venueSymbol}-aggTrades-{$day->utc()->format('Y-m-d')}.zip");
+        $flows = [];
+        $minute = null;
+        $empty = ['buy' => Decimal::zero(), 'sell' => Decimal::zero(), 'buys' => 0, 'sells' => 0, 'largest' => Decimal::zero()];
+        $sums = $empty;
+
+        try {
+            foreach (self::lines($local, 7) as $fields) {
+                // agg_trade_id, price, quantity, first_trade_id, last_trade_id, transact_time, is_buyer_maker
+                $at = intdiv(self::integer($fields[5]), 60_000) * 60;
+
+                if ($at !== $minute) {
+                    if ($minute !== null) {
+                        $flows[] = self::flow($minute, $sums, $largeNotional);
+                    }
+
+                    $minute = $at;
+                    $sums = $empty;
+                }
+
+                $quantity = Decimal::of(ExchangeNumber::plain($fields[2]));
+                $notional = Decimal::of(ExchangeNumber::plain($fields[1]))->times($quantity);
+                $sums['largest'] = $notional->isGreaterThan($sums['largest']) ? $notional : $sums['largest'];
+
+                // The buyer was the maker: the aggressor sold.
+                if (! $notional->isLessThan($largeNotional) && $fields[6] === 'true') {
+                    $sums['sell'] = $sums['sell']->plus($quantity);
+                    $sums['sells']++;
+                } elseif (! $notional->isLessThan($largeNotional)) {
+                    $sums['buy'] = $sums['buy']->plus($quantity);
+                    $sums['buys']++;
+                }
+            }
+        } finally {
+            @unlink($local);
+        }
+
+        if ($minute !== null) {
+            $flows[] = self::flow($minute, $sums, $largeNotional);
+        }
+
+        return $flows;
+    }
+
+    /** @return list<OpenInterest> the day's open interest every 5 minutes, oldest first (the file is not in order) */
+    public function openInterest(string $venueSymbol, CarbonImmutable $day): array
+    {
+        $local = $this->archive("futures/um/daily/metrics/{$venueSymbol}/{$venueSymbol}-metrics-{$day->utc()->format('Y-m-d')}.zip");
+        $rows = [];
+
+        foreach (self::lines($local, 4) as $fields) {
+            // create_time is text, in UTC: 2026-11-01 00:05:00.
+            $time = CarbonImmutable::createFromFormat('Y-m-d H:i:s', $fields[0], 'UTC') ?: throw new UnexpectedValueException("Binance metrics: '{$fields[0]}' is not a time.");
+            $rows[$time->getTimestamp()] = new OpenInterest($time, Decimal::of(ExchangeNumber::plain($fields[2])), Decimal::of(ExchangeNumber::plain($fields[3])));
+        }
+
+        ksort($rows);
+
+        return array_values($rows);
+    }
+
+    /** @return list<PriceMinute> the day's 1-minute mark price candles of a USD-M perpetual, oldest first */
+    public function markPrices(string $venueSymbol, CarbonImmutable $day): array
+    {
+        return $this->priceMinutes('markPriceKlines', $venueSymbol, $day);
+    }
+
+    /** @return list<PriceMinute> the day's 1-minute premium index candles of a USD-M perpetual, oldest first */
+    public function premiumIndex(string $venueSymbol, CarbonImmutable $day): array
+    {
+        return $this->priceMinutes('premiumIndexKlines', $venueSymbol, $day);
+    }
+
+    /** @return list<PriceMinute> */
+    private function priceMinutes(string $kind, string $venueSymbol, CarbonImmutable $day): array
+    {
+        $local = $this->archive("futures/um/daily/{$kind}/{$venueSymbol}/1m/{$venueSymbol}-1m-{$day->utc()->format('Y-m-d')}.zip");
+        $rows = [];
+
+        foreach (self::lines($local, 5) as $fields) {
+            $rows[] = new PriceMinute(
+                EpochTime::parse($fields[0]),
+                Decimal::of(ExchangeNumber::plain($fields[1])), Decimal::of(ExchangeNumber::plain($fields[2])),
+                Decimal::of(ExchangeNumber::plain($fields[3])), Decimal::of(ExchangeNumber::plain($fields[4])),
+            );
+        }
+
+        return $rows;
+    }
+
+    /** @param array{buy: Decimal, sell: Decimal, buys: int, sells: int, largest: Decimal} $sums */
+    private static function flow(int $minute, array $sums, Decimal $threshold): TradeFlow
+    {
+        return new TradeFlow(CarbonImmutable::createFromTimestampUTC($minute), $sums['buy'], $sums['sell'], $sums['buys'], $sums['sells'], $sums['largest'], $threshold);
+    }
+
+    /** The verified archive's local path: downloaded, or the cached copy when its checksum still matches. */
+    private function archive(string $path): string
+    {
+        $expected = $this->publishedChecksum($path);
+        $local = $this->cacheDirectory.'/'.$path;
+
+        if (! is_file($local) || hash_file('sha256', $local) !== $expected) {
+            $this->download($path, $local, $expected);
+        }
+
+        return $local;
+    }
+
+    /**
+     * The archived CSV's rows, read as a stream so a large file never sits in memory; a header line is skipped.
+     *
+     * @return Generator<int, list<string>>
+     */
+    private static function lines(string $local, int $columns): Generator
+    {
+        $zip = new ZipArchive;
+
+        if ($zip->open($local) !== true || $zip->count() !== 1) {
+            throw new UnexpectedValueException("{$local} is not a Binance archive with one file.");
+        }
+
+        $stream = $zip->getStreamIndex(0);
+
+        if ($stream === false) {
+            $zip->close();
+
+            throw new UnexpectedValueException("{$local}: cannot read the archived file.");
+        }
+
+        try {
+            $index = 0;
+
+            while (($line = fgets($stream)) !== false) {
+                $line = rtrim($line, "\r\n");
+
+                if ($line === '' || ($index++ === 0 && preg_match('/^[a-z_]/', $line) === 1)) {
+                    continue;
+                }
+
+                $fields = array_map(static fn (?string $field): string => (string) $field, str_getcsv($line, escape: ''));
+
+                if (count($fields) < $columns) {
+                    throw new UnexpectedValueException("Binance archive {$local}: a line has ".count($fields)." fields, expected {$columns}.");
+                }
+
+                yield $fields;
+            }
+        } finally {
+            fclose($stream);
+            $zip->close();
+        }
     }
 
     private function csv(string $path): string

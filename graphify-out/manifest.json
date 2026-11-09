@@ -241,10 +241,10 @@
     "semantic_hash": "3e0f0f3d39979d03a97b368c9669ac0f"
   },
   "app/Market/Archive/BinanceArchive.php": {
-    "mtime": 1794151063.675819,
-    "seen": 1794165296.719152,
-    "ast_hash": "5745239e0845ebb05a98266903fb1bab",
-    "semantic_hash": "5745239e0845ebb05a98266903fb1bab"
+    "mtime": 1794223195.6545882,
+    "seen": 1794223231.2160397,
+    "ast_hash": "9316037388b2a19bc188499c549b4a5e",
+    "semantic_hash": ""
   },
   "app/Market/Archive/ChecksumMismatch.php": {
     "mtime": 1794149971.879319,
@@ -1882,9 +1882,9 @@
     "semantic_hash": ""
   },
   "docs/market-data.md": {
-    "mtime": 1794220474.597167,
-    "seen": 1794221506.7388356,
-    "ast_hash": "87ce46b72758bc3ce2e28b788d67d7da",
+    "mtime": 1794223212.9832487,
+    "seen": 1794223231.2273846,
+    "ast_hash": "c68c119d933d26d1ef5160d9f7c615d8",
     "semantic_hash": ""
   },
   "docs/risk-policy.md": {
@@ -3499,6 +3499,42 @@
     "mtime": 1794222348.09272,
     "seen": 1794223017.0975533,
     "ast_hash": "051fd7dc611c91ed9441684fc660c4c1",
+    "semantic_hash": ""
+  },
+  "app/Market/Data/OpenInterest.php": {
+    "mtime": 1794223154.0233676,
+    "seen": 1794223231.216918,
+    "ast_hash": "651cb2bb29af9a2864d79ef72efc3d16",
+    "semantic_hash": ""
+  },
+  "app/Market/Data/PriceMinute.php": {
+    "mtime": 1794223154.0251431,
+    "seen": 1794223231.2169204,
+    "ast_hash": "2282163ac596ec7e9fe808cfa295df66",
+    "semantic_hash": ""
+  },
+  "app/Market/Data/TradeFlow.php": {
+    "mtime": 1794223154.0192502,
+    "seen": 1794223231.2169452,
+    "ast_hash": "937d639ac827ee5863a7d195ce4ae125",
+    "semantic_hash": ""
+  },
+  "tests/Feature/Market/ScalpingArchiveTest.php": {
+    "mtime": 1794223192.4136453,
+    "seen": 1794223231.2245543,
+    "ast_hash": "a9a8bec8df152724ddc5918bdb58c728",
+    "semantic_hash": ""
+  },
+  "tests/Support/ScalpingFixtures.php": {
+    "mtime": 1794223126.0672486,
+    "seen": 1794223231.225745,
+    "ast_hash": "36ab5434c45d606dd8f15fa08775eebd",
+    "semantic_hash": ""
+  },
+  "tests/Fixtures/binance/scalping/README.md": {
+    "mtime": 1794223163.1360807,
+    "seen": 1794223231.227562,
+    "ast_hash": "33fa84a15807f8a9c8e5a9df686f9646",
     "semantic_hash": ""
   },
   "package-lock.json": {
