@@ -94,7 +94,8 @@ final class RunBacktest extends Command
         $warmupFrom = self::warmupFrom($strategy, $from);
 
         foreach ($symbols as $symbol) {
-            $problem = $this->coverage($quality, $symbol, $warmupFrom, $to) ?? $this->fundingCoverage($funding, $symbol, $warmupFrom, $to);
+            $problem = $this->coverage($quality, $symbol, $warmupFrom, $to) ?? $this->fundingCoverage($funding, $symbol, $warmupFrom, $to)
+                ?? $this->scalpingCoverage($strategy, $symbol, $from, $to);
 
             if ($problem !== null) {
                 $this->error("{$symbol}: {$problem}. Backfill it before backtesting (market:backfill).");

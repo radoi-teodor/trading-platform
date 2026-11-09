@@ -20,6 +20,7 @@ use App\Execution\Data\VenuePosition;
 use App\Market\Data\Candle;
 use App\Market\Data\FundingRate;
 use App\Market\Data\InstrumentRules;
+use App\Market\Data\PriceMinute;
 use App\Support\Asset;
 use App\Support\Clock\Clock;
 use App\Support\Number\Decimal;
@@ -159,10 +160,11 @@ final class SimulatedFuturesBook
         return array_values(array_map(fn (SimulatedOrder $order): VenueOrder => $order->snapshot(), $this->open));
     }
 
-    public function match(Symbol $symbol, Candle $minute, InstrumentRules $rules): void
+    /** A position is liquidated on the mark price when the minute has one, on the last price otherwise (D-44, D-79). */
+    public function match(Symbol $symbol, Candle $minute, InstrumentRules $rules, ?PriceMinute $mark = null): void
     {
         $key = (string) $symbol;
-        $this->liquidateIf($symbol, $minute, $minute->open->value, $minute->open->value);
+        $this->liquidateIf($symbol, $minute, $mark->open ?? $minute->open->value, $mark->open ?? $minute->open->value);
         $working = array_filter($this->open, fn (SimulatedOrder $order): bool => $order->request->symbol->equals($symbol));
 
         foreach ([OrderType::Market, OrderType::StopMarket, OrderType::TakeProfitMarket, OrderType::Limit] as $type) {
@@ -177,7 +179,7 @@ final class SimulatedFuturesBook
             $order->arrived = true;
         }
 
-        $this->liquidateIf($symbol, $minute, $minute->low->value, $minute->high->value);
+        $this->liquidateIf($symbol, $minute, $mark->low ?? $minute->low->value, $mark->high ?? $minute->high->value);
         $this->lastClose[$key] = $minute->close;
     }
 

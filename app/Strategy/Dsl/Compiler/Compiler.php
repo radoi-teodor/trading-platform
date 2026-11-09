@@ -118,6 +118,15 @@ final class Compiler
             'hlc3' => fn (Frame $f): Decimal => $f->candle->high->value->plus($f->candle->low->value)->plus($f->candle->close->value)->dividedBy($three, 18),
             'ohlc4' => fn (Frame $f): Decimal => $f->candle->open->value->plus($f->candle->high->value)->plus($f->candle->low->value)->plus($f->candle->close->value)->dividedBy(Decimal::of(4), 18),
             'funding_rate' => fn (Frame $f): ?Decimal => $f->funding?->rate,
+            'buy_volume' => fn (Frame $f): Decimal => $f->candle->takerBuyVolume,
+            'sell_volume' => fn (Frame $f): Decimal => $f->candle->volume->minus($f->candle->takerBuyVolume),
+            'delta' => fn (Frame $f): Decimal => self::delta($f),
+            'open_interest' => fn (Frame $f): ?Decimal => $f->perpetual?->openInterest,
+            'mark_price' => fn (Frame $f): ?Decimal => $f->perpetual?->mark,
+            'basis' => fn (Frame $f): ?Decimal => $f->perpetual?->basis,
+            'large_buy_volume' => fn (Frame $f): ?Decimal => $f->perpetual?->largeBuyVolume,
+            'large_sell_volume' => fn (Frame $f): ?Decimal => $f->perpetual?->largeSellVolume,
+            'large_delta' => fn (Frame $f): ?Decimal => $f->perpetual?->largeBuyVolume?->minus($f->perpetual->largeSellVolume ?? Decimal::zero()),
             'in_position' => fn (Frame $f): bool => $f->position !== null,
             'bars_in_trade' => fn (Frame $f): ?Decimal => $f->position === null ? null : Decimal::of(intdiv($f->time->getTimestamp() - $f->position->openedAt->getTimestamp(), $timeframe->seconds())),
             'trade_r' => fn (Frame $f): ?Decimal => self::tradeR($f),
@@ -313,6 +322,8 @@ final class Compiler
             'supertrend' => $onBar(new Supertrend($count('n'), $number('k'))),
             'adx', 'plus_di', 'minus_di' => $this->directional($node->name, $count('n')),
             'funding_rate_avg' => $this->fundingAverage($count('n')),
+            'cvd' => $this->cumulativeDelta($count('n')),
+            'oi_change' => $this->openInterestChange($count('n')),
             'level' => $series('series'),
             'chandelier' => $this->chandelier($count('n'), $number('k')),
             'atr_trail' => $this->atrTrail($count('n'), $number('k')),
@@ -326,6 +337,39 @@ final class Compiler
         $indicator = new DirectionalMovement($period);
 
         return fn (Frame $f): ?Decimal => $indicator->push($f->candle)[$name];
+    }
+
+    /** The candle's volume bought by takers minus the volume they sold. */
+    private static function delta(Frame $f): Decimal
+    {
+        return $f->candle->takerBuyVolume->times(Decimal::of(2))->minus($f->candle->volume);
+    }
+
+    /** @return Closure(Frame): ?Decimal the delta summed over the last n candles (D-79) */
+    private function cumulativeDelta(int $periods): Closure
+    {
+        $deltas = [];
+
+        return function (Frame $f) use ($periods, &$deltas): ?Decimal {
+            $deltas[] = self::delta($f);
+            $deltas = array_slice($deltas, -$periods);
+
+            return count($deltas) < $periods ? null : array_reduce($deltas, fn (Decimal $sum, Decimal $d): Decimal => $sum->plus($d), Decimal::zero());
+        };
+    }
+
+    /** @return Closure(Frame): ?Decimal open interest now over its value n candles ago, minus 1 (D-79) */
+    private function openInterestChange(int $periods): Closure
+    {
+        $values = [];
+
+        return function (Frame $f) use ($periods, &$values): ?Decimal {
+            $values[] = $f->perpetual?->openInterest;
+            $values = array_slice($values, -($periods + 1));
+            [$then, $now] = [$values[0], $values[count($values) - 1]];
+
+            return count($values) <= $periods || $then === null || $now === null || $then->isZero() ? null : $now->dividedBy($then, 18)->minus(Decimal::of(1));
+        };
     }
 
     /** @return Closure(Frame): ?Decimal the mean of the last n funding rates seen, one per funding time */
@@ -392,7 +436,7 @@ final class Compiler
         $bar = $timeframe->seconds();
 
         return match (true) {
-            $node instanceof Identifier => in_array($node->name, ['open', 'high', 'low', 'close', 'volume', 'hl2', 'hlc3', 'ohlc4'], true) ? $bar : 0,
+            $node instanceof Identifier => in_array($node->name, ['open', 'high', 'low', 'close', 'volume', 'hl2', 'hlc3', 'ohlc4', 'buy_volume', 'sell_volume', 'delta'], true) ? $bar : 0,
             $node instanceof Unary => $this->seconds($node->operand, $timeframe),
             $node instanceof Binary => max($this->seconds($node->left, $timeframe), $this->seconds($node->right, $timeframe))
                 + (str_starts_with($node->operator, 'crosses') ? $bar : 0),
@@ -428,6 +472,8 @@ final class Compiler
         $own = match ($node->name) {
             'ema', 'sma', 'wma', 'vwma', 'stdev', 'highest', 'lowest', 'bb', 'donchian', 'keltner', 'atr', 'natr', 'supertrend', 'chandelier', 'atr_trail', 'vp_poc', 'vp_vah', 'vp_val' => $n('n'),
             'obv' => 1,
+            'cvd' => $n('n'),
+            'oi_change' => $n('n') + 1,
             'hma' => $n('n') + $root - 1,
             'rsi', 'roc', 'change', 'realized_vol', 'plus_di', 'minus_di' => $n('n') + 1,
             'adx' => 2 * $n('n'),

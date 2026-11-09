@@ -162,7 +162,7 @@ it('reads candles, funding and the DSL reference, refusing what it cannot serve'
     TradingServer::tool(GetFunding::class, ['symbol' => 'BTC/USDT', 'from' => '2026-10-01', 'to' => '2026-10-01'])
         ->assertHasErrors(['BTC/USDT is not a stored perpetual.']);
     TradingServer::tool(DslReference::class)
-        ->assertOk()->assertSee(['## 2. Expression language', 'bb(n = 20: a whole number of candles', 'fields .upper', 'NOT AVAILABLE', 'strategy: ema-cross-scalp-long']);
+        ->assertOk()->assertSee(['## 2. Expression language', 'bb(n = 20: a whole number of candles', 'fields .upper', 'oi_change(n: a whole number of candles', 'strategy: ema-cross-scalp-long']);
 });
 
 it('lists and reads saved versions, runs a backtest on one and lists its trials', function (): void {

@@ -13,6 +13,7 @@ use App\Market\FundingRateRepository;
 use App\Market\Instruments\StoredInstruments;
 use App\Market\Models\Instrument;
 use App\Market\Quality\QualityCheck;
+use App\Market\ScalpingRepository;
 use App\Risk\RiskPolicy;
 use App\Simulation\Backtest;
 use App\Simulation\Data\Participant;
@@ -227,6 +228,32 @@ trait PreparesBacktests
             : null;
     }
 
+    /**
+     * Why the stored data for scalping cannot carry a strategy that reads it over [$from, $to], or null (D-79): every
+     * day of the range must have rows in each store the strategy reads.
+     */
+    protected function scalpingCoverage(Strategy $strategy, Symbol $symbol, CarbonImmutable $from, CarbonImmutable $to): ?string
+    {
+        $instrument = $symbol->isPerpetual() ? self::instrument($symbol) : null;
+
+        if (! $strategy instanceof CompiledStrategy || $instrument === null) {
+            return null;
+        }
+
+        $names = ['trade_flow' => 'trade flow', 'open_interest' => 'open interest', 'mark_price_minutes' => 'mark price', 'premium_index_minutes' => 'premium index'];
+        $flag = ['trade_flow' => '--flow', 'open_interest' => '--oi', 'mark_price_minutes' => '--mark', 'premium_index_minutes' => '--mark'];
+
+        foreach ($strategy->scalpingData() as $table) {
+            $missing = $this->laravel->make(ScalpingRepository::class)->missingDays($table, $instrument, $from, $to);
+
+            if ($missing !== []) {
+                return sprintf('no %s stored on %s%s (market:backfill %s)', $names[$table], $missing[0], count($missing) > 1 ? ' and '.(count($missing) - 1).' more days' : '', $flag[$table]);
+            }
+        }
+
+        return null;
+    }
+
     /** @return list<Symbol> the instruments the strategy subscribes to, in subscription order */
     protected static function followed(Strategy $strategy): array
     {
@@ -354,7 +381,8 @@ trait PreparesBacktests
             }
 
             foreach ($symbols as $symbol) {
-                $problem = $this->coverage($quality, $symbol, $warmupFrom, $to) ?? $this->fundingCoverage($funding, $symbol, $warmupFrom, $to);
+                $problem = $this->coverage($quality, $symbol, $warmupFrom, $to) ?? $this->fundingCoverage($funding, $symbol, $warmupFrom, $to)
+                    ?? $this->scalpingCoverage($strategies[0], $symbol, $from, $to);
 
                 if ($problem !== null) {
                     throw new InvalidArgumentException("{$symbol}: {$problem}. Backfill it before backtesting (market:backfill).");

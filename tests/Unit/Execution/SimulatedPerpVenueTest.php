@@ -15,6 +15,8 @@ use App\Execution\Venues\SimulatedVenue;
 use App\Market\Data\Candle;
 use App\Market\Data\FundingRate;
 use App\Market\Data\InstrumentRules;
+use App\Market\Data\MinuteCandles;
+use App\Market\Data\PriceMinute;
 use App\Market\Data\RulesHistory;
 use App\Support\Clock\SimClock;
 use App\Support\Number\Decimal;
@@ -346,4 +348,41 @@ it('fills a resting limit at most a tenth of the minute\'s volume at a time', fu
 
     expect($h->updates())->toBe(['e new', 'e partially_filled buy 100@99 fee 1.98 USDT', 'e filled buy 50@99 fee 0.99 USDT'])
         ->and($h->position())->toBe('buy 150@99 margin 7425 x2');
+});
+
+it('liquidates on the mark price when the minute has one, not on the last price (D-79)', function (): void {
+    $wick = PerpHarness::make();
+    $wick->long();
+    $wick->minute('100', '100', '100', '100');
+    // The last price wicks to 50 but the mark stays at 70: no liquidation.
+    $at = CarbonImmutable::parse('2026-10-01 00:02', 'UTC');
+    $wick->venue->advance(new MinuteCandles($at->addMinute(), ['BTC/USDT:USDT' => Candle::fromStrings($at, Timeframe::OneMinute, '60', '61', '50', '55', '1000', '0', 1, '0')], marks: [
+        'BTC/USDT:USDT' => new PriceMinute($at, Decimal::of('71'), Decimal::of('72'), Decimal::of('70'), Decimal::of('71')),
+    ]));
+
+    $mark = PerpHarness::make();
+    $mark->long();
+    $mark->minute('100', '100', '100', '100');
+    // The last price holds at 70 but the mark reaches 50: liquidated.
+    $mark->venue->advance(new MinuteCandles($at->addMinute(), ['BTC/USDT:USDT' => Candle::fromStrings($at, Timeframe::OneMinute, '71', '72', '70', '71', '1000', '0', 1, '0')], marks: [
+        'BTC/USDT:USDT' => new PriceMinute($at, Decimal::of('71'), Decimal::of('72'), Decimal::of('50'), Decimal::of('55')),
+    ]));
+
+    expect($wick->position())->toBe('buy 1@100 margin 50 x2')
+        ->and(array_slice($mark->updates(), 2))->toBe(['liquidation -50 @50.50505050505050505']);
+});
+
+it('values funding at the minute\'s mark close when it has one', function (): void {
+    $h = PerpHarness::make();
+    $h->short();
+    $h->minute('100', '100', '100', '100');
+    $at = CarbonImmutable::parse('2026-10-01 00:02', 'UTC');
+    $h->venue->advance(new MinuteCandles(
+        $at->addMinute(),
+        ['BTC/USDT:USDT' => Candle::fromStrings($at, Timeframe::OneMinute, '100', '100', '100', '100', '1000', '0', 1, '0')],
+        ['BTC/USDT:USDT' => new FundingRate($at->addMinute(), Decimal::of('0.0001'), 8, null)],
+        marks: ['BTC/USDT:USDT' => new PriceMinute($at, Decimal::of('120'), Decimal::of('120'), Decimal::of('120'), Decimal::of('120'))],
+    ));
+
+    expect(array_slice($h->updates(), 2))->toBe(['funding 0.012']);
 });

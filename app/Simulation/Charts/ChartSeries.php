@@ -8,6 +8,8 @@ use App\Market\Contracts\CandleFeed;
 use App\Market\Data\Candle;
 use App\Market\Data\FundingRate;
 use App\Market\Feed\CandleAggregator;
+use App\Strategy\Data\PerpetualTracker;
+use App\Strategy\Data\PerpetualView;
 use App\Strategy\Dsl\Compiler\Compiler;
 use App\Strategy\Dsl\Compiler\Frame;
 use App\Strategy\Dsl\Compiler\Program;
@@ -82,10 +84,12 @@ final readonly class ChartSeries
         $candles = [];
         $series = array_fill_keys(array_values($expressions), []);
         $funding = null;
+        $perpetuals = new PerpetualTracker;
 
         foreach ($this->feed->minutes([$symbol], $start, $to) as $minute) {
             $candle = $minute->candles[(string) $symbol] ?? null;
             $funding = $minute->funding[(string) $symbol] ?? $funding;
+            $perpetuals->absorb($minute);
 
             if ($candle === null) {
                 continue;
@@ -95,7 +99,7 @@ final readonly class ChartSeries
 
             foreach ($closed as $value => $bar) {
                 if ($value !== $timeframe->value) {
-                    $program->update((string) $value, $this->frame($bar, $funding));
+                    $program->update((string) $value, $this->frame($bar, $funding, $symbol->isPerpetual() ? $perpetuals->view((string) $symbol, $bar) : null));
                 }
             }
 
@@ -105,7 +109,7 @@ final readonly class ChartSeries
                 continue;
             }
 
-            $values = $program->evaluate($this->frame($bar, $funding));
+            $values = $program->evaluate($this->frame($bar, $funding, $symbol->isPerpetual() ? $perpetuals->view((string) $symbol, $bar) : null));
 
             if ($bar->openTime < $from) {
                 continue;
@@ -124,9 +128,9 @@ final readonly class ChartSeries
         return ['candles' => $candles, 'series' => $series, 'types' => $types];
     }
 
-    private function frame(Candle $bar, ?FundingRate $funding): Frame
+    private function frame(Candle $bar, ?FundingRate $funding, ?PerpetualView $perpetual): Frame
     {
-        return new Frame($bar, $bar->endsAt(), null, $funding, null);
+        return new Frame($bar, $bar->endsAt(), null, $funding, null, $perpetual);
     }
 
     private static function text(mixed $value): ?string

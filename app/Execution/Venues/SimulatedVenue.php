@@ -20,6 +20,7 @@ use App\Market\Data\Candle;
 use App\Market\Data\FundingRate;
 use App\Market\Data\InstrumentRules;
 use App\Market\Data\MinuteCandles;
+use App\Market\Data\PriceMinute;
 use App\Market\Data\RulesHistory;
 use App\Support\Asset;
 use App\Support\Clock\Clock;
@@ -220,20 +221,22 @@ final class SimulatedVenue implements Venue
     public function advance(MinuteCandles $minute): void
     {
         foreach ($minute->candles as $symbol => $candle) {
-            $this->match(Symbol::parse($symbol), $candle);
+            $this->match(Symbol::parse($symbol), $candle, $minute->marks[$symbol] ?? null);
         }
 
+        // Funding is valued at the mark when the minute has one, at the last price otherwise (D-44, D-79).
         foreach ($minute->funding as $symbol => $rate) {
             if (isset($minute->candles[$symbol])) {
-                $this->settleFunding(Symbol::parse($symbol), $rate, $minute->candles[$symbol]->close);
+                $mark = $minute->marks[$symbol] ?? null;
+                $this->settleFunding(Symbol::parse($symbol), $rate, $mark === null ? $minute->candles[$symbol]->close : Price::of((string) $mark->close));
             }
         }
     }
 
-    public function match(Symbol $symbol, Candle $minute): void
+    public function match(Symbol $symbol, Candle $minute, ?PriceMinute $mark = null): void
     {
         if ($symbol->isPerpetual()) {
-            $this->futures->match($symbol, $minute, $this->rulesFor($symbol));
+            $this->futures->match($symbol, $minute, $this->rulesFor($symbol), $mark);
 
             return;
         }

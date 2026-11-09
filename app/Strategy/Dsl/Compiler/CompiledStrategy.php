@@ -18,10 +18,15 @@ use App\Strategy\Data\StrategyContext;
 use App\Strategy\Data\StrategyIdentity;
 use App\Strategy\Data\StrategyLimits;
 use App\Strategy\Data\Subscription;
+use App\Strategy\Dsl\Ast\Argument;
+use App\Strategy\Dsl\Ast\Binary;
 use App\Strategy\Dsl\Ast\Call;
 use App\Strategy\Dsl\Ast\DurationLiteral;
+use App\Strategy\Dsl\Ast\Identifier;
+use App\Strategy\Dsl\Ast\Lookback;
 use App\Strategy\Dsl\Ast\Node;
 use App\Strategy\Dsl\Ast\NumberLiteral;
+use App\Strategy\Dsl\Ast\OnTimeframe;
 use App\Strategy\Dsl\Ast\Parameter;
 use App\Strategy\Dsl\Ast\PercentLiteral;
 use App\Strategy\Dsl\Ast\Unary;
@@ -161,7 +166,7 @@ final class CompiledStrategy implements LimitedStrategy
     {
         $key = (string) $context->symbol;
         $program = $this->programs[$key] ??= $this->program();
-        $frame = new Frame($context->candle, $context->time, $context->position, $context->funding, $this->trades[$key] ?? null);
+        $frame = new Frame($context->candle, $context->time, $context->position, $context->funding, $this->trades[$key] ?? null, $context->perpetual);
 
         if ($context->candle->timeframe !== $this->spec->timeframe) {
             $program->update($context->candle->timeframe->value, $frame);
@@ -324,6 +329,48 @@ final class CompiledStrategy implements LimitedStrategy
     }
 
     /** The compiled expressions of the document, fresh, for one instrument. */
+    /**
+     * The stores of data for scalping its expressions read (D-79), so a backtest can refuse a range they do not cover.
+     *
+     * @return list<string> table names: trade_flow, open_interest, mark_price_minutes, premium_index_minutes
+     */
+    public function scalpingData(): array
+    {
+        $tables = [
+            'open_interest' => 'open_interest', 'oi_change' => 'open_interest', 'mark_price' => 'mark_price_minutes', 'basis' => 'premium_index_minutes',
+            'large_buy_volume' => 'trade_flow', 'large_sell_volume' => 'trade_flow', 'large_delta' => 'trade_flow',
+        ];
+        $exits = $this->spec->exits;
+        $expressions = [...$this->spec->filters, ...array_map(fn (EntrySpec $entry) => $entry->when, array_values($this->spec->entries)), $exits->stopLoss, $exits->trailing, $exits->when];
+        $used = [];
+        $walk = function (Node $node) use (&$walk, &$used, $tables): void {
+            match (true) {
+                $node instanceof Identifier, $node instanceof Call => isset($tables[$node->name]) ? $used[$tables[$node->name]] = true : null,
+                default => null,
+            };
+            $children = match (true) {
+                $node instanceof Unary => [$node->operand],
+                $node instanceof Binary => [$node->left, $node->right],
+                $node instanceof Lookback => [$node->series],
+                $node instanceof OnTimeframe => [$node->expression],
+                $node instanceof Call => array_map(fn (Argument $a): Node => $a->value, $node->arguments),
+                default => [],
+            };
+
+            foreach ($children as $child) {
+                $walk($child);
+            }
+        };
+
+        foreach ($expressions as $expression) {
+            if ($expression !== null) {
+                $walk($expression->node);
+            }
+        }
+
+        return array_keys($used);
+    }
+
     private function program(): Program
     {
         $program = new Program;

@@ -33,7 +33,6 @@ final class Library
         $count = fn (string $name, ?string $default = null): ParamSpec => new ParamSpec($name, ParamKind::Count, $default);
         $number = fn (string $name, ?string $default = null): ParamSpec => new ParamSpec($name, ParamKind::Number, $default);
         $src = new ParamSpec('src', ParamKind::Series, 'close');
-        $later = fn (string $what): string => "{$what} has no data yet: it comes when open interest and the mark price are stored (Phase 4 and 5, D-52).";
         $specs = [];
 
         foreach (['open', 'high', 'low', 'close', 'hl2', 'hlc3', 'ohlc4'] as $name) {
@@ -41,6 +40,11 @@ final class Library
         }
 
         $specs[] = new FunctionSpec('volume', Group::Price, Type::series(Unit::Volume), isCall: false);
+
+        // The candle's volume bought and sold by takers, and their difference (D-79).
+        foreach (['buy_volume', 'sell_volume', 'delta'] as $name) {
+            $specs[] = new FunctionSpec($name, Group::Price, Type::series(Unit::Volume), isCall: false);
+        }
 
         foreach (['sma', 'ema', 'wma', 'hma'] as $name) {
             $specs[] = new FunctionSpec($name, Group::Indicator, null, [$count('n'), $src], followsSource: true);
@@ -64,6 +68,7 @@ final class Library
         $specs[] = new FunctionSpec('minus_di', Group::Indicator, $plain, [$count('n', '14')]);
         $specs[] = new FunctionSpec('supertrend', Group::Indicator, null, [$count('n', '10'), $number('k', '3')], ['line' => $price, 'direction' => $plain]);
         $specs[] = new FunctionSpec('obv', Group::Indicator, Type::series(Unit::Volume));
+        $specs[] = new FunctionSpec('cvd', Group::Indicator, Type::series(Unit::Volume), [$count('n')]);
         foreach (['vp_poc', 'vp_vah', 'vp_val'] as $name) {
             $specs[] = new FunctionSpec($name, Group::Indicator, $price, [$count('n')]);
         }
@@ -74,10 +79,14 @@ final class Library
 
         $specs[] = new FunctionSpec('funding_rate', Group::Perpetual, $fraction, isCall: false);
         $specs[] = new FunctionSpec('funding_rate_avg', Group::Perpetual, $fraction, [$count('n')]);
-        $specs[] = new FunctionSpec('open_interest', Group::Perpetual, $plain, isCall: false, refused: $later('open_interest'));
-        $specs[] = new FunctionSpec('oi_change', Group::Perpetual, $plain, [$count('n')], refused: $later('oi_change'));
-        $specs[] = new FunctionSpec('basis', Group::Perpetual, $fraction, isCall: false, refused: $later('basis'));
-        $specs[] = new FunctionSpec('mark_price', Group::Perpetual, $price, isCall: false, refused: $later('mark_price'));
+        $specs[] = new FunctionSpec('open_interest', Group::Perpetual, $plain, isCall: false);
+        $specs[] = new FunctionSpec('oi_change', Group::Perpetual, $fraction, [$count('n')]);
+        $specs[] = new FunctionSpec('basis', Group::Perpetual, $fraction, isCall: false);
+        $specs[] = new FunctionSpec('mark_price', Group::Perpetual, $price, isCall: false);
+
+        foreach (['large_buy_volume', 'large_sell_volume', 'large_delta'] as $name) {
+            $specs[] = new FunctionSpec($name, Group::Perpetual, Type::series(Unit::Volume), isCall: false);
+        }
 
         $specs[] = new FunctionSpec('in_position', Group::Position, $condition, isCall: false);
         $specs[] = new FunctionSpec('bars_in_trade', Group::Position, $plain, isCall: false);

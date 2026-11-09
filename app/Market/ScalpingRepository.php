@@ -103,6 +103,28 @@ final readonly class ScalpingRepository
         return $this->db->table($table)->where('instrument_id', $instrument->id)->whereBetween($key, [Rows::timestamp($from), Rows::timestamp($to)])->count();
     }
 
+    /** @return list<string> the days (UTC, Y-m-d) from $from to $to on which a table holds no row for the instrument */
+    public function missingDays(string $table, Instrument $instrument, CarbonImmutable $from, CarbonImmutable $to): array
+    {
+        $key = self::COLUMNS[$table][0];
+        $stored = [];
+
+        foreach ($this->db->table($table)->where('instrument_id', $instrument->id)->whereBetween($key, [Rows::timestamp($from), Rows::timestamp($to)])
+            ->selectRaw("to_char({$key} at time zone 'UTC', 'YYYY-MM-DD') as day")->distinct()->get() as $row) {
+            $stored[Rows::string($row, 'day')] = true;
+        }
+
+        $missing = [];
+
+        for ($day = $from->utc()->startOfDay(); $day < $to; $day = $day->addDay()) {
+            if (! isset($stored[$day->format('Y-m-d')])) {
+                $missing[] = $day->format('Y-m-d');
+            }
+        }
+
+        return $missing;
+    }
+
     /**
      * @param  list<list<mixed>>  $values  the key time first, then the columns of the table, in order
      */

@@ -46,6 +46,7 @@ use App\Strategy\Data\MoveStop;
 use App\Strategy\Data\OpenCarry;
 use App\Strategy\Data\OpenLong;
 use App\Strategy\Data\OpenShort;
+use App\Strategy\Data\PerpetualTracker;
 use App\Strategy\Data\PositionView;
 use App\Strategy\Data\StrategyContext;
 use App\Strategy\Data\StrategyLimits;
@@ -90,6 +91,9 @@ final class Engine
     /** @var array<string, FundingRate> the last funding rate seen, by perpetual */
     private array $funding = [];
 
+    /** The perpetuals' data for scalping as known at the current event (D-79). */
+    private PerpetualTracker $perpetuals;
+
     /**
      * @param  list<Strategy>  $strategies
      * @param  array<string, RulesHistory>  $rules  by unified symbol
@@ -112,6 +116,7 @@ final class Engine
 
         $this->riskState = new RiskState($policy);
         $this->breakers = new MarketBreakers;
+        $this->perpetuals = new PerpetualTracker;
         $this->risk = new RiskEngine($policy, $this->riskState, $maintenanceRate);
         $this->book = new OrderBook;
         $this->orders = new OrderManager($venue, $this->book);
@@ -177,6 +182,8 @@ final class Engine
         foreach ($event->funding as $symbol => $rate) {
             $this->funding[$symbol] = $rate;
         }
+
+        $this->perpetuals->absorb($event);
 
         foreach ($commands as $command) {
             $this->apply($command, $time);
@@ -527,7 +534,10 @@ final class Engine
             $view = $position === null ? null : new PositionView($position->quantity, $position->entryPrice(), $plan?->stop, $position->openedAt);
         }
 
-        $intents = $strategy->onCandle(new StrategyContext($time, $symbol, $candle, $view, $this->funding[(string) $symbol] ?? null));
+        $intents = $strategy->onCandle(new StrategyContext(
+            $time, $symbol, $candle, $view, $this->funding[(string) $symbol] ?? null,
+            $symbol->isPerpetual() ? $this->perpetuals->view((string) $symbol, $candle) : null,
+        ));
         $records = [];
         $entered = [];
         $paused = isset($this->paused[$strategy->identity()->label()]);

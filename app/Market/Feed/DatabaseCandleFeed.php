@@ -9,6 +9,9 @@ use App\Market\Contracts\CandleFeed;
 use App\Market\Data\FundingRate;
 use App\Market\Data\MarketType;
 use App\Market\Data\MinuteCandles;
+use App\Market\Data\OpenInterest;
+use App\Market\Data\PriceMinute;
+use App\Market\Data\TradeFlow;
 use App\Market\Models\Instrument;
 use App\Market\Persistence\Rows;
 use App\Support\Number\Decimal;
@@ -43,13 +46,16 @@ final readonly class DatabaseCandleFeed implements CandleFeed
 
             ksort($minutes);
             $funding = $this->funding($symbolsById, $chunk, $end);
+            $perpetuals = array_filter($symbolsById, fn (string $symbol): bool => str_contains($symbol, ':'));
+            [$flow, $marks, $premium, $interest] = $perpetuals === [] ? [[], [], [], []] : $this->scalping($perpetuals, $chunk, $end);
 
             foreach ($minutes as $candles) {
                 ksort($candles, SORT_STRING);
                 $first = reset($candles);
                 $closedAt = $first->endsAt();
+                $at = $closedAt->getTimestamp();
 
-                yield new MinuteCandles($closedAt, $candles, $funding[$closedAt->getTimestamp()] ?? []);
+                yield new MinuteCandles($closedAt, $candles, $funding[$at] ?? [], $flow[$at] ?? [], $marks[$at] ?? [], $premium[$at] ?? [], $interest[$at] ?? []);
             }
         }
     }
@@ -85,6 +91,51 @@ final readonly class DatabaseCandleFeed implements CandleFeed
         }
 
         return $funding;
+    }
+
+    /**
+     * The scalping data of the minutes closing in ($from, $to] (D-79), each keyed by the close of the minute it is
+     * known at: a minute's flow, mark and premium at its own close, open interest five minutes after its time.
+     *
+     * @param  array<int, string>  $perpetuals  unified symbol by instrument id
+     * @return array{array<int, array<string, TradeFlow>>, array<int, array<string, PriceMinute>>, array<int, array<string, PriceMinute>>, array<int, array<string, OpenInterest>>}
+     */
+    private function scalping(array $perpetuals, CarbonImmutable $from, CarbonImmutable $to): array
+    {
+        $ids = array_keys($perpetuals);
+        $minutes = fn (string $table) => $this->db->table($table)->whereIn('instrument_id', $ids)
+            ->where('open_time', '>=', Rows::timestamp($from))->where('open_time', '<', Rows::timestamp($to))->get();
+        [$flow, $marks, $premium, $interest] = [[], [], [], []];
+
+        foreach ($minutes('trade_flow') as $row) {
+            $f = new TradeFlow(
+                Rows::time($row, 'open_time'), Decimal::of(Rows::string($row, 'large_buy_volume')), Decimal::of(Rows::string($row, 'large_sell_volume')),
+                Rows::int($row, 'large_buy_count'), Rows::int($row, 'large_sell_count'), Decimal::of(Rows::string($row, 'largest_notional')), Decimal::of(Rows::string($row, 'threshold')),
+            );
+            $flow[$f->openTime->getTimestamp() + 60][$perpetuals[Rows::int($row, 'instrument_id')]] = $f;
+        }
+
+        $prices = ['mark_price_minutes' => [], 'premium_index_minutes' => []];
+
+        foreach (array_keys($prices) as $table) {
+            foreach ($minutes($table) as $row) {
+                $p = new PriceMinute(Rows::time($row, 'open_time'), Decimal::of(Rows::string($row, 'open')), Decimal::of(Rows::string($row, 'high')), Decimal::of(Rows::string($row, 'low')), Decimal::of(Rows::string($row, 'close')));
+                $prices[$table][$p->openTime->getTimestamp() + 60][$perpetuals[Rows::int($row, 'instrument_id')]] = $p;
+            }
+        }
+
+        [$marks, $premium] = [$prices['mark_price_minutes'], $prices['premium_index_minutes']];
+
+        $known = $this->db->table('open_interest')->whereIn('instrument_id', $ids)
+            ->where('time', '>', Rows::timestamp($from->subSeconds(OpenInterest::KNOWN_AFTER_SECONDS)))
+            ->where('time', '<=', Rows::timestamp($to->subSeconds(OpenInterest::KNOWN_AFTER_SECONDS)))->get();
+
+        foreach ($known as $row) {
+            $o = new OpenInterest(Rows::time($row, 'time'), Decimal::of(Rows::string($row, 'contracts')), Decimal::of(Rows::string($row, 'value')));
+            $interest[$o->knownAt()->getTimestamp()][$perpetuals[Rows::int($row, 'instrument_id')]] = $o;
+        }
+
+        return [$flow, $marks, $premium, $interest];
     }
 
     /**

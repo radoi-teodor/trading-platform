@@ -141,15 +141,15 @@ arg       = expr | identifier ":" expr ;
 | Volatility | `atr(n: 14)`, `natr(n)`, `stdev(n, src)`, `realized_vol(n)`, `bb(n: 20, k: 2).upper / .middle / .lower / .width`, `donchian(n).upper / .lower`, `keltner(n, k).upper / .lower` |
 | Trend | `adx(n: 14)`, `plus_di(n)`, `minus_di(n)`, `supertrend(n, k).line / .direction` |
 | Windows | `highest(src, n)`, `lowest(src, n)`, `change(src, n)` |
-| Volume | `obv()` (its level depends on where it starts: compare it with its own average or its change), `vp_poc(n)`, `vp_vah(n)`, `vp_val(n)` (the volume profile of the last n candles, D-72) |
-| Perpetuals | `funding_rate`, `funding_rate_avg(n)`, `open_interest`, `oi_change(n)`, `basis`, `mark_price` |
+| Volume | `obv()` (its level depends on where it starts: compare it with its own average or its change), `vp_poc(n)`, `vp_vah(n)`, `vp_val(n)` (the volume profile of the last n candles, D-72), `buy_volume`, `sell_volume` (taken by buyers and sellers), `delta` (bought minus sold), `cvd(n)` (delta over n candles) |
+| Perpetuals | `funding_rate`, `funding_rate_avg(n)`, `open_interest` (contracts, known 5 minutes after its time), `oi_change(n)` (now over n candles ago, minus 1), `basis` (the premium index), `mark_price`, `large_buy_volume`, `large_sell_volume`, `large_delta` (trades of at least the instrument's large-trade notional, over the candle) |
 | Position | `in_position`, `bars_in_trade`, `trade_r` (current open result in R) |
 | Time | `hour_utc`, `weekday` |
 | Exits only | `level(series)`, `chandelier(n, k)`, `atr_trail(n, k)` |
 
-Not in the first version (D-52): `open_interest`, `oi_change`, `basis` and `mark_price` are refused at compile
-time until their data is stored; phase 5 stores it (D-65). The language has no text values and no functions fed by
-language models (D-64). `src` defaults to `close` everywhere.
+The perpetual data functions read what phase 5 stores (D-79); a backtest refuses a range where it is missing, and a
+value is `none` when nothing is known yet. The language has no text values and no functions fed by language models
+(D-64). `src` defaults to `close` everywhere.
 
 Each function has a reference test against known values; the old pandas formulas at commit `e0ec48b`
 (`agents/indicators/technical.py`) serve as oracles where they apply. New functions are added through `feature-work` with a D-number if they change semantics.
