@@ -97,14 +97,14 @@
         </form>
         @foreach ($approvals as $id => $approval)
             @php($live = $accounts->firstWhere('id', $id))
-            <div class="mt-3 flex flex-wrap items-center gap-2 rounded-control border border-live p-2 text-sm" aria-label="Live approval of {{ $live?->name }}">
+            <div class="mt-3 flex flex-wrap items-center gap-2 rounded-control border border-live p-2 text-sm" wire:key="approval-{{ $id }}" aria-label="Live approval of {{ $live?->name }}">
                 <span class="font-mono">{{ $live?->name }}</span>
                 @if ($approval === null)
                     <span class="text-muted">not approved for live trading</span>
-                    <x-button variant="danger" type="button" class="ml-auto" wire:click="approveLive({{ $id }})" wire:confirm="Approve {{ $live?->name }} for live trading with real money? It takes effect in 24 hours.">Approve live trading</x-button>
+                    <x-button variant="danger" type="button" class="ml-auto" wire:key="approve-{{ $id }}" wire:click="approveLive({{ $id }})" wire:confirm="Approve {{ $live?->name }} for live trading with real money? It takes effect in 24 hours.">Approve live trading</x-button>
                 @else
                     <span>approved {{ $approval->approved_at->format('Y-m-d H:i') }} UTC, {{ $approval->effective_at->isFuture() ? 'takes effect '.$approval->effective_at->format('Y-m-d H:i').' UTC' : 'in effect' }}</span>
-                    <x-button variant="secondary" type="button" class="ml-auto" wire:click="withdrawLive({{ $id }})">Withdraw</x-button>
+                    <x-button variant="secondary" type="button" class="ml-auto" wire:key="withdraw-{{ $id }}" wire:click="withdrawLive({{ $id }})">Withdraw</x-button>
                 @endif
             </div>
         @endforeach
@@ -120,7 +120,7 @@
             @else
                 <ul class="mb-3 text-sm">
                     @foreach ($testnet as $a)
-                        <li class="flex min-h-row flex-wrap items-center gap-x-3 border-t border-border">
+                        <li class="flex min-h-row flex-wrap items-center gap-x-3 border-t border-border" wire:key="key-{{ $a->id }}">
                             <span class="font-mono">{{ $a->name }}</span>
                             <span class="text-muted">{{ $hints[$a->id] ?? 'no key' }}</span>
                             @if ($fresh && ($hints[$a->id] ?? null) !== null)
@@ -153,7 +153,7 @@
             <h2 id="tokens-heading" class="{{ $heading }}">MCP tokens</h2>
             <ul class="mb-3 text-sm">
                 @forelse ($tokens as $t)
-                    <li class="flex min-h-row flex-wrap items-center gap-x-3 border-t border-border">
+                    <li class="flex min-h-row flex-wrap items-center gap-x-3 border-t border-border" wire:key="token-{{ $t->id }}">
                         <span class="font-mono">{{ $t->name }}</span>
                         <span class="text-muted">{{ $t->revoked_at !== null ? 'revoked '.$t->revoked_at->format('Y-m-d H:i') : 'last used '.($t->last_used_at?->format('Y-m-d H:i') ?? 'never') }}</span>
                         @if ($t->revoked_at === null)
@@ -192,7 +192,7 @@
                 </thead>
                 <tbody class="font-mono">
                     @foreach ($universe as $u)
-                        <tr class="h-row border-t border-border">
+                        <tr class="h-row border-t border-border" wire:key="universe-{{ $u->id }}">
                             <td class="whitespace-nowrap pr-3">{{ $u->symbol }}</td>
                             <td class="pr-3"><input type="checkbox" class="size-4 accent-[var(--accent)]" aria-label="Stream {{ $u->symbol }}" @checked($u->streamed) wire:click="setUniverse({{ $u->id }}, 'streamed', {{ $u->streamed ? 'false' : 'true' }})"></td>
                             <td class="pr-3">

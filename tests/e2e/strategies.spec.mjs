@@ -46,7 +46,7 @@ test('promotes a qualified paper deployment to live micro after re-authenticatio
     await page.goto('/strategies');
     const ladder = page.getByLabel('Ladder');
     const paper = ladder.locator('div').filter({ hasText: `${SEEDED}` }).filter({ hasText: 'paper · paper · size 1' }).first();
-    await expect(paper).toContainText(/40 days, 32 trades, in band/);
+    await expect(paper).toContainText(/40 days, 32 trades,\s+in band/);
     await checkLayout(page);
 
     const promote = paper.getByRole('button', { name: 'Promote to live micro, a quarter of the size' });

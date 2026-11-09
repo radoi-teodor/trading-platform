@@ -92,6 +92,18 @@ it('promotes a qualified paper deployment to live micro on the live account, eff
         ->and(StrategyStage::query()->orderByDesc('id')->value('stage'))->toBe('live_micro');
 });
 
+it('does not offer a step twice: once approved it waits for its 24 hours', function (): void {
+    $deployment = ladderSetup();
+    ladderTrades($deployment, ...array_merge(...array_fill(0, 16, ['20', '0'])));
+    at('2026-11-02 09:00');
+    app(Ladder::class)->promote($deployment, 'ui');
+
+    expect(app(Ladder::class)->status($deployment)->ready)->toBeFalse()
+        ->and(app(Ladder::class)->status($deployment)->missing)->toBe('already promoted')
+        ->and(fn () => app(Ladder::class)->promote($deployment, 'ui'))->toThrow(InvalidArgumentException::class, 'Not yet: already promoted.');
+    expect(Deployment::query()->where('stage', 'live_micro')->count())->toBe(1);
+});
+
 it('demotes a deployment out of band at once: ends it, pauses the strategy, journals and notifies', function (): void {
     Bus::fake([SendTelegram::class]);
     $deployment = ladderSetup();

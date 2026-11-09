@@ -2,10 +2,15 @@
 import { test, expect } from '@playwright/test';
 import { checkLayout, reauthenticate, watchConsole } from './support.mjs';
 
+/** Picks the paper account and waits for the screen to show it: the first account by name may be another one. */
+async function pickPaper(page) {
+    await Promise.all([page.waitForResponse((r) => r.url().includes('/livewire') && r.ok() && (r.request().postData() ?? '').includes('"updates":{"account"')), page.getByLabel('Account').selectOption({ label: 'paper (paper)' })]);
+}
+
 test('halts at once and resumes after re-authentication', async ({ page }) => {
     const errors = watchConsole(page);
     await page.goto('/account');
-    await page.getByLabel('Account').selectOption({ label: 'paper (paper)' });
+    await pickPaper(page);
 
     await page.getByRole('button', { name: 'Halt account' }).click();
     await expect(page.getByRole('status').filter({ hasText: 'Halt queued for paper' })).toBeVisible();
@@ -21,7 +26,7 @@ test('halts at once and resumes after re-authentication', async ({ page }) => {
 
     if (page.url().endsWith('/confirm')) {
         await reauthenticate(page, '/account');
-        await page.getByLabel('Account').selectOption({ label: 'paper (paper)' });
+        await pickPaper(page);
         await page.getByRole('button', { name: 'Resume', exact: true }).first().click();
     }
 

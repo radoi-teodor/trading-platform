@@ -82,7 +82,7 @@
                         @if ($row['next'] !== null)
                             <p class="text-subtle">Next: {{ $row['next'] }}{{ $row['missing'] !== null ? ' ('.$row['missing'].')' : '' }}</p>
                             @if ($row['ready'])
-                                <x-button type="button" class="mt-1 w-full" wire:click="promoteDeployment({{ $row['id'] }})" wire:confirm="Approve {{ $row['label'] }} for {{ $row['next'] }}? It takes effect 24 hours from now.">Promote to {{ $row['next'] }}</x-button>
+                                <x-button type="button" class="mt-1 w-full" wire:key="promote-{{ $row['id'] }}" wire:click="promoteDeployment({{ $row['id'] }})" wire:confirm="Approve {{ $row['label'] }} for {{ $row['next'] }}? It takes effect 24 hours from now.">Promote to {{ $row['next'] }}</x-button>
                             @endif
                         @endif
                     @endif

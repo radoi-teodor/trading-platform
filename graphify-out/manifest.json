@@ -3226,9 +3226,9 @@
     "semantic_hash": ""
   },
   "resources/views/livewire/strategies-screen.blade.php": {
-    "mtime": 1794229632.7276354,
-    "seen": 1794230419.3656356,
-    "ast_hash": "2f8945c642c0e5664302996edc30827e",
+    "mtime": 1794232406.8737547,
+    "seen": 1794233310.5674646,
+    "ast_hash": "8394f61932b643201c43d3bb28bbb2fe",
     "semantic_hash": ""
   },
   "tests/Feature/Web/ScreensTest.php": {
@@ -3298,9 +3298,9 @@
     "semantic_hash": ""
   },
   "resources/views/livewire/settings-screen.blade.php": {
-    "mtime": 1794230314.0873952,
-    "seen": 1794230419.3656316,
-    "ast_hash": "dc39b7f2072c9f72da2865b13606f03f",
+    "mtime": 1794232406.8732505,
+    "seen": 1794233310.567463,
+    "ast_hash": "6f6c1cc3d2b2b1d71cfff82989d499e9",
     "semantic_hash": ""
   },
   "tests/Feature/Web/SettingsScreenTest.php": {
@@ -3334,9 +3334,9 @@
     "semantic_hash": ""
   },
   "tests/e2e/account.spec.mjs": {
-    "mtime": 1794217681.683787,
-    "seen": 1794218790.525687,
-    "ast_hash": "157b429bfc2a87a9326cb70667cb82f7",
+    "mtime": 1794232569.7052848,
+    "seen": 1794233310.5706735,
+    "ast_hash": "7a50b35bc0f8c194b719d0681c0fd768",
     "semantic_hash": ""
   },
   "tests/e2e/chart.spec.mjs": {
@@ -3382,9 +3382,9 @@
     "semantic_hash": ""
   },
   "tests/e2e/strategies.spec.mjs": {
-    "mtime": 1794230371.1173737,
-    "seen": 1794230419.3706691,
-    "ast_hash": "9e5491a103ad44460dd0c0208745d85f",
+    "mtime": 1794232406.8741784,
+    "seen": 1794233310.5708508,
+    "ast_hash": "402554d672e8aa6f68b26087802c82c6",
     "semantic_hash": ""
   },
   "tests/e2e/support.mjs": {
@@ -3694,9 +3694,9 @@
     "semantic_hash": ""
   },
   "app/Simulation/Ladder/Ladder.php": {
-    "mtime": 1794229498.9355059,
-    "seen": 1794230419.3565447,
-    "ast_hash": "07e60697e8ce9d6b757003c135b7a446",
+    "mtime": 1794233292.5265892,
+    "seen": 1794233310.5619295,
+    "ast_hash": "e075ceef454e2a63172102189951fee5",
     "semantic_hash": ""
   },
   "app/Simulation/Ladder/LadderStatus.php": {
@@ -3718,9 +3718,9 @@
     "semantic_hash": ""
   },
   "tests/Feature/Simulation/LadderTest.php": {
-    "mtime": 1794229642.3406484,
-    "seen": 1794230419.366997,
-    "ast_hash": "b34d7f40863570c71d317465235054ab",
+    "mtime": 1794232737.1762412,
+    "seen": 1794233310.5683637,
+    "ast_hash": "5b921d0ba0226f4962494a849f4a32bf",
     "semantic_hash": ""
   },
   "tests/Unit/Execution/SizedStrategyTest.php": {

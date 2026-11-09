@@ -57,6 +57,7 @@ final readonly class Ladder
         $missing = $step === null ? null : implode(', ', array_filter([
             $days < $step[2] ? "{$days} of {$step[2]} days" : null,
             count($trades) < $step[3] ? count($trades).' of '.$step[3].' trades' : null,
+            $this->promoted($deployment, $step[0], $step[1]) ? 'already promoted' : null,
         ]));
 
         return new LadderStatus($days, count($trades), $breaches, $step[4] ?? null, $missing === '' ? null : $missing, $step !== null && ($missing === null || $missing === '') && $breaches === []);
@@ -72,19 +73,17 @@ final readonly class Ladder
         $status = $this->status($deployment);
         $step = self::STEPS[$this->key($deployment)] ?? throw new InvalidArgumentException('It is at full size already.');
 
+        if (Account::query()->where('mode', EngineMode::Live)->doesntExist()) {
+            throw new InvalidArgumentException('Open a live account first, on the Settings screen.');
+        }
+
         if (! $status->ready) {
             throw new InvalidArgumentException('Not yet: '.($status->missing ?? implode('; ', $status->breaches)).'.');
         }
 
         $now = $this->clock->now();
         $effective = $now->addDay();
-        $accounts = $deployment->stage === 'paper'
-            ? Account::query()->where('mode', EngineMode::Live)->orderBy('id')->get()->all()
-            : [Account::query()->findOrFail($deployment->account_id)];
-
-        if ($accounts === []) {
-            throw new InvalidArgumentException('Open a live account first, on the Settings screen.');
-        }
+        $accounts = $this->targets($deployment, $step[0], $step[1]);
 
         $created = [];
 
@@ -160,6 +159,32 @@ final readonly class Ladder
             'payload' => ['time' => $now->toIso8601ZuluString(), 'kind' => $kind, 'detail' => $detail], 'created_at' => $now,
         ]);
         $this->notifier->engineEvent($account->name, new EngineRecord($now, $kind, $detail));
+    }
+
+    /** Whether the step up was approved already: there are accounts to go to and each has it, waiting or in force. */
+    private function promoted(Deployment $deployment, string $stage, string $size): bool
+    {
+        return ($deployment->stage !== 'paper' || Account::query()->where('mode', EngineMode::Live)->exists()) && $this->targets($deployment, $stage, $size) === [];
+    }
+
+    /**
+     * The accounts a step up goes to: every live account from paper, the same account further up; less those where the
+     * version already has that step, waiting or in force, so an approval is never given twice.
+     *
+     * @return list<Account>
+     */
+    private function targets(Deployment $deployment, string $stage, string $size): array
+    {
+        $accounts = $deployment->stage === 'paper'
+            ? Account::query()->where('mode', EngineMode::Live)->orderBy('id')->get()->all()
+            : [Account::query()->findOrFail($deployment->account_id)];
+        $now = $this->clock->now();
+
+        return array_values(array_filter($accounts, fn (Account $account): bool => Deployment::query()
+            ->where('account_id', $account->id)->where('strategy_version_id', $deployment->strategy_version_id)
+            ->where('stage', $stage)->where('size_multiplier', $size)->where('active', true)
+            ->where(fn ($q) => $q->whereNull('ended_at')->orWhere('ended_at', '>', $now))
+            ->doesntExist()));
     }
 
     /** @return list<AccountTrade> the deployment's trades since it took effect, oldest first */
