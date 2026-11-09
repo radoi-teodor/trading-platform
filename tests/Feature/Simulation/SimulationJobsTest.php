@@ -67,7 +67,7 @@ it('refuses what a run cannot be, and more than two waiting runs per author', fu
     expect(fn () => $queue->submit('backtest', $valid, 'agent:desk'))->toThrow(InvalidArgumentException::class, 'agent:desk already has 2 runs waiting or running; wait for one to finish.')
         ->and(fn () => $queue->submit('backtest', [...$valid, 'strategy' => 'ema-cross-test'], 'operator'))->toThrow(InvalidArgumentException::class, 'strategy is a saved version, such as ema-cross-scalp-long@v1.')
         ->and(fn () => $queue->submit('backtest', [...$valid, 'from' => 'yesterday'], 'operator'))->toThrow(InvalidArgumentException::class, 'from and to are days, YYYY-MM-DD.')
-        ->and(fn () => $queue->submit('deploy', $valid, 'operator'))->toThrow(InvalidArgumentException::class, 'A simulation run is a backtest or a grid.')
+        ->and(fn () => $queue->submit('deploy', $valid, 'operator'))->toThrow(InvalidArgumentException::class, 'A simulation run is a backtest, a grid or a gate report.')
         ->and(fn () => $queue->submit('backtest', [...$valid, 'shell' => 'rm'], 'operator'))->toThrow(InvalidArgumentException::class, 'Unknown argument shell.');
     Queue::assertPushed(RunSimulation::class, 2);
     expect(SimulationJob::query()->where('status', 'queued')->count())->toBe(2);

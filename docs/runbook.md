@@ -195,3 +195,18 @@ the testnet site first. It halts when the machine's clock is more than a second 
 sync) or when the key is refused, and stops on any other venue error; its supervisor restarts it. Binance blocks
 some regions: run it from where your account works.
 
+## 13. The screens
+
+| Task | Command |
+|------|---------|
+| Create the operator (once) | `php artisan user:create you@example.com`: the password twice, then add the TOTP key it shows to your authenticator and type a code |
+| Build the front end | `npm ci && npm run build` |
+| Serve it on this machine | `php artisan serve` and open `http://127.0.0.1:8000` |
+
+Chart: candles of a stored instrument with layers from the DSL's library; price layers over the candles, the
+others in panels, conditions as markers, the window's volume profile on the right, and a table view. Strategies:
+the editor compiles as you type, shows errors with their line and column and the read-back, saves versions, runs
+backtests, grids and gate reports in the background (the simulation worker must run) and promotes a passing
+version to Backtested. Account: the snapshot of each account, its journal and its commands; resume, resume a
+strategy and flatten ask for your password and a fresh code, valid 10 minutes. Halt is on every screen.
+

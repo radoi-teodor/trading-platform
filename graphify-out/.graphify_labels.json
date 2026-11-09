@@ -4,7 +4,6 @@
   "9": "SimulatedVenueTest.php",
   "11": "SimulatedPerpVenueTest.php",
   "12": "Candle",
-  "21": "Illuminate\\Database\\Schema\\Blueprint",
   "45": "User",
   "47": "package.json",
   "54": "postgres",
@@ -36,7 +35,5 @@
   "113": "market.php",
   "114": "queue.php",
   "115": "risk.php",
-  "116": "services.php",
-  "117": "app.js",
-  "118": "web.php"
+  "116": "services.php"
 }

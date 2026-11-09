@@ -37,7 +37,7 @@ final readonly class ChartSeries
 
     /**
      * @param  list<string>  $expressions
-     * @return array{candles: list<array{time: string, open: string, high: string, low: string, close: string, volume: string}>, series: array<string, list<?string>>}
+     * @return array{candles: list<array{time: string, open: string, high: string, low: string, close: string, volume: string}>, series: array<string, list<?string>>, types: array<string, string>} types say what each expression measures, such as "a price series" or "a condition"
      */
     public function compute(Symbol $symbol, Timeframe $timeframe, CarbonImmutable $from, CarbonImmutable $to, array $expressions): array
     {
@@ -55,6 +55,7 @@ final readonly class ChartSeries
         $compiler = new Compiler($scope, []);
         $program = new Program;
         $history = 0;
+        $types = [];
 
         foreach (array_values($expressions) as $index => $expression) {
             $node = Parser::parse($expression);
@@ -64,6 +65,7 @@ final readonly class ChartSeries
                 throw new DslError($node->position(), "{$expression} is {$type->describe()}; a chart shows series and conditions.");
             }
 
+            $types[$expression] = $type->describe();
             $compiler->add($program, "e{$index}", $node);
             $history = max($history, $compiler->history($node));
         }
@@ -119,7 +121,7 @@ final readonly class ChartSeries
             }
         }
 
-        return ['candles' => $candles, 'series' => $series];
+        return ['candles' => $candles, 'series' => $series, 'types' => $types];
     }
 
     private function frame(Candle $bar, ?FundingRate $funding): Frame

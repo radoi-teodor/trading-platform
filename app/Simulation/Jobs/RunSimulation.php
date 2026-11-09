@@ -33,7 +33,9 @@ final class RunSimulation implements ShouldQueue
         $output = new BufferedOutput;
 
         try {
-            $exit = $console->call($job->kind === 'grid' ? 'backtest:grid' : 'backtest:run', self::options($job), $output);
+            $exit = $console->call(match ($job->kind) {
+                'grid' => 'backtest:grid', 'gates' => 'strategy:gates', default => 'backtest:run',
+            }, self::options($job), $output);
             $text = $output->fetch();
             $lines = array_values(array_filter(array_map('trim', explode("\n", $text)), fn (string $line): bool => $line !== ''));
             $summary = $exit === 0 ? json_decode((string) end($lines), true) : null;
@@ -56,6 +58,11 @@ final class RunSimulation implements ShouldQueue
     private static function options(SimulationJob $job): array
     {
         $a = $job->arguments;
+
+        if ($job->kind === 'gates') {
+            return ['strategy' => $a['strategy'] ?? '', '--json' => true, ...(isset($a['to']) ? ['--to' => $a['to']] : [])];
+        }
+
         $options = ['strategy' => $a['strategy'] ?? '', '--from' => $a['from'] ?? '', '--to' => $a['to'] ?? '', '--json' => true];
         $list = fn (mixed $value): array => is_array($value) ? array_values(array_filter($value, 'is_string')) : [];
 

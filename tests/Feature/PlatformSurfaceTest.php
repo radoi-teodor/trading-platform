@@ -11,8 +11,9 @@ it('answers the health check', function (): void {
     get('/up')->assertOk();
 });
 
-it('has no public home page', function (): void {
-    get('/')->assertNotFound();
+it('has no public page: every screen sends a visitor to the login', function (): void {
+    get('/')->assertRedirect('/login');
+    get('/chart')->assertRedirect('/login');
 });
 
 it('has no registration route', function (): void {

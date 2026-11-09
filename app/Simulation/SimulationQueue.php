@@ -21,6 +21,7 @@ final readonly class SimulationQueue
     private const array ARGUMENTS = [
         'backtest' => ['strategy', 'from', 'to', 'params', 'no_benchmarks'],
         'grid' => ['strategy', 'from', 'to', 'grid', 'walk_forward'],
+        'gates' => ['strategy', 'to'],
     ];
 
     public function __construct(private Dispatcher $dispatcher, private Clock $clock, private string $connection) {}
@@ -28,7 +29,7 @@ final readonly class SimulationQueue
     /** @param array<string, mixed> $arguments */
     public function submit(string $kind, array $arguments, string $author): SimulationJob
     {
-        $allowed = self::ARGUMENTS[$kind] ?? throw new InvalidArgumentException('A simulation run is a backtest or a grid.');
+        $allowed = self::ARGUMENTS[$kind] ?? throw new InvalidArgumentException('A simulation run is a backtest, a grid or a gate report.');
 
         foreach (array_keys($arguments) as $name) {
             if (! in_array($name, $allowed, true)) {
@@ -42,7 +43,7 @@ final readonly class SimulationQueue
             throw new InvalidArgumentException('strategy is a saved version, such as ema-cross-scalp-long@v1.');
         }
 
-        foreach (['from', 'to'] as $day) {
+        foreach ($kind === 'gates' ? (isset($arguments['to']) ? ['to'] : []) : ['from', 'to'] as $day) {
             if (! is_string($arguments[$day] ?? null) || preg_match('/^\d{4}-\d{2}-\d{2}$/', $arguments[$day]) !== 1) {
                 throw new InvalidArgumentException('from and to are days, YYYY-MM-DD.');
             }
