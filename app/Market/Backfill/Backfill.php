@@ -11,7 +11,6 @@ use App\Market\Archive\ChecksumMismatch;
 use App\Market\Binance\BinanceRequestFailed;
 use App\Market\Binance\BinanceRestClient;
 use App\Market\CandleRepository;
-use App\Market\Data\Candle;
 use App\Market\Data\CandleSource;
 use App\Market\Data\FundingRate;
 use App\Market\Data\OpenInterest;
@@ -25,6 +24,7 @@ use App\Support\Clock\Clock;
 use App\Support\Number\Decimal;
 use App\Support\Timeframe;
 use Carbon\CarbonImmutable;
+use Generator;
 use InvalidArgumentException;
 use UnexpectedValueException;
 
@@ -163,16 +163,24 @@ final readonly class Backfill
      */
     private function storeArchive(Instrument $instrument, ArchivePeriod $period, CarbonImmutable $from, CarbonImmutable $to, array &$steps): void
     {
-        $candles = array_values(array_filter(
-            $this->archive->klines($instrument->market, $instrument->venue_symbol, $period),
-            static fn (Candle $candle): bool => $candle->openTime->betweenIncluded($from, $to),
-        ));
+        $archived = $this->archive->klines($instrument->market, $instrument->venue_symbol, $period);
+        $openTimes = [];
+        // Streamed into the upsert, which writes in batches: a month of candles never sits in memory at once.
+        $candles = (static function () use ($archived, $from, $to, &$openTimes): Generator {
+            foreach ($archived as $candle) {
+                if ($candle->openTime->betweenIncluded($from, $to)) {
+                    $openTimes[] = $candle->openTime->getTimestamp();
+
+                    yield $candle;
+                }
+            }
+        })();
         $steps[] = new BackfillStep("{$period->folder()} {$period->label()}", $this->candles->upsert($instrument, CandleSource::Archive, $candles));
 
         $windowStart = $period->start->max(Timeframe::OneMinute->openTimeContaining($from));
         $windowEnd = $period->end()->subMinute()->min($to);
 
-        foreach (self::missingRanges($candles, $windowStart, $windowEnd) as [$gapFrom, $gapTo]) {
+        foreach (self::missingRanges($openTimes, $windowStart, $windowEnd) as [$gapFrom, $gapTo]) {
             $steps[] = new BackfillStep(
                 "rest gap {$gapFrom->format('Y-m-d H:i')}",
                 $this->candles->upsert($instrument, CandleSource::Rest, $this->rest->klines($instrument->market, $instrument->venue_symbol, $gapFrom, $gapTo)),
@@ -181,20 +189,22 @@ final readonly class Backfill
     }
 
     /**
-     * @param  list<Candle>  $candles  oldest first
+     * @param  list<int>  $openTimes  Unix seconds of the stored candles, oldest first (integers: a month of Carbon
+     *                                objects would undo the streaming)
      * @return list<array{0: CarbonImmutable, 1: CarbonImmutable}>
      */
-    private static function missingRanges(array $candles, CarbonImmutable $from, CarbonImmutable $to): array
+    private static function missingRanges(array $openTimes, CarbonImmutable $from, CarbonImmutable $to): array
     {
         $ranges = [];
-        $expected = $from;
+        $expected = $from->getTimestamp();
+        $openTimes[] = $to->addMinute()->getTimestamp();
 
-        foreach ([...array_map(static fn (Candle $c): CarbonImmutable => $c->openTime, $candles), $to->addMinute()] as $time) {
-            if ($time->greaterThan($expected)) {
-                $ranges[] = [$expected, $time->subMinute()];
+        foreach ($openTimes as $time) {
+            if ($time > $expected) {
+                $ranges[] = [CarbonImmutable::createFromTimestampUTC($expected), CarbonImmutable::createFromTimestampUTC($time - 60)];
             }
 
-            $expected = $time->addMinute()->max($expected);
+            $expected = max($time + 60, $expected);
         }
 
         return $ranges;

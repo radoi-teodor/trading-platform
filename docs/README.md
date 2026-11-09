@@ -71,7 +71,10 @@ database instead of Redis, the dependencies, the app key, the front-end build an
 the web process on http://127.0.0.1:8000, the simulation worker and the notifications worker in one window, and
 restarts one that dies. Ctrl+C stops them and PostgreSQL; `.\start-local.ps1 -Stop` does it after the window was
 closed. `-Stream` adds the market data streams and the scheduler, `-Scheduler` the scheduler alone, `-Engine paper`
-an engine. Create the operator once with `php artisan user:create <email>`.
+an engine. The processes it starts run with `memory_limit=2G`, through an ini file in
+`%LOCALAPPDATA%\TradingPlatform\php`, since PHP's usual 128 MB is too little for backtests over months of 1-minute
+candles; for a command typed by hand use `php -d memory_limit=2G artisan ...`. Create the operator once with
+`php artisan user:create <email>`.
 
 `php artisan serve` starts the web process; `/up` is the health check. The screens are Chart, Strategies, Account
 and Settings (`runbook.md` section 13).

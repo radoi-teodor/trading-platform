@@ -176,6 +176,12 @@ Add to the list when a fix reveals a new one.
   `market:instruments spot` timed out, and decoding it passed Herd's 128 MB memory limit. REST answers travel
   gzip-compressed and the spot `exchangeInfo` asks `showPermissionSets=false` (147 KB, same filters). Search:
   `->timeout(` on downloads whose size grows (`BinanceArchive::fetch`, 120 s for daily archives of up to 25 MB).
+- **A whole archive held in memory.** A month of 1-minute candles as `Candle` objects is about 160 MB (3.8 KB
+  each); `market:backfill SOL/USDT:USDT --from=2026-10` passed Herd's 128 MB limit, which CI never has.
+  `BinanceArchive::klines` now yields candles from a streamed zip and the backfill upserts them as they come,
+  keeping only open times as integers. Search: `array_map`/`array_filter`/`iterator_to_array` over archive or
+  REST data in `app/Market`, `rows(`/`csv(` on large files. Backtests over months still need more than 128 MB:
+  `start-local.ps1` runs PHP with 2 GB.
 - **Packages that bring their own `App\` namespace.** `laravel/pint` maps `App\` to its own internal app, which
   merged into ours. Such tools live in `tools/<name>` with their own composer project. Search:
   `grep "'App\\\\\\\\'" vendor/composer/autoload_psr4.php` must list only `app/`.

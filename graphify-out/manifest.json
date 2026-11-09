@@ -241,9 +241,9 @@
     "semantic_hash": "3e0f0f3d39979d03a97b368c9669ac0f"
   },
   "app/Market/Archive/BinanceArchive.php": {
-    "mtime": 1794234536.6402907,
-    "seen": 1794237954.257904,
-    "ast_hash": "35d44cc9309a8db95ed800a827bdaff1",
+    "mtime": 1794241185.711692,
+    "seen": 1794241766.2065754,
+    "ast_hash": "d28b289e5f900afe0690969da6d0bcf5",
     "semantic_hash": ""
   },
   "app/Market/Archive/ChecksumMismatch.php": {
@@ -253,9 +253,9 @@
     "semantic_hash": "bdc07eb4af862872b83af6a57d453d90"
   },
   "app/Market/Backfill/Backfill.php": {
-    "mtime": 1794234536.6413639,
-    "seen": 1794237954.2579246,
-    "ast_hash": "16b64e799681336a768e956d7872c2be",
+    "mtime": 1794241292.812952,
+    "seen": 1794241766.2067876,
+    "ast_hash": "751f674b31a77d8bac4f4b25182cc3b5",
     "semantic_hash": ""
   },
   "app/Market/Backfill/BackfillReport.php": {
@@ -1352,16 +1352,16 @@
     "semantic_hash": "e3f038891f31b4ae31014a0ed1074130"
   },
   "tests/Feature/Market/ArchiveImportTest.php": {
-    "mtime": 1794234537.180234,
-    "seen": 1794237954.2619367,
-    "ast_hash": "e5845a12f85f13e3aa269e22321d8bf9",
-    "semantic_hash": "e5845a12f85f13e3aa269e22321d8bf9"
+    "mtime": 1794241211.4834845,
+    "seen": 1794241766.2925394,
+    "ast_hash": "a2f3a6871d997bdd114e004ecefe7798",
+    "semantic_hash": ""
   },
   "tests/Feature/Market/BackfillTest.php": {
-    "mtime": 1794234537.1823058,
-    "seen": 1794237954.2619462,
-    "ast_hash": "33b34e3d53609a10afc5bdd124349362",
-    "semantic_hash": "33b34e3d53609a10afc5bdd124349362"
+    "mtime": 1794241139.1551306,
+    "seen": 1794241766.29255,
+    "ast_hash": "0dc84e6d6077767677e2b1e45fe07e3a",
+    "semantic_hash": ""
   },
   "tests/Feature/Market/BinanceRestClientTest.php": {
     "mtime": 1794237541.9967153,
@@ -1804,9 +1804,9 @@
     "semantic_hash": ""
   },
   ".claude/skills/bug-fix/SKILL.md": {
-    "mtime": 1794237943.772544,
-    "seen": 1794237954.2632744,
-    "ast_hash": "f142f6861f22db5e59fa1b507ff92424",
+    "mtime": 1794241275.4538596,
+    "seen": 1794241766.323568,
+    "ast_hash": "afd9c959128795f32fb8e1acd609502b",
     "semantic_hash": ""
   },
   ".claude/skills/feature-work/SKILL.md": {
@@ -1834,9 +1834,9 @@
     "semantic_hash": ""
   },
   "docs/README.md": {
-    "mtime": 1794236960.7308044,
-    "seen": 1794237954.2633228,
-    "ast_hash": "cd2d30826047746c672d264c7061d7ec",
+    "mtime": 1794241270.0943515,
+    "seen": 1794241766.3244798,
+    "ast_hash": "f080656bff568782bb59950ba313f125",
     "semantic_hash": ""
   },
   "docs/architecture.md": {
@@ -1864,9 +1864,9 @@
     "semantic_hash": ""
   },
   "docs/decisions.md": {
-    "mtime": 1794238905.832952,
-    "seen": 1794239327.0769029,
-    "ast_hash": "aaa2efed7f2ff7d7bd2b7d14b34c821c",
+    "mtime": 1794241272.3596675,
+    "seen": 1794241766.32539,
+    "ast_hash": "0a4ff0ca5424508fa95bd184ff29d096",
     "semantic_hash": ""
   },
   "docs/engine.md": {
@@ -3736,9 +3736,9 @@
     "semantic_hash": ""
   },
   "start-local.ps1": {
-    "mtime": 1794236960.731912,
-    "seen": 1794237954.261798,
-    "ast_hash": "359fa58bcf573a8448e9ef8ca41eb5ef",
+    "mtime": 1794241266.5378335,
+    "seen": 1794241766.2895997,
+    "ast_hash": "27dc6aaa16e9f1e16c91dc6ddad74001",
     "semantic_hash": ""
   },
   "app/Web/Console/TerminalQrCode.php": {

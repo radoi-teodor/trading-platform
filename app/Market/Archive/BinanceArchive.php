@@ -37,14 +37,22 @@ final readonly class BinanceArchive
         private int $timeoutSeconds,
     ) {}
 
-    /** @return list<Candle> 1-minute candles, oldest first */
-    public function klines(MarketType $market, string $venueSymbol, ArchivePeriod $period): array
+    /** @return Generator<int, Candle> 1-minute candles, oldest first */
+    public function klines(MarketType $market, string $venueSymbol, ArchivePeriod $period): Generator
     {
         $root = $market === MarketType::Spot ? 'spot' : 'futures/um';
         $path = "{$root}/{$period->folder()}/klines/{$venueSymbol}/1m/{$venueSymbol}-1m-{$period->label()}.zip";
 
-        return array_map(
-            static fn (array $fields): Candle => Candle::fromStrings(
+        // Downloaded and verified now, so a missing or corrupt archive fails here; read lazily, since a month of
+        // candles held as objects is about 160 MB.
+        return self::candles($this->archive($path));
+    }
+
+    /** @return Generator<int, Candle> */
+    private static function candles(string $local): Generator
+    {
+        foreach (self::lines($local, 12) as $fields) {
+            yield Candle::fromStrings(
                 EpochTime::parse($fields[0]),
                 Timeframe::OneMinute,
                 ExchangeNumber::plain($fields[1]),
@@ -55,9 +63,8 @@ final readonly class BinanceArchive
                 ExchangeNumber::plain($fields[7]),
                 self::integer($fields[8]),
                 ExchangeNumber::plain($fields[9]),
-            ),
-            self::rows($this->csv($path), 12),
-        );
+            );
+        }
     }
 
     /** @return list<FundingRate> the funding rates of the month that contains $month, oldest first */

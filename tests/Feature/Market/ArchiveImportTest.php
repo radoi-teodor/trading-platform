@@ -31,7 +31,7 @@ it('imports a spot daily archive written in microseconds', function (): void {
         'data.binance.vision/data/spot/daily/klines/BTCUSDT/1m/BTCUSDT-1m-2026-11-06.zip' => Http::response(archiveBytes('spot-BTCUSDT-1m-2026-11-06.zip')),
     ]);
 
-    $candles = app(BinanceArchive::class)->klines(MarketType::Spot, 'BTCUSDT', ArchivePeriod::daily(CarbonImmutable::parse('2026-11-06', 'UTC')));
+    $candles = iterator_to_array(app(BinanceArchive::class)->klines(MarketType::Spot, 'BTCUSDT', ArchivePeriod::daily(CarbonImmutable::parse('2026-11-06', 'UTC'))), false);
 
     expect($candles)->toHaveCount(1440)
         ->and($candles[0]->openTime->toIso8601String())->toBe('2026-11-06T00:00:00+00:00')
@@ -48,7 +48,7 @@ it('imports a perpetual daily archive and skips its header line', function (): v
         'data.binance.vision/data/futures/um/daily/klines/BTCUSDT/1m/BTCUSDT-1m-2026-11-06.zip' => Http::response(archiveBytes('perp-BTCUSDT-1m-2026-11-06.zip')),
     ]);
 
-    $candles = app(BinanceArchive::class)->klines(MarketType::Perp, 'BTCUSDT', ArchivePeriod::daily(CarbonImmutable::parse('2026-11-06', 'UTC')));
+    $candles = iterator_to_array(app(BinanceArchive::class)->klines(MarketType::Perp, 'BTCUSDT', ArchivePeriod::daily(CarbonImmutable::parse('2026-11-06', 'UTC'))), false);
 
     expect($candles)->toHaveCount(1440)
         ->and($candles[0]->openTime->toIso8601String())->toBe('2026-11-06T00:00:00+00:00')

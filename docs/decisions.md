@@ -560,8 +560,10 @@ The operator's Windows machine has no Docker, and installing it needs administra
 the official PostgreSQL 17 binaries from a folder in `%LOCALAPPDATA%`, started and stopped by the script, and no
 Redis: nothing in the code talks to Redis directly, so the cache and the default queue use the database, as runbook
 section 2 already allows. The processes run under `concurrently`, which restarts one that dies; the scheduler
-starts with the streams, because without them `platform:health` fails every minute. Docker Compose stays the setup
-for every other machine and for CI.
+starts with the streams, because without them `platform:health` fails every minute. The processes it starts run
+with `memory_limit=2G` (an ini file found through `PHP_INI_SCAN_DIR`, so Herd's PHP, shared with other projects, is
+not changed): backtests and the golden suite need more than PHP's usual 128 MB, while the backfill streams its
+archives and fits in it. Docker Compose stays the setup for every other machine and for CI.
 
 **D-86. The authenticator is set up from a QR code in the terminal** (2026-11-09, accepted; the operator could not
 set up the app from the key as text)

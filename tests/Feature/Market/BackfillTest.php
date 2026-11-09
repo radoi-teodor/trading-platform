@@ -78,6 +78,33 @@ it('takes full months from monthly archives, past days from daily ones and today
     Http::assertNotSent(fn (Request $request): bool => str_contains($request->url(), '2026-11-03.zip'));
 });
 
+// A month of 1-minute candles held as objects is about 160 MB; SOL/USDT:USDT for October 2026 passed Herd's
+// 128 MB limit. The archive is read line by line and stored as it is read, so the memory stays small.
+it('stores a full monthly archive without holding the month in memory', function (): void {
+    $start = 1790812800000; // 2026-10-01 00:00 UTC
+    $october = ArchiveFactory::make('BTCUSDT-1m-2026-10.zip', array_map(
+        fn (int $minute): string => ArchiveFactory::spotLine($start + $minute * 60_000),
+        range(0, 31 * 1440 - 1),
+    ));
+    Http::fake([
+        '*/monthly/klines/BTCUSDT/1m/BTCUSDT-1m-2026-10.zip.CHECKSUM' => Http::response($october['checksum']),
+        '*/monthly/klines/BTCUSDT/1m/BTCUSDT-1m-2026-10.zip' => Http::response($october['zip']),
+    ]);
+    app()->instance(Clock::class, new SimClock(CarbonImmutable::parse('2026-11-03 12:00:00', 'UTC')));
+    $instrument = Instrument::register('binance', MarketType::Spot, Symbol::parse('BTC/USDT'), CarbonImmutable::parse('2026-11-03', 'UTC'));
+    $backfill = app(Backfill::class);
+    memory_reset_peak_usage();
+    $before = memory_get_usage();
+
+    $report = $backfill->candles($instrument, CarbonImmutable::parse('2026-10-01', 'UTC'), CarbonImmutable::parse('2026-10-31 23:59:00', 'UTC'));
+
+    expect($report->steps)->toHaveCount(1)
+        ->and($report->steps[0]->result->inserted)->toBe(44640)
+        ->and($report->failure)->toBeNull()
+        ->and(DB::table('candles')->count())->toBe(44640)
+        ->and(memory_get_peak_usage() - $before)->toBeLessThan(48 * 1024 * 1024);
+});
+
 it('only keeps candles inside the asked range', function (): void {
     $day = ArchiveFactory::make('BTCUSDT-1m-2026-10-31.zip', [
         ArchiveFactory::spotLine(1793404800000), // 2026-10-31 00:00

@@ -15,6 +15,8 @@
     Ctrl+C stops the processes and PostgreSQL. If the window was closed instead, run it with -Stop.
 
     Redis is not used locally: the cache and the default queue are the database (docs/runbook.md, section 2).
+    PHP runs with memory_limit=2G for the processes started here; for a command typed by hand, use
+    php -d memory_limit=2G artisan ...
 
 .EXAMPLE
     .\start-local.ps1
@@ -53,6 +55,14 @@ $PgBin = Join-Path $Home_ 'pgsql\bin'
 $PgData = Join-Path $Home_ 'pgdata'
 $PgLog = Join-Path $Home_ 'postgres.log'
 $PidFile = Join-Path $Home_ 'processes.pid'
+
+# PHP's usual 128 MB is too little for backtests over months of 1-minute candles. An extra ini file, found
+# through PHP_INI_SCAN_DIR, raises it for every PHP process started from here, the children of the scheduler and
+# the workers included, without touching the PHP installation that other projects share.
+$PhpIniDir = Join-Path $Home_ 'php'
+New-Item -ItemType Directory -Force -Path $PhpIniDir | Out-Null
+[IO.File]::WriteAllText((Join-Path $PhpIniDir 'trading-platform.ini'), "memory_limit=2G`n")
+$env:PHP_INI_SCAN_DIR = $PhpIniDir
 
 function Write-Step([string] $Text) { Write-Host "==> $Text" -ForegroundColor Cyan }
 function Write-Note([string] $Text) { Write-Host "    $Text" -ForegroundColor DarkGray }
