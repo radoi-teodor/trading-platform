@@ -1,0 +1,15 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    level: max
+    # config/ is not analysed: env() is untyped by design. Code reads configuration through typed
+    # accessors (Config::string(), Config::integer(), ...), which PHPStan checks at the point of use.
+    paths:
+        - app
+        - bootstrap/app.php
+        - database
+        - routes
+        - tests
+    tmpDir: .phpstan
+    treatPhpDocTypesAsCertain: false

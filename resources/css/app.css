@@ -1,0 +1,67 @@
+@import 'tailwindcss';
+@import './tokens.css';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+
+/*
+ * Tailwind utilities mapped to the Graphite tokens (docs/brand.md, A1 and B1): bg-surface, text-muted,
+ * text-up, border-strong, ... Only var() references here; color literals live in tokens.css.
+ * The IBM Plex font files are downloaded at build time by the Vite fonts plugin (vite.config.js).
+ */
+@theme {
+    --color-*: initial;
+
+    --color-bg: var(--bg);
+    --color-surface: var(--surface);
+    --color-surface-2: var(--surface-2);
+    --color-border: var(--border);
+    --color-strong: var(--border-strong);
+    --color-text: var(--text);
+    --color-muted: var(--text-muted);
+    --color-subtle: var(--text-subtle);
+    --color-accent: var(--accent);
+    --color-accent-contrast: var(--accent-contrast);
+    --color-focus: var(--focus);
+    --color-up: var(--up);
+    --color-down: var(--down);
+    --color-warn: var(--warn);
+    --color-info: var(--info);
+    --color-live: var(--live);
+    --color-agent: var(--agent);
+    --color-series-1: var(--series-1);
+    --color-series-2: var(--series-2);
+    --color-series-3: var(--series-3);
+    --color-series-4: var(--series-4);
+    --color-series-5: var(--series-5);
+
+    --font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+    --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+    --text-2xs: 11px;
+    --text-xs: 12px;
+    --text-sm: 13px;
+    --text-base: 13px;
+    --text-md: 15px;
+    --text-lg: 18px;
+    --text-xl: 22px;
+    --text-2xl: 28px;
+
+    --radius-control: 2px;
+    --radius-card: 4px;
+
+    --spacing-row: 28px;
+    --spacing-card: 12px;
+    --spacing-gutter: 12px;
+}
+
+html {
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+body {
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+}

@@ -1,0 +1,72 @@
+/*
+ * Trading X design tokens: the Graphite identity (D-24, docs/brand.md, Part B1).
+ * The only file in the project that holds color literals. Every other style reads these variables,
+ * usually through the Tailwind theme in app.css. tests/Brand/TokensTest.php checks contrast on every build.
+ *
+ * Dark is the default; light is for reports and print.
+ */
+
+:root,
+[data-theme="dark"] {
+    color-scheme: dark;
+
+    --bg: #0A0C0F;
+    --surface: #101419;
+    --surface-2: #161B21;
+    --border: #232A32;
+    --border-strong: #5C6878;
+    --text: #E6EAEF;
+    --text-muted: #9BA5B3;
+    --text-subtle: #6F7A88;
+    --accent: #7CC4FA;
+    --accent-contrast: #06131D;
+    --focus: #7CC4FA;
+    --up: #33C48D;
+    --down: #F2606B;
+    --up-alt: #5AA9FF;
+    --down-alt: #FF9F43;
+    --warn: #F2B33D;
+    --info: #7CC4FA;
+    --live: #E35DD3;
+    --agent: #7CC4FA;
+    --series-1: #3987E5;
+    --series-2: #D95926;
+    --series-3: #9085E9;
+    --series-4: #C98500;
+    --series-5: #D55181;
+}
+
+[data-theme="light"] {
+    color-scheme: light;
+
+    --bg: #F4F5F7;
+    --surface: #FFFFFF;
+    --surface-2: #EEF1F4;
+    --border: #D9DEE4;
+    --border-strong: #8A94A1;
+    --text: #0E1318;
+    --text-muted: #4F5B69;
+    --text-subtle: #6B7684;
+    --accent: #0A6FB8;
+    --accent-contrast: #FFFFFF;
+    --focus: #0A6FB8;
+    --up: #0B7450;
+    --down: #C42F3C;
+    --up-alt: #1F63C6;
+    --down-alt: #A84800;
+    --warn: #8F5A00;
+    --info: #0A6FB8;
+    --live: #A3168E;
+    --agent: #0A6FB8;
+    --series-1: #2A78D6;
+    --series-2: #EB6834;
+    --series-3: #6250D6;
+    --series-4: #EDA100;
+    --series-5: #E87BA4;
+}
+
+/* Direction colors swapped for color-vision deficiency (docs/brand.md, A3), a user setting. */
+[data-direction="alt"] {
+    --up: var(--up-alt);
+    --down: var(--down-alt);
+}

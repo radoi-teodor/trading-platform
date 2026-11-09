@@ -1,0 +1,13 @@
+{
+    "name": "radoi-teodor/trading-platform-pint",
+    "description": "Pint, installed apart from the application so its own App\\ namespace never enters the application's autoloader.",
+    "type": "project",
+    "license": "proprietary",
+    "require": {
+        "php": "^8.4",
+        "laravel/pint": "^1.32"
+    },
+    "config": {
+        "sort-packages": true
+    }
+}

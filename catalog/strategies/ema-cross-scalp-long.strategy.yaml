@@ -1,0 +1,33 @@
+strategy: ema-cross-scalp-long
+title: EMA 9/21 cross scalp, long, on 5m
+family: trend
+hypothesis: >
+  On 5-minute candles, a fast EMA crossing above a slow one while the hourly trend is up starts a short burst of
+  momentum that pays more than the perpetual's fees.
+fails_when: Choppy hours, when the EMAs cross back and forth and every trade pays fees and slippage.
+
+params:
+  fast: { default: 9, range: [5, 13], step: 2 }
+  slow: { default: 21, range: [15, 34], step: 1 }
+  trend: { default: 50, range: [20, 100], step: 10 }
+
+market:
+  exchange: binance
+  type: perp                          # USD-M: 0.05 % taker against 0.10 % on spot (D-47)
+  instruments: [BTC/USDT:USDT]
+timeframe: 5m
+
+filters:
+  - close > ema($trend) on 1h         # trade with the hourly trend only
+  - adx(14) > 20                      # skip flat markets
+
+entries:
+  long:
+    when: ema($fast) crosses_above ema($slow)
+    order: market
+
+exits:
+  stop_loss: 1.5 * atr(14)
+  take_profit: 2R
+  time_stop: 36 bars                  # 3 hours
+  when: ema($fast) crosses_below ema($slow)

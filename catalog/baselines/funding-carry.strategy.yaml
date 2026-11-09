@@ -1,0 +1,19 @@
+strategy: funding-carry
+title: BTC funding carry, the coded baseline
+family: carry
+hypothesis: >
+  Leveraged longs pay positive funding on the perpetual; long spot plus an equal short perpetual collects it with
+  little price exposure.
+fails_when: Funding turns negative for days, or the exchange fails.
+template: funding_carry
+
+params:
+  spot: BTC/USDT
+  perp: BTC/USDT:USDT
+  enter_when: funding_rate_avg(9) > 0.01%
+  exit_when: funding_rate_avg(3) < 0%
+  max_leverage_perp: 2
+  margin_buffer: 50%
+
+sizing:
+  max_position: 30%

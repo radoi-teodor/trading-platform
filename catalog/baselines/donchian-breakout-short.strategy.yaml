@@ -1,0 +1,26 @@
+strategy: donchian-breakout-short
+title: Donchian breakdown, short, on the perpetual
+family: trend
+hypothesis: >
+  The mirror of the breakout: a close below the lowest low of the last 20 candles starts a fall that forced sellers
+  extend.
+fails_when: Ranges with false breakdowns, and short squeezes.
+
+params:
+  entry: { default: 20, range: [10, 40], step: 5 }
+  exit: { default: 10, range: [5, 20], step: 5 }
+
+market:
+  exchange: binance
+  type: perp
+  instruments: [BTC/USDT:USDT]
+timeframe: 4h
+
+entries:
+  short:
+    when: close < lowest(low, $entry)[1]
+
+exits:
+  stop_loss: 2 * atr(14)
+  take_profit: 3R
+  when: close > highest(high, $exit)[1]

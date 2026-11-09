@@ -1,0 +1,20 @@
+strategy: buy-and-hold
+title: Buy and hold, the first benchmark
+family: trend
+hypothesis: >
+  Holding the asset is the return every active strategy must beat after its costs (docs/simulation.md, section 10).
+fails_when: Long bear markets; it never leaves.
+profile: benchmark
+
+market:
+  exchange: binance
+  type: spot
+  instruments: [BTC/USDT]
+timeframe: 1m
+
+entries:
+  long:
+    when: true
+
+exits:
+  stop_loss: none

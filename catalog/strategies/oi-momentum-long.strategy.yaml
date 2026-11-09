@@ -1,0 +1,28 @@
+strategy: oi-momentum-long
+title: Open interest momentum, long, on the perpetual
+family: trend
+hypothesis: >
+  When open interest grows while takers keep buying and the perpetual does not trade at an unusual premium, new
+  longs are opening into strength and the move carries on for a few candles.
+fails_when: >
+  Open interest grows on hedges and basis trades rather than on directional longs; choppy sessions where buying
+  pressure reverses within the candle.
+
+params:
+  oi_bars: { default: 4, range: [2, 8], step: 2 }
+  flow_bars: { default: 4, range: [2, 8], step: 2 }
+
+market: { exchange: binance, type: perp, instruments: [BTC/USDT:USDT] }
+timeframe: 5m
+
+filters:
+  - basis < 0.05%
+
+entries:
+  long:
+    when: oi_change($oi_bars) > 0.3% and cvd($flow_bars) > 0 and close > mark_price * 0.999
+
+exits:
+  stop_loss: 1.5 * atr(14)
+  take_profit: 2R
+  when: oi_change($oi_bars) < 0

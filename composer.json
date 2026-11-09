@@ -1,0 +1,114 @@
+{
+    "$schema": "https://getcomposer.org/schema.json",
+    "name": "radoi-teodor/trading-platform",
+    "type": "project",
+    "description": "Automated crypto trading platform for one operator: LLM agents propose, deterministic code disposes.",
+    "keywords": [
+        "trading",
+        "crypto",
+        "laravel"
+    ],
+    "license": "proprietary",
+    "require": {
+        "php": "^8.4",
+        "laravel/fortify": "^1.41",
+        "laravel/framework": "^13.17",
+        "laravel/mcp": "^1.1",
+        "laravel/tinker": "^3.0",
+        "livewire/livewire": "^4.4",
+        "phrity/websocket": "^4.1"
+    },
+    "require-dev": {
+        "fakerphp/faker": "^1.23",
+        "larastan/larastan": "^3.14",
+        "laravel/pail": "^1.2.5",
+        "laravel/pao": "^1.0.6",
+        "mockery/mockery": "^1.6",
+        "nunomaduro/collision": "^8.6",
+        "pestphp/pest": "^5.3",
+        "pestphp/pest-plugin-laravel": "^5.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "app/",
+            "Database\\Factories\\": "database/factories/",
+            "Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "setup": [
+            "composer install",
+            "@tools:install",
+            "@php -r \"file_exists('.env') || copy('.env.example', '.env');\"",
+            "@php artisan key:generate",
+            "@php artisan migrate --force",
+            "npm install --ignore-scripts",
+            "npm run build"
+        ],
+        "dev": [
+            "Composer\\Config::disableProcessTimeout",
+            "@php artisan dev"
+        ],
+        "tools:install": "@composer install --no-interaction --working-dir=tools/pint",
+        "format": "tools/pint/vendor/bin/pint",
+        "analyse": "phpstan analyse --memory-limit=1G",
+        "test": [
+            "@php artisan config:clear --ansi @no_additional_args",
+            "pest --exclude-group=testnet,network"
+        ],
+        "test:network": [
+            "Composer\\Config::disableProcessTimeout",
+            "@putenv TRADING_NETWORK=1",
+            "pest --group=network"
+        ],
+        "test:testnet": [
+            "Composer\\Config::disableProcessTimeout",
+            "@putenv TRADING_TESTNET=1",
+            "pest --group=testnet"
+        ],
+        "mutate": [
+            "Composer\\Config::disableProcessTimeout",
+            "pest tests/Unit --mutate"
+        ],
+        "post-autoload-dump": [
+            "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
+            "@php artisan package:discover --ansi"
+        ],
+        "post-update-cmd": [
+            "@php artisan vendor:publish --tag=laravel-assets --ansi --force"
+        ],
+        "pre-package-uninstall": [
+            "Illuminate\\Foundation\\ComposerScripts::prePackageUninstall"
+        ]
+    },
+    "extra": {
+        "laravel": {
+            "dont-discover": []
+        }
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "preferred-install": "dist",
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true,
+            "php-http/discovery": true
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "scripts-descriptions": {
+        "tools:install": "Install the isolated tools (Pint) under tools/.",
+        "format": "Format the code with Pint (add -- --test to check only).",
+        "analyse": "Run PHPStan through Larastan at the project level.",
+        "test": "Run the default suite: no network, no exchange, no LLM.",
+        "test:network": "Read the real public market data endpoints (opt-in, no keys).",
+        "test:testnet": "Run the Binance testnet suite (opt-in).",
+        "mutate": "Run Pest mutation testing on the domain unit tests (D-34)."
+    }
+}

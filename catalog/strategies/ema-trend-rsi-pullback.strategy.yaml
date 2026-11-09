@@ -1,0 +1,32 @@
+strategy: ema-trend-rsi-pullback
+title: RSI 7 pullback inside an EMA 9/21 uptrend, on 5m
+family: mean_reversion
+hypothesis: >
+  When the 9 EMA is above the 21 EMA, a fast RSI dipping under 30 is a pullback that the trend tends to recover
+  within an hour.
+fails_when: The trend turns: the pullback is the start of a reversal and the stop is hit.
+
+params:
+  fast: { default: 9, range: [5, 13], step: 2 }
+  slow: { default: 21, range: [15, 34], step: 1 }
+  oversold: { default: 30, range: [20, 40], step: 5 }
+
+market:
+  exchange: binance
+  type: perp
+  instruments: [BTC/USDT:USDT]
+timeframe: 5m
+
+filters:
+  - ema($fast) > ema($slow)
+
+entries:
+  long:
+    when: rsi(7) < $oversold
+    order: market
+
+exits:
+  stop_loss: 2 * atr(14)
+  take_profit: 1.5R
+  time_stop: 12 bars                  # one hour
+  when: rsi(7) > 70
