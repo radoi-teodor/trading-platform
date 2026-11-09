@@ -32,6 +32,16 @@ final readonly class InstrumentSync
             foreach ($definitions as $definition) {
                 $instrument = Instrument::register($exchange, $market, $definition->symbol, $now, $definition->status);
                 $seen[] = $instrument->id;
+                // The lifetime (D-89) only ever gains what the exchange says; a later sync never erases it.
+                $instrument->fill(array_filter([
+                    'listed_at' => $definition->listedAt,
+                    'delisted_at' => $definition->delistedAt,
+                    'underlying_type' => $definition->underlyingType,
+                ], fn (mixed $value): bool => $value !== null));
+
+                if ($instrument->isDirty()) {
+                    $instrument->save();
+                }
 
                 if ($this->filtersChanged($instrument, $definition)) {
                     InstrumentFilter::query()->create([

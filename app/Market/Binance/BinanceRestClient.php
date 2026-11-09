@@ -32,6 +32,9 @@ final readonly class BinanceRestClient
 
     private const int FUNDING_PAGE = 1000;
 
+    /** Perpetuals carry a delivery date of 2100-12-25 (4133404800000 ms); from 2100 on it means none. */
+    private const int NO_DELIVERY = 4102444800000;
+
     public function __construct(
         private HttpFactory $http,
         private BinanceEndpoints $endpoints,
@@ -292,13 +295,25 @@ final readonly class BinanceRestClient
             default => InstrumentStatus::Halted,
         };
         $settle = Asset::of(Json::string($symbol, 'marginAsset'));
-
-        return self::definition(
+        $definition = self::definition(
             MarketType::Perp,
             Symbol::parse(Json::string($symbol, 'baseAsset').'/'.Json::string($symbol, 'quoteAsset').':'.$settle),
             $status,
             $filters,
             self::optionalDecimal($filters['MIN_NOTIONAL'] ?? null, 'notional'),
+        );
+        // The lifetime (D-89): onboardDate is the listing; a perpetual's deliveryDate is 2100-12-25, meaning none,
+        // and a settled contract's is when it stopped trading.
+        $onboard = is_array($symbol) && is_int($symbol['onboardDate'] ?? null) ? $symbol['onboardDate'] : null;
+        $delivery = is_array($symbol) && is_int($symbol['deliveryDate'] ?? null) ? $symbol['deliveryDate'] : null;
+        $underlying = is_array($symbol) && is_string($symbol['underlyingType'] ?? null) ? $symbol['underlyingType'] : null;
+
+        return new InstrumentDefinition(
+            $definition->market, $definition->symbol, $definition->status, $definition->tickSize, $definition->stepSize,
+            $definition->minQty, $definition->maxQty, $definition->minNotional, $definition->rawFilters,
+            listedAt: $onboard === null ? null : EpochTime::parse($onboard),
+            delistedAt: $delivery === null || $delivery >= self::NO_DELIVERY ? null : EpochTime::parse($delivery),
+            underlyingType: $underlying,
         );
     }
 

@@ -140,6 +140,25 @@ it('reads only perpetual contracts from the futures exchangeInfo', function (): 
         ->and($definitions[2]->status)->toBe(InstrumentStatus::Delisted);
 });
 
+it('reads when a perpetual was listed and what it is a contract on (D-89)', function (): void {
+    // A settled contract carries its delivery time; a live perpetual carries 2100-12-25, which means none.
+    $fixture = (string) preg_replace(
+        '/("symbol": "OLDUSDT",.*?"deliveryDate": )4133404800000(.*?"underlyingType": )"COIN"/s',
+        '${1}1767225600000${2}"INDEX"',
+        binanceFixture('perp-exchange-info.hand-written.json'),
+    );
+    Http::fake(['fapi.binance.com/fapi/v1/exchangeInfo*' => Http::response($fixture)]);
+    [$client] = binanceClient();
+
+    $definitions = $client->exchangeInfo(MarketType::Perp);
+
+    expect($definitions[0]->listedAt?->toIso8601String())->toBe('2019-09-25T08:00:00+00:00')
+        ->and($definitions[0]->delistedAt)->toBeNull()
+        ->and($definitions[0]->underlyingType)->toBe('COIN')
+        ->and($definitions[2]->delistedAt?->toIso8601String())->toBe('2026-01-01T00:00:00+00:00')
+        ->and($definitions[2]->underlyingType)->toBe('INDEX');
+});
+
 it('reads perpetual klines in milliseconds', function (): void {
     Http::fake(['fapi.binance.com/fapi/v1/klines*' => Http::response(binanceFixture('perp-klines-btcusdt.from-archive.json'))]);
     [$client] = binanceClient();

@@ -26,12 +26,15 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property InstrumentStatus $status
  * @property CarbonImmutable|null $first_seen_at
  * @property CarbonImmutable|null $last_seen_at
+ * @property CarbonImmutable|null $listed_at when the instrument was listed (D-89)
+ * @property CarbonImmutable|null $delisted_at when it stopped trading; null while it trades or when not known
+ * @property string|null $underlying_type COIN, INDEX, ... as the exchange names it
  */
 final class Instrument extends Model
 {
     protected $fillable = [
         'exchange', 'market', 'symbol', 'venue_symbol', 'base', 'quote', 'settle', 'status',
-        'first_seen_at', 'last_seen_at',
+        'first_seen_at', 'last_seen_at', 'listed_at', 'delisted_at', 'underlying_type',
     ];
 
     /** Creates the instrument the first time it is seen, and records when it was last seen. */
@@ -91,6 +94,8 @@ final class Instrument extends Model
             'status' => InstrumentStatus::class,
             'first_seen_at' => 'immutable_datetime',
             'last_seen_at' => 'immutable_datetime',
+            'listed_at' => 'immutable_datetime',
+            'delisted_at' => 'immutable_datetime',
         ];
     }
 }
