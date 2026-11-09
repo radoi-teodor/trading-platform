@@ -26,11 +26,11 @@ database between two codebases.
 |---------|---------|------|-------|
 | web | `php artisan serve` / PHP-FPM | HTTP, Livewire UI, MCP endpoint | Never waits on the engine or the network; reads state, writes commands |
 | reverb | `php artisan reverb:start` | WebSockets to the browser | Throttled broadcasts (prices at most 4 per second per instrument) |
-| market-data | `php artisan market:stream spot` and `market:stream perp` | One combined WebSocket stream per market | Blocking client, one process per market; stores closed candles, repairs gaps on reconnect (`docs/market-data.md`); later publishes ticks to a Redis stream |
-| engine | `php artisan engine:run {account}` | Orders, positions, ledger of one account, in the account's mode (paper or testnet; live from Phase 6) | The only writer of trading state for that account; reads closed minutes from the database (D-67), restarts by replay (D-68) |
+| market-data | `php artisan market:stream spot` and `market:stream perp` | One combined WebSocket stream per market | Blocking client, one process per market; stores closed candles and, for perpetuals with scalping data, the mark price, trade flow, premium index and open interest (D-81); repairs gaps on reconnect (`docs/market-data.md`) |
+| engine | `php artisan engine:run {account}` | Orders, positions, ledger of one account, in the account's mode (paper, testnet, or live once approved, D-82) | The only writer of trading state for that account; reads closed minutes from the database (D-67), restarts by replay (D-68) |
 | queue workers | `php artisan queue:work --queue=notifications,default` and the simulation worker below | Queued jobs | Horizon once Redis is installed |
-| simulation worker | `php artisan queue:work simulation --queue=simulation --timeout=3600 --tries=1` | Background backtests, grids, walk-forwards (D-62) | Until Redis and Horizon are installed |
-| scheduler | `php artisan schedule:work` | Timed jobs | Reconciliation sweep, daily reports |
+| simulation worker | `php artisan queue:work simulation --queue=simulation,market --timeout=3600 --tries=1` | Background backtests, grids, walk-forwards (D-62) and history imports (D-80) | Until Redis and Horizon are installed |
+| scheduler | `php artisan schedule:work` | Timed jobs | `platform:health --alert` every minute (D-78), `report:daily` (D-77), the band of every deployment once a day (D-83) |
 
 Long-running PHP processes are supervised (Supervisor or systemd), restart on failure, and restart themselves
 after a memory or uptime limit. Each one reconnects to the database on failure instead of reusing a dead

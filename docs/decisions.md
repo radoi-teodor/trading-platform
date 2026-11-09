@@ -477,6 +477,73 @@ are the operator's choice. The test message is sent at once with a 10 second tim
 new key is used from the engine's next start. The accounts and tokens screens and the commands share one service
 each (`App\Execution\Accounts\OpenAccount`, `App\Agents\Tokens`), so the rules are the same on both paths.
 
+**D-76. What the engine publishes for reading** (2026-11-09, accepted by the operator with the report and live plan)
+Besides the snapshot (D-70), `publish` writes every closed round trip to `account_trades` (keyed by account and the
+trip's index in the ledger, so a replay rewrites the same rows) and one equity point per hour to `account_equity`.
+Both are derived from the journal-replayed state, never read back by the engine, and safe to rebuild. The daily
+report, the equity chart and the band of D-83 read them.
+
+**D-77. The daily report** (2026-11-09, accepted with the same plan)
+`report:daily` runs from the scheduler at 08:00 Europe/Bucharest (`notifications.daily_report_at`) and sends one
+Telegram message per account: equity and its change over 24 hours, trades closed (count, winners, net, fees,
+funding), halts and commands, breakers tripped by kind and instrument, reconciliation mismatches and stale data. It
+is sent when nothing happened too, so its absence is itself a signal. The operator can turn it off in Settings.
+
+**D-78. The health check** (2026-11-09, accepted with the same plan; the operator chose local alerts only)
+`platform:health` prints each check; the scheduler runs it every minute with `--alert`. Checks: each market stream's
+heartbeat under 2 minutes and the latest candle of every streamed instrument under 3 minutes; each monitored
+account's snapshot under 3 minutes; no notification job waiting over 2 minutes and no new failed job; no queued
+simulation or import waiting over 10 minutes with none running; free disk above 10 % and 5 GB. Alerts are sent at
+once through `TelegramClient`, not the queue, since the queue may be what failed: one message when a check fails, a
+reminder every hour while it lasts, and one when it recovers, with the state in `health_checks`. An account is
+monitored from its first snapshot unless the operator turns it off. If the machine or the scheduler stops, nothing
+alerts; the missing daily report is the sign.
+
+**D-79. Data for scalping** (2026-11-09, accepted with the same plan; supersedes the open details of D-65)
+Three stores, filled from Binance's archives and, live, from the stream (D-81). `trade_flow`: aggregated trades
+reduced to one row per minute (volume bought and sold by trades of at least the instrument's large-trade notional,
+their count, the largest trade's notional); raw trades are never stored (the operator's answer). `open_interest`:
+the futures `metrics` archive, one row per 5 minutes, open interest in contracts and in quote; a row stamped T is
+known from T + 5 minutes, so a backtest never reads it earlier than live could. `perp_minutes`: the mark price
+(close, high, low) and the premium index (close) of every minute, from `markPriceKlines` and `premiumIndexKlines`.
+DSL functions: `open_interest` (the latest known value, contracts), `oi_change(n)` (open interest now over n candles
+ago, minus 1), `mark_price` (the mark's close), `basis` (the premium index close, Binance's own basis for funding);
+from the candles already stored, `buy_volume`, `sell_volume`, `delta` (bought minus sold) and `cvd(n)` (delta summed
+over n candles); from `trade_flow`, `large_buy_volume`, `large_sell_volume` and `large_delta`. Each has a reference
+test against the Python oracle (D-52). The simulated venue values funding and checks liquidation at the stored mark
+when the minute has one and at the last price otherwise (amends D-44); the golden data has no marks, so its reports
+do not move. A backtest that uses one of these functions refuses a range its data does not cover.
+
+**D-80. The universe lives in the app** (2026-11-09, accepted with the same plan; amends D-33)
+`market_universe` replaces the list in `config/market.php`, which only seeds it. From Settings the operator adds or
+removes any instrument `market:instruments` has stored, chooses streamed or history only, turns the scalping data on,
+sets the large-trade notional, and starts a history import as a job on the `market` queue with its progress shown.
+The stream reads the universe when it starts; the screen says when a restart is needed.
+
+**D-81. Scalping data, live** (2026-11-09, accepted with the same plan)
+`market:stream perp` adds `<symbol>@markPrice@1s` (the minute's last value is its mark close, highest and lowest its
+high and low) and `<symbol>@aggTrade` (reduced to the minute in memory and written at its close) for instruments
+with the scalping data on. A poller in the same process reads the premium index each minute and open interest each
+5 minutes over REST, and repairs gaps over REST on reconnect, as for candles. `engine:run` waits for these rows on
+the instruments where a strategy reads them, like it waits for candles (D-67).
+
+**D-82. The live venue** (2026-11-09, accepted with the same plan; the operator chose to build it now, blocked)
+A live account uses the same `BinanceVenue` and signed client as testnet, with `exchanges.binance.live.*` (D-69).
+Before trading, the engine reads the key's restrictions (`/sapi/v1/account/apiRestrictions`) and refuses a key that
+can withdraw, is not restricted to IP addresses, or cannot trade the account's markets. A live account is opened
+only after re-authentication, and `engine:run` refuses it until the operator approves it, in the UI after
+re-authentication or with `account:approve-live`, which asks for the password and a code. The approval is journaled
+and takes effect 24 hours later (D-19); the operator can withdraw it until then.
+
+**D-83. The ladder to live in code** (2026-11-09, accepted with the same plan; implements D-15 and D-16)
+Each deployment's results are the account's trades of its strategy since it started. The band (`risk-policy.md`,
+section 7) is computed every day by the scheduler against the version's latest passing gate report; a deployment
+out of band is demoted one stage at once, its deployment ended, journaled and notified. Moving up is offered only
+when the stage's conditions hold (30 days and 30 trades in paper for live micro; 30 days and 20 trades at the
+previous step for each live step), asks for re-authentication and the operator's approval, and takes effect 24
+hours later. A deployment's `size_multiplier` (0.25 with notional at most 5 % of equity for live micro, 0.5, then
+1.0) only tightens the strategy's limits; at 1.0 nothing changes, so the golden reports do not move.
+
 ## Open
 
 | Id | Question | Blocks |

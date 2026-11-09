@@ -186,8 +186,7 @@ entry price, margin) with the venue's. The venue's updates are one numbered stre
 
 ## 9. Live operation (Phase 4)
 
-`php artisan engine:run <account>` runs one account in paper or testnet mode; live is refused until Phase 6 and the
-operator's approval (D-16). It is the only writer of the account's trading state.
+`php artisan engine:run <account>` runs one account in paper, testnet or live mode; live only as section 10 allows. It is the only writer of the account's trading state.
 
 **Feed (D-67).** The engine polls the `candles` table every 2 seconds for minutes that `market:stream` closed. A
 minute is handled once every instrument the account follows has it, in the order of section 1. An instrument
@@ -214,4 +213,25 @@ account's deployments when it starts, so a new deployment asks for a restart, wh
 **Publish (D-70).** After every event the engine writes `account_snapshots` (equity, balances, positions, working
 orders, active breakers) and queues notifications for halts, breakers, mismatches and demotions. The UI polls the
 snapshot and never waits on the engine.
+
+## 10. Live (Phase 6, D-82, D-83)
+
+A live account runs the testnet code path against `api.binance.com` and `fapi.binance.com`: the venue is the
+truth, reconciliation tolerates one mismatch and halts at the second, a refused key halts. `engine:run` refuses a
+live account unless all of these hold, and says which one does not:
+
+1. the operator approved the account (Settings after re-authentication, or `account:approve-live`) at least 24
+   hours ago and did not withdraw it;
+2. the key's restrictions, read from Binance at start, allow trading on the account's markets, forbid withdrawals
+   and are limited to IP addresses;
+3. every active deployment on it is at a live stage, which a version reaches only through section 6 of
+   `risk-policy.md`.
+
+**Size.** A deployment's `size_multiplier` scales the strategy's risk per trade, and live micro also caps each
+position's notional at 5 % of equity. The multiplier only tightens the limits of `PolicyLimits`; at 1.0 the engine
+behaves exactly as before.
+
+**Results and the band.** `publish` writes closed trades and hourly equity (D-76). Once a day the scheduler compares
+each deployment's trades with its version's latest passing gate report (the four tests of `risk-policy.md`, section
+7) and demotes a deployment out of band at once.
 

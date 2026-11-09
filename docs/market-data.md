@@ -115,11 +115,12 @@ reachable. Any mismatch is listed and the command exits non-zero.
 **Phase 1 is done** when October 2026 for the ten instruments of the universe has no gap, no OHLC violation, and
 no mismatch in a 500-candle sample per instrument.
 
-## 6. Universe (D-33)
+## 6. Universe (D-33, D-80)
 
-`config/market.php` lists the instruments the platform follows. The first universe: BTC, ETH, SOL, BNB and XRP
-against USDT, on spot and as USD-M perpetuals. Changing the universe is a config change; `market:instruments`
-loads every instrument the exchange lists, but only the universe is backfilled and streamed.
+The universe is the `market_universe` table, edited on the Settings screen; `config/market.php` seeds it once
+(BTC, ETH, SOL, BNB and XRP against USDT, spot and USD-M perpetuals). `market:instruments` loads every instrument
+the exchange lists; only the universe is backfilled and streamed, and an instrument can be history only. The
+stream reads the universe when it starts.
 
 ## 7. Tests
 
@@ -127,3 +128,21 @@ The default suite never touches the network: the HTTP client is faked, stray req
 fixtures are real responses captured from Binance's public hosts (`tests/Fixtures/binance/`). Where a host could
 not be reached when the fixture was made, the fixture is the example from Binance's API documentation and says
 so in its file name. The opt-in `network` group (`composer test:network`) reads the real public endpoints.
+
+## 8. Data for scalping (D-79, D-81)
+
+| Store | Archive (`data.binance.vision`, futures/um) | Live | Known from |
+|-------|---------------------------------------------|------|------------|
+| `trade_flow` (instrument, minute): large-trade volume bought and sold, their count, the largest trade's notional | `daily/aggTrades/{SYM}/{SYM}-aggTrades-{day}.zip`, read as a stream and reduced to minutes | `<sym>@aggTrade`, reduced in memory | the minute's close |
+| `open_interest` (instrument, 5-minute time): contracts and quote value | `daily/metrics/{SYM}/{SYM}-metrics-{day}.zip` (`create_time` is text, UTC) | `GET /futures/data/openInterestHist?period=5m` | its time plus 5 minutes |
+| `perp_minutes` (instrument, minute): mark close, high, low; premium index close | `daily/markPriceKlines/{SYM}/1m/...` and `daily/premiumIndexKlines/{SYM}/1m/...` | `<sym>@markPrice@1s`; `GET /fapi/v1/premiumIndexKlines` | the minute's close |
+
+The large-trade notional is set per instrument in the universe (BTC 100,000 USDT, ETH 50,000 by default) and applied
+at import, so changing it means importing again. Sources rank as for candles (archive, then REST, then stream).
+Volume bought and sold per minute needs no new data: the candles carry `taker_buy_volume`. The aggregated trades
+are the largest download: about 100 to 300 MB a day for BTC, so twelve months of BTC and ETH means 50 to 100 GB
+read once and deleted day by day; only the minutes are kept.
+
+`php artisan market:backfill BTC/USDT:USDT --from=2025-11 --flow --oi --mark` imports them; the Settings screen
+starts the same import as a job.
+

@@ -98,6 +98,13 @@ these holds:
 
 Out of band means demotion one stage down, a journal entry with the numbers, and a notification.
 
+How it is measured (D-83), each day, on the deployment's trades since it started and the version's latest passing
+gate report: the 95 % interval of the mean net result of the last 30 trades (Student t) against the report's
+out-of-sample expectancy interval; the deployment's peak-to-trough equity drawdown against the report's 95th
+percentile Monte Carlo drawdown; a one-sided CUSUM of trade results against the report's mean, with the reference
+at half a standard deviation and the alarm at 4 standard deviations; average fees plus slippage per trade against
+the cost the backtest charged per trade. Fewer than 30 trades: only the drawdown and the cost tests apply.
+
 ## 8. Changing this policy
 
 The values here are the defaults. Changing a default is a code change with a D-number. Changing an account
