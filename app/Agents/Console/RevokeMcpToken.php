@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Agents\Console;
 
-use App\Agents\Models\McpToken;
-use App\Support\Clock\Clock;
+use App\Agents\Tokens;
 use Illuminate\Console\Command;
+use InvalidArgumentException;
 
 /** Revokes a name's MCP token at once (D-63). */
 final class RevokeMcpToken extends Command
@@ -15,14 +15,14 @@ final class RevokeMcpToken extends Command
 
     protected $description = 'Revoke an MCP token';
 
-    public function handle(Clock $clock): int
+    public function handle(Tokens $tokens): int
     {
-        $name = $this->argument('name');
-        $name = is_string($name) ? $name : '';
-        $revoked = McpToken::query()->where('name', $name)->whereNull('revoked_at')->update(['revoked_at' => $clock->now()]);
+        $name = is_string($this->argument('name')) ? $this->argument('name') : '';
 
-        if ($revoked === 0) {
-            $this->error("{$name} has no active token.");
+        try {
+            $tokens->revoke($name);
+        } catch (InvalidArgumentException $failure) {
+            $this->error($failure->getMessage());
 
             return self::FAILURE;
         }

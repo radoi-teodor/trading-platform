@@ -4,11 +4,7 @@ declare(strict_types=1);
 
 namespace App\Execution\Console;
 
-use App\Execution\Data\EngineMode;
-use App\Execution\Models\Account;
-use App\Support\Clock\Clock;
-use App\Support\Number\Decimal;
-use App\Support\Symbol;
+use App\Execution\Accounts\OpenAccount;
 use Carbon\CarbonImmutable;
 use Illuminate\Console\Command;
 use InvalidArgumentException;
@@ -26,39 +22,23 @@ final class CreateAccount extends Command
 
     protected $description = 'Create a paper or testnet account';
 
-    public function handle(Clock $clock): int
+    public function handle(OpenAccount $accounts): int
     {
         try {
-            $name = $this->argument('name');
-            $name = is_string($name) && preg_match('/^[a-z0-9]+(-[a-z0-9]+)*$/', $name) === 1 && strlen($name) <= 40 ? $name : throw new InvalidArgumentException('An account name is lowercase letters, digits and hyphens.');
-            $mode = EngineMode::tryFrom(is_string($this->option('mode')) ? $this->option('mode') : '');
-
-            if ($mode !== EngineMode::Paper && $mode !== EngineMode::Testnet) {
-                throw new InvalidArgumentException('An account is paper or testnet; live accounts need phase 6 and the operator\'s approval (D-16).');
-            }
-
-            if (Account::query()->where('name', $name)->exists()) {
-                throw new InvalidArgumentException("{$name} already exists.");
-            }
-
-            $amount = fn (string $option): string => is_string($this->option($option)) && preg_match('/^\d+(\.\d+)?$/', $this->option($option)) === 1
-                ? (string) Decimal::of($this->option($option))
-                : throw new InvalidArgumentException("--{$option} is an amount of USDT.");
+            $text = fn (string $option, string $default): string => is_string($this->option($option)) ? $this->option($option) : $default;
             $symbols = $this->option('symbol');
-            $symbols = is_array($symbols) && $symbols !== [] ? $symbols : ['BTC/USDT'];
-            $start = is_string($this->option('start')) ? CarbonImmutable::parse($this->option('start'), 'UTC')->startOfMinute() : $clock->now()->startOfMinute();
+            $start = is_string($this->option('start')) ? CarbonImmutable::parse($this->option('start'), 'UTC') : null;
+            $account = $accounts->open(
+                is_string($this->argument('name')) ? $this->argument('name') : '', $text('mode', 'paper'), $text('equity', '10000'), $text('futures', '0'),
+                is_array($symbols) ? array_values(array_map(fn (mixed $s): string => is_string($s) ? $s : '', $symbols)) : [], $start,
+            );
         } catch (InvalidArgumentException $failure) {
             $this->error($failure->getMessage());
 
             return self::FAILURE;
         }
 
-        Account::query()->create([
-            'name' => $name, 'mode' => $mode, 'quote' => 'USDT', 'spot_balance' => $amount('equity'), 'futures_balance' => $amount('futures'),
-            'symbols' => array_values(array_map(fn (mixed $s): string => (string) Symbol::parse(is_string($s) ? $s : ''), $symbols)),
-            'started_at' => $start, 'created_at' => $clock->now(),
-        ]);
-        $this->info("{$name} ({$mode->value}) starts at {$start->toIso8601ZuluString()}. Run it with php artisan engine:run {$name}.");
+        $this->info("{$account->name} ({$account->mode->value}) starts at {$account->started_at->toIso8601ZuluString()}. Run it with php artisan engine:run {$account->name}.");
 
         return self::SUCCESS;
     }

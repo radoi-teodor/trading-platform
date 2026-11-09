@@ -1231,9 +1231,9 @@
     "semantic_hash": ""
   },
   "config/services.php": {
-    "mtime": 1794193998.9583824,
-    "seen": 1794195823.5703623,
-    "ast_hash": "0e0c49b50aff4cf763c629b76fed80a3",
+    "mtime": 1794215683.5737746,
+    "seen": 1794216415.9847171,
+    "ast_hash": "ee9c9e4175e9488625062c9f0aee20d0",
     "semantic_hash": ""
   },
   "config/session.php": {
@@ -1840,9 +1840,9 @@
     "semantic_hash": ""
   },
   "docs/architecture.md": {
-    "mtime": 1794191175.2659216,
-    "seen": 1794192362.9165592,
-    "ast_hash": "ac2ec04cbde8745de33c2fc0e8a3bf69",
+    "mtime": 1794215593.7286096,
+    "seen": 1794216415.9878814,
+    "ast_hash": "4a2a8fa8f02b1a4bea009c1f2b4a7603",
     "semantic_hash": ""
   },
   "docs/assessment.md": {
@@ -1864,9 +1864,9 @@
     "semantic_hash": ""
   },
   "docs/decisions.md": {
-    "mtime": 1794192727.8835568,
-    "seen": 1794193132.0657933,
-    "ast_hash": "61c2efaf1cf173d1059406c369a378ae",
+    "mtime": 1794215588.1905596,
+    "seen": 1794216415.9879606,
+    "ast_hash": "b65b3baadbfd96766918be3234779903",
     "semantic_hash": ""
   },
   "docs/engine.md": {
@@ -1900,9 +1900,9 @@
     "semantic_hash": ""
   },
   "docs/security.md": {
-    "mtime": 1794192727.8840163,
-    "seen": 1794193132.0658786,
-    "ast_hash": "ce94e6090cf91734d5d6887a324239c2",
+    "mtime": 1794215588.1908357,
+    "seen": 1794216415.9880455,
+    "ast_hash": "ca6a51cae551b3e3ed51955eda31d9ca",
     "semantic_hash": ""
   },
   "docs/simulation.md": {
@@ -2530,15 +2530,15 @@
     "semantic_hash": ""
   },
   "app/Agents/Console/CreateMcpToken.php": {
-    "mtime": 1794173290.5338178,
-    "seen": 1794173560.6645772,
-    "ast_hash": "e30704a6bb87f52bfe145504550cdead",
+    "mtime": 1794216295.7249546,
+    "seen": 1794216415.9768229,
+    "ast_hash": "6a75da45b219a701daf005a646b4c9b8",
     "semantic_hash": ""
   },
   "app/Agents/Console/RevokeMcpToken.php": {
-    "mtime": 1794173290.539292,
-    "seen": 1794173560.6645818,
-    "ast_hash": "a04177bd01b44325153be950938eff33",
+    "mtime": 1794216295.742175,
+    "seen": 1794216415.9768267,
+    "ast_hash": "0da9efe41aa86fe819624fdf9359898b",
     "semantic_hash": ""
   },
   "app/Agents/Mcp/AuthenticateMcpToken.php": {
@@ -2902,9 +2902,9 @@
     "semantic_hash": ""
   },
   "app/Execution/Console/CreateAccount.php": {
-    "mtime": 1794191192.5788596,
-    "seen": 1794192362.9066975,
-    "ast_hash": "26621a969a48a23c5c95ccef07619635",
+    "mtime": 1794216291.6500018,
+    "seen": 1794216415.9774766,
+    "ast_hash": "0d17522d468c4dad59378a63049126aa",
     "semantic_hash": ""
   },
   "app/Execution/Console/FlattenEngine.php": {
@@ -2992,15 +2992,15 @@
     "semantic_hash": ""
   },
   "app/Notifications/SendTelegram.php": {
-    "mtime": 1794191175.2472775,
-    "seen": 1794192362.9092124,
-    "ast_hash": "4a3e5a87cfe9eab7a29bce9270443082",
+    "mtime": 1794215683.5603695,
+    "seen": 1794216415.9802163,
+    "ast_hash": "cb5c77a9979d86d77b49424ae17fddf4",
     "semantic_hash": ""
   },
   "app/Notifications/TelegramNotifier.php": {
-    "mtime": 1794193998.958152,
-    "seen": 1794195823.566711,
-    "ast_hash": "58a93604bd3331315d9c54122e32abb5",
+    "mtime": 1794215683.5735855,
+    "seen": 1794216415.9802213,
+    "ast_hash": "4041192acad683b4bddf0f756f4157d9",
     "semantic_hash": ""
   },
   "database/migrations/2026_11_09_000008_create_engine_tables.php": {
@@ -3016,15 +3016,15 @@
     "semantic_hash": ""
   },
   "tests/Feature/Notifications/TelegramTest.php": {
-    "mtime": 1794194759.3072784,
-    "seen": 1794195823.5712092,
-    "ast_hash": "5c23795109837b27b552d5bdd7380c53",
+    "mtime": 1794215720.4869177,
+    "seen": 1794216415.9859521,
+    "ast_hash": "286f89a4c5edb35b83d123b96125eea3",
     "semantic_hash": ""
   },
   "app/Execution/Console/StoreKeys.php": {
-    "mtime": 1794192586.0923316,
-    "seen": 1794193132.051675,
-    "ast_hash": "87eef82bb49ce75417c9d5b1fac3eebf",
+    "mtime": 1794216291.6502883,
+    "seen": 1794216415.9776056,
+    "ast_hash": "22492f6cb11db7687b54bd66d50b2f3b",
     "semantic_hash": ""
   },
   "app/Execution/Models/ExchangeKey.php": {
@@ -3235,6 +3235,60 @@
     "mtime": 1794193951.5239592,
     "seen": 1794193957.4403377,
     "ast_hash": "2cf51c1ab461021ca9dc7a9dbf68fc7a",
+    "semantic_hash": ""
+  },
+  "app/Agents/Tokens.php": {
+    "mtime": 1794216276.2869577,
+    "seen": 1794216415.9774497,
+    "ast_hash": "dd525b0d0ca18c665a9e0ba98c42505c",
+    "semantic_hash": ""
+  },
+  "app/Execution/Accounts/OpenAccount.php": {
+    "mtime": 1794216276.2821982,
+    "seen": 1794216415.977475,
+    "ast_hash": "c28d6d2f8a9d995cb9f28445f6679b53",
+    "semantic_hash": ""
+  },
+  "app/Notifications/Models/NotificationSettings.php": {
+    "mtime": 1794215683.5540562,
+    "seen": 1794216415.980214,
+    "ast_hash": "21ddd47f54d7527c4fa507350ba9da56",
+    "semantic_hash": ""
+  },
+  "app/Notifications/SettingSource.php": {
+    "mtime": 1794215683.5555465,
+    "seen": 1794216415.9802182,
+    "ast_hash": "634673ac28e799a52833f3e0f8778c09",
+    "semantic_hash": ""
+  },
+  "app/Notifications/TelegramClient.php": {
+    "mtime": 1794215683.5585244,
+    "seen": 1794216415.9802194,
+    "ast_hash": "d2b18b6812b0a365977e3aae0396ab97",
+    "semantic_hash": ""
+  },
+  "app/Notifications/TelegramSettings.php": {
+    "mtime": 1794216208.6295567,
+    "seen": 1794216415.9802227,
+    "ast_hash": "58111ce3c9f8e517301d3a9f25ecdaa0",
+    "semantic_hash": ""
+  },
+  "database/migrations/2026_11_09_000011_create_notification_settings_table.php": {
+    "mtime": 1794215683.55237,
+    "seen": 1794216415.9850569,
+    "ast_hash": "79b14cbb4decd343b85a1eba612fe707",
+    "semantic_hash": ""
+  },
+  "tests/Feature/Agents/TokensTest.php": {
+    "mtime": 1794216248.3165555,
+    "seen": 1794216415.9856472,
+    "ast_hash": "971755d38b78aa0ef58d32d4503750d1",
+    "semantic_hash": ""
+  },
+  "tests/Feature/Execution/OpenAccountTest.php": {
+    "mtime": 1794216397.995257,
+    "seen": 1794216415.9856696,
+    "ast_hash": "13ebcc0a81f78b8f2357fbd22ac64f8e",
     "semantic_hash": ""
   },
   "package-lock.json": {
