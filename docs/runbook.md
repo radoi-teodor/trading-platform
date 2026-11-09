@@ -296,7 +296,10 @@ Chart: candles of a stored instrument with layers from the DSL's library; price 
 others in panels, conditions as markers, the window's volume profile on the right, and a table view. It follows
 the market live (D-87) while `market:stream` runs for that market: the last candle moves every second, and the
 candles and layers are recomputed when a candle of the chart's timeframe closes, as a strategy sees them; the line
-above the chart says "Live" or that the stream is not running. Zoom and scroll stay where you put them. Strategies:
+above the chart says "Live" or that the stream is not running. Zoom and scroll stay where you put them. When the
+window's history is incomplete (an instrument only streamed, never backfilled, or a missing minute) the chart says
+what is missing and offers **Fill history from** a day: the import runs on the simulation worker and the chart
+draws when it is done (D-88). Strategies:
 the editor compiles as you type, shows errors with their line and column and the read-back, saves versions, runs
 backtests, grids and gate reports in the background (the simulation worker must run) and promotes a passing
 version to Backtested. Account: the snapshot of each account, its journal and its commands; resume, resume a

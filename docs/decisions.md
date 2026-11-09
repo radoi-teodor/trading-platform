@@ -585,6 +585,15 @@ the forming bar, so what the operator sees is what a strategy sees (D-67). The f
 architecture test keeps Strategy, Risk, Portfolio, Execution, Simulation and Agents from reading it, so D-8 and
 replay are untouched. A one second poll replaces Reverb for now: one operator, one machine, a few rows a second.
 
+**D-88. The chart explains missing history and fills it** (2026-11-09, accepted; the operator asked for an
+explanation and a fill button instead of an error)
+Candles stay whole (D-36): when the minutes a chart's window needs are not all stored (the history starts inside a
+candle, as after starting `market:stream` without a backfill, or a minute is missing), `ChartSeries` says so with
+the day to fill from (`ChartHistoryMissing`) instead of failing. The Chart screen shows that sentence and a **Fill
+history** button that queues the same import as Settings, Market data (candles, on the simulation worker), follows
+the job every 5 seconds and draws the chart when the history is complete. The MCP chart tools refuse with the same
+sentence and ask the agent to have the operator fill it: agents never write market data (D-63).
+
 ## Open
 
 | Id | Question | Blocks |

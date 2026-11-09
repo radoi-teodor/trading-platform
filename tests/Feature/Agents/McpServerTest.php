@@ -17,9 +17,15 @@ use App\Agents\Mcp\Tools\SaveStrategy;
 use App\Agents\Mcp\TradingServer;
 use App\Agents\Models\McpCall;
 use App\Agents\Models\McpToken;
+use App\Market\CandleRepository;
+use App\Market\Data\CandleSource;
+use App\Market\Data\MarketType;
+use App\Market\Models\Instrument;
 use App\Simulation\Charts\ChartSeries;
 use App\Simulation\Models\SimulationJob;
 use App\Strategy\Versions\StrategyVersion;
+use App\Support\Clock\Clock;
+use App\Support\Clock\SimClock;
 use App\Support\Symbol;
 use App\Support\Timeframe;
 use Carbon\CarbonImmutable;
@@ -28,6 +34,7 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Testing\TestResponse;
 use Pest\TestSuite;
 use Symfony\Component\HttpFoundation\Response;
+use Tests\Support\CandleFactory;
 use Tests\TestCase;
 
 uses(RefreshDatabase::class);
@@ -163,6 +170,17 @@ it('reads candles, funding and the DSL reference, refusing what it cannot serve'
         ->assertHasErrors(['BTC/USDT is not a stored perpetual.']);
     TradingServer::tool(DslReference::class)
         ->assertOk()->assertSee(['## 2. Expression language', 'bb(n = 20: a whole number of candles', 'fields .upper', 'oi_change(n: a whole number of candles', 'strategy: ema-cross-scalp-long']);
+});
+
+it('refuses candles over incomplete history with the day to fill, which only the operator can do (D-88)', function (): void {
+    app()->instance(Clock::class, new SimClock(CarbonImmutable::parse('2026-10-03 01:30:00', 'UTC')));
+    $eth = Instrument::register('binance', MarketType::Spot, Symbol::parse('ETH/USDT'), CarbonImmutable::parse('2026-10-03', 'UTC'));
+    app(CandleRepository::class)->upsert($eth, CandleSource::Stream, CandleFactory::walk('2026-10-03 00:52:00', 30, seed: 3));
+    mcpToken();
+    actAsToken();
+
+    TradingServer::tool(GetCandles::class, ['symbol' => 'ETH/USDT', 'timeframe' => '1h', 'from' => '2026-10-02T00:00:00Z', 'to' => '2026-10-03T01:00:00Z'])
+        ->assertHasErrors(['ETH/USDT has stored minutes only from 2026-10-03 00:52', 'ask the operator to fill its history from 2026-10-0']);
 });
 
 it('lists and reads saved versions, runs a backtest on one and lists its trials', function (): void {

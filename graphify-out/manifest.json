@@ -1864,9 +1864,9 @@
     "semantic_hash": ""
   },
   "docs/decisions.md": {
-    "mtime": 1794243686.9950757,
-    "seen": 1794244430.2215512,
-    "ast_hash": "7a99bb986e43e46179e1b2db2c20a5f0",
+    "mtime": 1794244944.7358038,
+    "seen": 1794246201.3435636,
+    "ast_hash": "a43407cee26ef2c7caef1441435e5391",
     "semantic_hash": ""
   },
   "docs/engine.md": {
@@ -1894,9 +1894,9 @@
     "semantic_hash": ""
   },
   "docs/runbook.md": {
-    "mtime": 1794242846.481918,
-    "seen": 1794244430.2222323,
-    "ast_hash": "393829440c8b6cabeb8be692e28170bc",
+    "mtime": 1794244946.652526,
+    "seen": 1794246201.34576,
+    "ast_hash": "99b90103410cd56861613c65aaceaaca",
     "semantic_hash": ""
   },
   "docs/security.md": {
@@ -2662,9 +2662,9 @@
     "semantic_hash": ""
   },
   "app/Simulation/Charts/ChartSeries.php": {
-    "mtime": 1794234536.7650316,
-    "seen": 1794237954.2591064,
-    "ast_hash": "2950f30e48363ae6e9f6170575fb114c",
+    "mtime": 1794245102.0944242,
+    "seen": 1794246201.1816118,
+    "ast_hash": "4ed0e0db5c4123bc37e96d5f789c6934",
     "semantic_hash": ""
   },
   "app/Simulation/StrategyLibrary.php": {
@@ -2692,9 +2692,9 @@
     "semantic_hash": ""
   },
   "tests/Feature/Agents/McpServerTest.php": {
-    "mtime": 1794234537.1698797,
-    "seen": 1794237954.2618475,
-    "ast_hash": "0550040f379b5c624da54fcb361b2776",
+    "mtime": 1794244821.3220925,
+    "seen": 1794246201.2821636,
+    "ast_hash": "2dab86779384116247257671bba19e86",
     "semantic_hash": ""
   },
   "tests/Unit/Simulation/ChartSeriesTest.php": {
@@ -3100,9 +3100,9 @@
     "semantic_hash": ""
   },
   "app/Livewire/ChartScreen.php": {
-    "mtime": 1794243702.648031,
-    "seen": 1794244430.110064,
-    "ast_hash": "549ea3fdc3e800b2489b0a26c7a89b90",
+    "mtime": 1794245352.6360946,
+    "seen": 1794246201.1340103,
+    "ast_hash": "db1d5d24de1d6070e76da362241023b1",
     "semantic_hash": ""
   },
   "app/Livewire/HaltButton.php": {
@@ -3148,9 +3148,9 @@
     "semantic_hash": ""
   },
   "resources/js/chart.js": {
-    "mtime": 1794243644.310932,
-    "seen": 1794244430.1864,
-    "ast_hash": "389ce0542c32280c3ccc1d09922f2b7c",
+    "mtime": 1794245527.0757105,
+    "seen": 1794246201.2734327,
+    "ast_hash": "def3b434b0f6518b674dec1b60e9bd00",
     "semantic_hash": ""
   },
   "resources/js/editor.js": {
@@ -3208,9 +3208,9 @@
     "semantic_hash": ""
   },
   "resources/views/livewire/chart-screen.blade.php": {
-    "mtime": 1794243635.5072641,
-    "seen": 1794244430.1882925,
-    "ast_hash": "e1189f4fa72655bb340d84b7aaae5a7b",
+    "mtime": 1794245515.4708922,
+    "seen": 1794246201.2769136,
+    "ast_hash": "8a40e3bc9d203de7c91194b17208eab0",
     "semantic_hash": ""
   },
   "resources/views/livewire/halt-button.blade.php": {
@@ -3232,9 +3232,9 @@
     "semantic_hash": ""
   },
   "tests/Feature/Web/ScreensTest.php": {
-    "mtime": 1794243740.1008637,
-    "seen": 1794244430.1984146,
-    "ast_hash": "cf425cb27f7656122978e73289ee5f68",
+    "mtime": 1794245342.43219,
+    "seen": 1794246201.2963364,
+    "ast_hash": "2da0e248ed3fe8ce12fc63db5acad812",
     "semantic_hash": ""
   },
   "app/Agents/Tokens.php": {
@@ -3292,9 +3292,9 @@
     "semantic_hash": ""
   },
   "app/Livewire/SettingsScreen.php": {
-    "mtime": 1794234536.6320186,
-    "seen": 1794237954.2578676,
-    "ast_hash": "0333059568d72f5716a02330b0a29730",
+    "mtime": 1794244858.56218,
+    "seen": 1794246201.135258,
+    "ast_hash": "c44cfb53d7ba802e9e008e936460d10c",
     "semantic_hash": ""
   },
   "resources/views/livewire/settings-screen.blade.php": {
@@ -3781,6 +3781,18 @@
     "mtime": 1794243588.1865766,
     "seen": 1794244430.1734366,
     "ast_hash": "8af22d63a6c30ee1bf58bc5e658097df",
+    "semantic_hash": ""
+  },
+  "app/Market/HistoryImports.php": {
+    "mtime": 1794244849.8320243,
+    "seen": 1794246201.1568284,
+    "ast_hash": "1b19c954f878f33772d164f39c559d54",
+    "semantic_hash": ""
+  },
+  "app/Simulation/Charts/ChartHistoryMissing.php": {
+    "mtime": 1794244834.8527718,
+    "seen": 1794246201.1815946,
+    "ast_hash": "4a2a90b2574eba8b06bc0676a6fc3c53",
     "semantic_hash": ""
   },
   "package-lock.json": {

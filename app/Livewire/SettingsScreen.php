@@ -12,8 +12,8 @@ use App\Execution\Data\EngineMode;
 use App\Execution\Models\Account;
 use App\Http\Controllers\ReauthController;
 use App\Market\Data\MarketType;
+use App\Market\HistoryImports;
 use App\Market\Instruments\Universe;
-use App\Market\Jobs\ImportMarketData;
 use App\Market\Models\MarketJob;
 use App\Market\Models\UniverseEntry;
 use App\Notifications\TelegramClient;
@@ -24,7 +24,6 @@ use App\Support\Clock\Clock;
 use App\Support\Number\Decimal;
 use App\Support\Symbol;
 use Carbon\CarbonImmutable;
-use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\View\View;
 use InvalidArgumentException;
@@ -246,7 +245,7 @@ final class SettingsScreen extends Component
         $this->marketMessage = "{$found->symbol}: trades from ".($value === '' ? 'the default' : $value).' count as large from the next import and stream. Restart market:stream perp to apply it.';
     }
 
-    public function import(Dispatcher $bus, Clock $clock, ?int $entry = null): void
+    public function import(HistoryImports $imports, Clock $clock, ?int $entry = null): void
     {
         $found = UniverseEntry::query()->find($entry ?? $this->importSymbol);
 
@@ -267,8 +266,7 @@ final class SettingsScreen extends Component
         $scalping = $this->importScalping && $found->market === MarketType::Perp;
         $days = max(1, intdiv($clock->now()->getTimestamp() - $from->startOfDay()->getTimestamp(), 86400));
         $megabytes = (int) round($days * (($this->importCandles ? self::CANDLE_MB_PER_DAY : 0) + ($scalping ? self::SCALPING_MB_PER_DAY : 0)));
-        $job = MarketJob::query()->create(['symbol' => $found->symbol, 'from' => $from->startOfDay(), 'candles' => $this->importCandles, 'scalping' => $scalping, 'status' => 'queued', 'created_at' => $clock->now()]);
-        $bus->dispatch((new ImportMarketData($job->id))->onConnection('simulation')->onQueue('market'));
+        $job = $imports->queue($found->symbol, $from, $this->importCandles, $scalping);
         $this->marketMessage = "Import of {$found->symbol} from {$from->format('Y-m-d')} queued as job {$job->id}: {$days} days, about {$megabytes} MB in the database. The simulation worker runs it.";
     }
 

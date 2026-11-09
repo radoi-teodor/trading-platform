@@ -48,10 +48,33 @@
         <div class="rounded-card border border-down bg-surface p-card text-sm text-down" role="alert">{{ $error }}</div>
     @endif
 
+    {{-- History the window needs is not stored (D-88): say what is missing and fill it on the simulation worker. --}}
+    @if ($missing !== '')
+        @php($running = $fill !== null && in_array($fill->status, ['queued', 'running'], true))
+        <div class="flex flex-col gap-2 rounded-card border border-border bg-surface p-card text-sm" @if ($running) wire:poll.5s @endif aria-label="Missing history">
+            <p>{{ $missing }}</p>
+            <p class="text-muted">The chart draws whole candles only, as a strategy sees them, so it needs every minute of the window.</p>
+            @if ($fill === null || ! $running)
+                <div><x-button variant="secondary" type="button" wire:click="fillHistory">Fill history from {{ $fillFrom }}</x-button></div>
+            @endif
+            @if ($fill !== null)
+                <p class="font-mono text-xs text-muted" role="status">
+                    Import {{ $fill->id }} of {{ $fill->symbol }} from {{ $fill->from->format('Y-m-d') }}: {{ $fill->status }}.
+                    @if ($fill->status === 'queued') The simulation worker runs it (start-local.ps1 starts it). @endif
+                    @if ($fill->status === 'failed') {{ \Illuminate\Support\Str::of((string) $fill->output)->trim()->afterLast("\n") }} @endif
+                    @if ($fill->status === 'done') Some minutes are still missing: Binance may have none before this instrument was listed, or not yet. @endif
+                </p>
+            @endif
+        </div>
+    @endif
+
     <div wire:ignore x-data="priceChart(@js($payload), @js(route('chart.live')))" class="relative rounded-card border border-border bg-surface p-card">
         <p class="mb-2 font-mono text-2xs text-muted" role="status" x-text="status"></p>
-        <div x-ref="main" class="h-[420px] w-full"></div>
-        <div x-ref="profile" class="pointer-events-none absolute inset-y-3 right-16 z-10 w-16 sm:w-32" aria-hidden="true"></div>
+        {{-- The profile sits in the main chart's own box, so its bars line up with the price scale and stay inside. --}}
+        <div class="relative">
+            <div x-ref="main" class="h-[420px] w-full"></div>
+            <div x-ref="profile" class="pointer-events-none absolute inset-y-0 right-16 z-10 w-16 overflow-hidden sm:w-32" aria-hidden="true"></div>
+        </div>
         <div x-ref="panels" class="flex flex-col gap-2"></div>
     </div>
 

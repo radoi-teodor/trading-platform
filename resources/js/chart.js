@@ -68,6 +68,8 @@ export function priceChart(initial, liveUrl) {
                 this.status = live.status;
                 this.forming = live.bar;
                 this.drawForming();
+                // The price scale moves with the forming candle and with the operator's zoom: keep the bars on it.
+                this.drawProfile();
             } catch {
                 this.status = 'Not live: the server does not answer';
             } finally {
@@ -96,6 +98,7 @@ export function priceChart(initial, liveUrl) {
             this.volumeSeries = null;
             this.$refs.panels.innerHTML = '';
             this.$refs.profile.innerHTML = '';
+            this.profileBins = [];
             this.key = payload?.key ?? null;
             this.count = payload?.candles?.length ?? 0;
             this.liveQuery = payload?.live ?? null;
@@ -175,23 +178,30 @@ export function priceChart(initial, liveUrl) {
             }
 
             // The price scale has coordinates only once the chart has laid out.
-            requestAnimationFrame(() => requestAnimationFrame(() => this.drawProfile(candles, payload.profile ?? [])));
-            main.timeScale().subscribeVisibleTimeRangeChange(() => this.drawProfile(candles, payload.profile ?? []));
+            this.profileBins = payload.profile ?? [];
+            requestAnimationFrame(() => requestAnimationFrame(() => this.drawProfile()));
+            main.timeScale().subscribeVisibleTimeRangeChange(() => this.drawProfile());
         },
-        drawProfile(series, bins) {
+        profileBins: [],
+        drawProfile() {
             const box = this.$refs.profile;
+            const series = this.candleSeries;
+            const bins = this.profileBins;
             box.innerHTML = '';
             const largest = Math.max(...bins.map((b) => +b.volume), 0);
 
-            if (largest === 0) {
+            if (largest === 0 || !series) {
                 return;
             }
+
+            const height = box.clientHeight;
 
             for (const bin of bins) {
                 const top = series.priceToCoordinate(+bin.high);
                 const bottom = series.priceToCoordinate(+bin.low);
 
-                if (top === null || bottom === null) {
+                // A bin outside the visible prices is left out rather than drawn over the controls.
+                if (top === null || bottom === null || bottom < 0 || top > height) {
                     continue;
                 }
 

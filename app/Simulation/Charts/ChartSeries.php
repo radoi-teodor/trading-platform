@@ -8,6 +8,7 @@ use App\Market\Contracts\CandleFeed;
 use App\Market\Data\Candle;
 use App\Market\Data\FundingRate;
 use App\Market\Feed\CandleAggregator;
+use App\Market\Feed\CandleSequenceBroken;
 use App\Strategy\Data\PerpetualTracker;
 use App\Strategy\Data\PerpetualView;
 use App\Strategy\Dsl\Compiler\Compiler;
@@ -86,6 +87,8 @@ final readonly class ChartSeries
         $funding = null;
         $perpetuals = new PerpetualTracker;
 
+        $previous = null;
+
         foreach ($this->feed->minutes([$symbol], $start, $to) as $minute) {
             $candle = $minute->candles[(string) $symbol] ?? null;
             $funding = $minute->funding[(string) $symbol] ?? $funding;
@@ -95,7 +98,16 @@ final readonly class ChartSeries
                 continue;
             }
 
-            $closed = array_filter(array_map(fn (CandleAggregator $aggregator): ?Candle => $aggregator->push($candle), $aggregators));
+            try {
+                $closed = array_filter(array_map(fn (CandleAggregator $aggregator): ?Candle => $aggregator->push($candle), $aggregators));
+            } catch (CandleSequenceBroken) {
+                // Whole candles only (D-36): say what is missing and from which day to fill it (D-88).
+                throw $previous === null
+                    ? new ChartHistoryMissing((string) $symbol, "{$symbol} has stored minutes only from {$candle->openTime->format('Y-m-d H:i')}, so its first {$timeframes[0]->value} candle in the window would be incomplete.", $start->startOfDay())
+                    : new ChartHistoryMissing((string) $symbol, "{$symbol} misses the minute {$previous->addMinute()->format('Y-m-d H:i')}, so the candle around it would be incomplete.", $previous->addMinute()->startOfDay());
+            }
+
+            $previous = $candle->openTime;
 
             foreach ($closed as $value => $bar) {
                 if ($value !== $timeframe->value) {
@@ -123,6 +135,11 @@ final readonly class ChartSeries
             foreach (array_values($expressions) as $index => $expression) {
                 $series[$expression][] = self::text($values["e{$index}"] ?? null);
             }
+        }
+
+        if ($candles === []) {
+            // Nothing whole to draw: the stored minutes start after the window, or all fall in a candle still forming.
+            throw new ChartHistoryMissing((string) $symbol, "{$symbol} has no stored minutes from {$start->format('Y-m-d H:i')} to {$to->format('Y-m-d H:i')}, so there is no whole {$timeframe->value} candle to draw.", $start->startOfDay());
         }
 
         return ['candles' => $candles, 'series' => $series, 'types' => $types];

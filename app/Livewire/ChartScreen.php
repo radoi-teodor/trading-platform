@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace App\Livewire;
 
 use App\Market\Data\Candle;
+use App\Market\HistoryImports;
 use App\Market\Models\Instrument;
+use App\Market\Models\MarketJob;
+use App\Simulation\Charts\ChartHistoryMissing;
 use App\Simulation\Charts\ChartSeries;
 use App\Strategy\Dsl\DslError;
 use App\Strategy\Dsl\Functions\FunctionSpec;
@@ -50,6 +53,26 @@ final class ChartScreen extends Component
     public bool $table = false;
 
     public string $error = '';
+
+    /** Why the window's history is incomplete, and from which day to fill it (D-88); empty when it is complete. */
+    public string $missing = '';
+
+    public string $fillFrom = '';
+
+    /** The import started from this screen, followed until it ends. */
+    public ?int $fillJob = null;
+
+    /** Queues the history import the chart is missing, on the simulation worker, as Settings, Market data does. */
+    public function fillHistory(HistoryImports $imports): void
+    {
+        $from = CarbonImmutable::createFromFormat('Y-m-d', $this->fillFrom, 'UTC');
+
+        if ($this->missing === '' || $from === null) {
+            return;
+        }
+
+        $this->fillJob = $imports->queue((string) Symbol::parse($this->symbol), $from, candles: true, scalping: false)->id;
+    }
 
     public function add(): void
     {
@@ -98,6 +121,7 @@ final class ChartScreen extends Component
     {
         $payload = ['candles' => [], 'series' => [], 'types' => [], 'profile' => []];
         $this->error = '';
+        $this->missing = '';
         $through = '';
 
         try {
@@ -110,7 +134,18 @@ final class ChartScreen extends Component
             $through = CarbonImmutable::parse($last, 'UTC')->utc()->toIso8601String();
             $count = max(20, min(1000, $this->candles));
             $payload = $chart->compute($symbol, $timeframe, $to->subSeconds($count * $timeframe->seconds()), $to, $this->layers) + ['profile' => []];
+            // The window ends at the last stored minute, so its last candle must end there too: an earlier end means
+            // the minutes between are missing, as while an import is still running (D-88).
+            $lastEnd = CarbonImmutable::parse($payload['candles'][count($payload['candles']) - 1]['time'], 'UTC')->addSeconds($timeframe->seconds());
+
+            if ($lastEnd->lessThan($to)) {
+                throw new ChartHistoryMissing((string) $symbol, "{$symbol} misses the minutes from {$lastEnd->format('Y-m-d H:i')} to {$to->subMinute()->format('Y-m-d H:i')}, so the chart would skip them.", $lastEnd->startOfDay());
+            }
+
             $payload['profile'] = self::profile($payload['candles']);
+        } catch (ChartHistoryMissing $missing) {
+            $this->missing = $missing->reason;
+            $this->fillFrom = $missing->fillFrom->format('Y-m-d');
         } catch (DslError|InvalidArgumentException $failure) {
             $this->error = $failure->getMessage();
         }
@@ -127,6 +162,7 @@ final class ChartScreen extends Component
             'functions' => array_map(fn (FunctionSpec $f): string => $f->name, $functions),
             'instruments' => Instrument::query()->orderBy('market')->orderBy('symbol')->pluck('symbol')->unique()->values()->all(),
             'timeframes' => array_map(fn (Timeframe $t): string => $t->value, Timeframe::cases()),
+            'fill' => $this->fillJob === null ? null : MarketJob::query()->find($this->fillJob),
         ]);
     }
 

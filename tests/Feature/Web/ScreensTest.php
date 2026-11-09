@@ -13,18 +13,22 @@ use App\Market\Data\Candle;
 use App\Market\Data\CandleSource;
 use App\Market\Data\MarketType;
 use App\Market\FormingCandles;
+use App\Market\Jobs\ImportMarketData;
 use App\Market\Models\Instrument;
+use App\Market\Models\MarketJob;
 use App\Models\User;
 use App\Simulation\Models\SimulationJob;
 use App\Strategy\Dsl\Functions\Library;
 use App\Strategy\Versions\StrategyVersion;
 use App\Support\Clock\Clock;
+use App\Support\Clock\SimClock;
 use App\Support\Number\Decimal;
 use App\Support\Symbol;
 use App\Support\Timeframe;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Testing\PendingCommand;
 use Laravel\Fortify\Contracts\TwoFactorAuthenticationProvider;
 use Livewire\Livewire;
@@ -195,6 +199,74 @@ it('says the chart is not live when the stream does not write, and only to the o
 
     expect($response->json('bar'))->toBeNull()
         ->and($response->json('status'))->toContain('market:stream is not running');
+});
+
+/** ETH/USDT spot with stored minutes only from 2026-10-03 00:52, as when market:stream started without history. */
+function partialHistory(): Instrument
+{
+    app()->instance(Clock::class, new SimClock(CarbonImmutable::parse('2026-10-03 01:30:00', 'UTC')));
+    $eth = Instrument::register('binance', MarketType::Spot, Symbol::parse('ETH/USDT'), CarbonImmutable::parse('2026-10-03', 'UTC'));
+    app(CandleRepository::class)->upsert($eth, CandleSource::Stream, CandleFactory::walk('2026-10-03 00:52:00', 30, seed: 3));
+
+    return $eth;
+}
+
+it('explains missing history and offers to fill it, instead of failing (D-88)', function (): void {
+    web()->actingAs(operator());
+    partialHistory();
+    Bus::fake();
+
+    $component = Livewire::test(ChartScreen::class)->set('symbol', 'ETH/USDT')
+        ->assertSee('ETH/USDT has stored minutes only from 2026-10-03 00:52')
+        ->assertSee('Fill history from 2026-09-')
+        ->call('fillHistory')
+        ->assertSee('queued');
+    $job = MarketJob::query()->sole();
+
+    expect($job->symbol)->toBe('ETH/USDT')
+        ->and($job->candles)->toBeTrue()
+        ->and($job->scalping)->toBeFalse()
+        ->and($job->from->format('Y-m'))->toBe('2026-09')
+        ->and($component->get('error'))->toBe('');
+    Bus::assertDispatched(ImportMarketData::class);
+});
+
+it('explains an empty window too: minutes stored only in the hour still forming', function (): void {
+    web()->actingAs(operator());
+    app()->instance(Clock::class, new SimClock(CarbonImmutable::parse('2026-10-03 01:30:00', 'UTC')));
+    $eth = Instrument::register('binance', MarketType::Spot, Symbol::parse('ETH/USDT'), CarbonImmutable::parse('2026-10-03', 'UTC'));
+    app(CandleRepository::class)->upsert($eth, CandleSource::Stream, CandleFactory::walk('2026-10-03 01:05:00', 20, seed: 3));
+
+    Livewire::test(ChartScreen::class)->set('symbol', 'ETH/USDT')
+        ->assertSee('ETH/USDT has no stored minutes from 2026-09-')
+        ->assertSee('Fill history from 2026-09-');
+});
+
+it('does not draw a window whose last hours are missing, as while an import is still running', function (): void {
+    web()->actingAs(operator());
+    app()->instance(Clock::class, new SimClock(CarbonImmutable::parse('2026-10-03 03:30:00', 'UTC')));
+    $eth = Instrument::register('binance', MarketType::Spot, Symbol::parse('ETH/USDT'), CarbonImmutable::parse('2026-10-03', 'UTC'));
+    app(CandleRepository::class)->upsert($eth, CandleSource::Archive, CandleFactory::walk('2026-10-03 00:00:00', 60, seed: 3));
+    app(CandleRepository::class)->upsert($eth, CandleSource::Stream, CandleFactory::walk('2026-10-03 03:05:00', 20, seed: 4));
+
+    Livewire::test(ChartScreen::class)->set('symbol', 'ETH/USDT')
+        ->assertSee('ETH/USDT misses the minutes from 2026-10-03 01:00 to 2026-10-03 02:59')
+        ->assertSee('Fill history from 2026-10-03');
+});
+
+it('names a minute missing inside the window, and draws once the history is complete', function (): void {
+    web()->actingAs(operator());
+    app()->instance(Clock::class, new SimClock(CarbonImmutable::parse('2026-10-03 03:30:00', 'UTC')));
+    $eth = Instrument::register('binance', MarketType::Spot, Symbol::parse('ETH/USDT'), CarbonImmutable::parse('2026-10-03', 'UTC'));
+    $minutes = CandleFactory::walk('2026-10-03 00:00:00', 180, seed: 3);
+    app(CandleRepository::class)->upsert($eth, CandleSource::Archive, array_values(array_filter($minutes, fn (Candle $c): bool => $c->openTime->format('H:i') !== '01:30')));
+
+    Livewire::test(ChartScreen::class)->set('symbol', 'ETH/USDT')->assertSee('2026-10-03 01:30')->assertSee('Fill history from');
+
+    app(CandleRepository::class)->upsert($eth, CandleSource::Rest, $minutes);
+    $payload = Livewire::test(ChartScreen::class)->set('symbol', 'ETH/USDT')->assertDontSee('Fill history from')->viewData('payload');
+
+    expect(data_get($payload, 'candles.*.time'))->toBe(['2026-10-03T00:00:00Z', '2026-10-03T01:00:00Z', '2026-10-03T02:00:00Z']);
 });
 
 it('compiles as the operator types, reads the strategy back, saves it and runs it in the background', function (): void {
