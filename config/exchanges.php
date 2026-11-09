@@ -11,7 +11,9 @@ return [
         ],
         'perp' => [
             'rest' => env('BINANCE_PERP_REST', 'https://fapi.binance.com'),
-            'stream' => env('BINANCE_PERP_STREAM', 'wss://fstream.binance.com'),
+            // USD-M market streams (klines, aggregated trades, mark price) are served under /market; the bare host
+            // still accepts a connection and sends nothing (found 2026-11-09).
+            'stream' => env('BINANCE_PERP_STREAM', 'wss://fstream.binance.com/market'),
         ],
         'archive' => env('BINANCE_ARCHIVE', 'https://data.binance.vision'),
         // Verified archives are kept here and checked against their checksum again on reuse.

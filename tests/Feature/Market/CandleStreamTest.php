@@ -167,6 +167,7 @@ it('collects the scalping data of the perpetuals it is given on the same connect
 
     $stream->run(MarketType::Perp, [$perp], maxSessions: 1, scalping: ['BTCUSDT' => $perp], thresholds: ['BTCUSDT' => Decimal::of('100000')]);
 
-    expect($transport->connectedTo)->toBe(['wss://fstream.binance.com/stream?streams=btcusdt@kline_1m/btcusdt@aggTrade/btcusdt@markPrice@1s'])
+    // USD-M market streams moved to the /market path; the old /stream path accepts the connection and sends nothing.
+    expect($transport->connectedTo)->toBe(['wss://fstream.binance.com/market/stream?streams=btcusdt@kline_1m/btcusdt@aggTrade/btcusdt@markPrice@1s'])
         ->and(DB::table('candles')->count())->toBe(0);
 });
