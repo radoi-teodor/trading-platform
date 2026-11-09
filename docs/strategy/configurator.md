@@ -83,6 +83,10 @@ Rules that the compiler enforces:
   shorter than it.
 - Every symbol must exist on the exchange and be tradable in the chosen market type.
 
+**Universe strategies (Phase 7, planned, D-92).** A document may declare `universe: { rule: top, n: 50, by:
+quote_volume_30d }` instead of `market.instruments`, and rank its members with `rank`, `percentile`, `top` and
+`bottom`. `docs/universe.md`, section 5, describes them; this section will hold the rules once they compile.
+
 ## 2. Expression language
 
 ### Types

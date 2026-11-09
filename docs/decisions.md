@@ -594,6 +594,45 @@ history** button that queues the same import as Settings, Market data (candles, 
 the job every 5 seconds and draws the chart when the history is complete. The MCP chart tools refuse with the same
 sentence and ask the agent to have the operator fill it: agents never write market data (D-63).
 
+**D-89. Universe and instrument lifetime** (2026-11-09, accepted with the Phase 7 plan; the operator chose the top
+50 perpetuals over 2 years)
+Every USD-M perpetual that ever existed is known: `exchangeInfo` for current ones (`onboardDate` is `listed_at`),
+the public archive listing for delisted ones. `instruments` gains `listed_at`, `delisted_at` and `underlying_type`.
+A research universe is a rule (top N USDT-quoted crypto perpetuals by 30-day quote volume, re-ranked monthly),
+stored as dated `universe_members`, so a backtest sees only the members of its time. Minutes outside an
+instrument's lifetime are not gaps; flat archive candles after a delisting are cut. `docs/universe.md`.
+
+**D-90. Storage at scale** (2026-11-09, accepted with the Phase 7 plan; settles the revision D-31 promised at 50
+million rows)
+`candles` is partitioned by month on `open_time` with native PostgreSQL partitioning (no TimescaleDB, which the
+portable PostgreSQL of D-85 does not carry). `daily_stats` holds a row per instrument per day for rankings and
+screens. The feed streams many instruments in hour chunks through a cursor. The repository API is unchanged.
+
+**D-91. Depth, positioning and liquidations** (2026-11-09, accepted with the Phase 7 plan; the operator chose to
+collect liquidations from now on)
+Order book depth from the `bookDepth` archives (bid and ask notional within 1, 2 and 5 %, per 5 minutes), the
+long/short and taker ratios of the `metrics` archives, and liquidations from `!forceOrder@arr`, stored per minute as
+a lower bound (Binance sends one per symbol per second and publishes no history). A run that reads a series over a
+window without it is refused.
+
+**D-92. Cross-sectional strategies** (2026-11-09, accepted with the Phase 7 plan)
+A document may declare `universe:` instead of instruments. `rank`, `percentile`, `top` and `bottom` rank the members
+at each close of the strategy's timeframe, in decimals with ties broken by symbol. The engine decides a universe
+strategy in one batch: exits and stop moves first, entries in rank order once those closes have filled. Entries keep
+their stops; per-symbol strategies and `Engine::VERSION` are unchanged.
+
+**D-93. Research over MCP** (2026-11-09, accepted with the Phase 7 plan)
+Read-only tools `list_universe`, `screen_market`, `get_depth`, `get_liquidations` and `get_listing_stats`, with row
+and window caps, a separate rate limit for heavy tools and a statement timeout. Building the universe and importing
+data stay with the operator.
+
+**D-94. Ten positions, raised by the operator** (2026-11-09, accepted with the Phase 7 plan; the operator chose to
+plan for 10 positions)
+Universe strategies are designed for up to 10 open positions at about 0.3 % risk each, tighter than the account.
+The account defaults (6 positions, 3 % total open risk) do not change in code; the operator raises them to the
+ceilings (10, 5 %) in Settings with re-authentication and the 24 hour delay (D-19). Correlation buckets remain
+unimplemented and the docs say so.
+
 ## Open
 
 | Id | Question | Blocks |
