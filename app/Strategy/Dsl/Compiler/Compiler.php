@@ -16,6 +16,7 @@ use App\Strategy\Dsl\Ast\OnTimeframe;
 use App\Strategy\Dsl\Ast\Parameter;
 use App\Strategy\Dsl\Ast\PercentLiteral;
 use App\Strategy\Dsl\Ast\Unary;
+use App\Strategy\Dsl\DslWriter;
 use App\Strategy\Dsl\Functions\Group;
 use App\Strategy\Dsl\Scope;
 use App\Strategy\Dsl\TypeChecker;
@@ -62,9 +63,14 @@ final class Compiler
 
     /**
      * @param  array<string, Decimal>  $values  the parameter set this program runs with
+     * @param  ?CrossSection  $section  where a universe strategy's rankings read the place of $member; without it they have no value
      */
-    public function __construct(private readonly Scope $scope, private readonly array $values)
-    {
+    public function __construct(
+        private readonly Scope $scope,
+        private readonly array $values,
+        private readonly ?CrossSection $section = null,
+        private readonly string $member = '',
+    ) {
         $this->types = new TypeChecker;
     }
 
@@ -137,6 +143,7 @@ final class Compiler
             'trade_r' => fn (Frame $f): ?Decimal => self::tradeR($f),
             'hour_utc' => fn (Frame $f): Decimal => Decimal::of((int) $f->time->format('G')),
             'weekday' => fn (Frame $f): Decimal => Decimal::of((int) $f->time->format('N')),
+            'count' => $this->entered(),
             'none' => fn (): null => null,
             default => throw new LogicException("Cannot compile {$node->name}."),
         };
@@ -333,8 +340,63 @@ final class Compiler
             'level' => $series('series'),
             'chandelier' => $this->chandelier($count('n'), $number('k')),
             'atr_trail' => $this->atrTrail($count('n'), $number('k')),
+            'rank', 'percentile', 'top', 'bottom' => $this->ranking($node, $arguments, $timeframe, $program),
             default => throw new LogicException("Cannot compile {$node->name}()."),
         };
+    }
+
+    /**
+     * A ranking across the members of a universe (D-92). Its source is worked out for every member first
+     * (Program::collect); each member then reads its place among those entered in the cross-section. A member that
+     * is not entered, or has no value yet, has no place.
+     *
+     * @param  array<string, Node>  $arguments
+     * @return Closure(Frame): mixed
+     */
+    private function ranking(Call $node, array $arguments, Timeframe $timeframe, Program $program): Closure
+    {
+        $source = $arguments['src'];
+        $slot = $program->slot($node, DslWriter::write($source), fn (): Closure => $this->compile($source, $timeframe, $program));
+        $n = isset($arguments['n']) ? (int) (string) $this->number($arguments['n']) : 0;
+        $section = $this->section;
+        $member = $this->member;
+
+        if ($section === null) {
+            return fn (): null => null;
+        }
+
+        return match ($node->name) {
+            'rank' => function () use ($section, $slot, $member): ?Decimal {
+                $rank = $section->rank($slot, $member);
+
+                return $rank === null ? null : Decimal::of($rank);
+            },
+            'percentile' => function () use ($section, $slot, $member): ?Decimal {
+                $rank = $section->rank($slot, $member);
+                $ranked = $section->ranked($slot);
+
+                return $rank === null || $ranked < 2 ? null : Decimal::of($ranked - $rank)->dividedBy(Decimal::of($ranked - 1), 18);
+            },
+            'top' => function () use ($section, $slot, $member, $n): ?bool {
+                $rank = $section->rank($slot, $member);
+
+                return $rank === null ? null : $rank <= $n;
+            },
+            default => function () use ($section, $slot, $member, $n): ?bool {
+                $rank = $section->rank($slot, $member);
+
+                return $rank === null ? null : $rank > $section->ranked($slot) - $n;
+            },
+        };
+    }
+
+    /** @return Closure(Frame): ?Decimal how many members are entered at this close, for one of them */
+    private function entered(): Closure
+    {
+        $section = $this->section;
+        $member = $this->member;
+
+        return fn (): ?Decimal => $section !== null && $section->has($member) ? Decimal::of($section->count()) : null;
     }
 
     /** @return Closure(Frame): ?Decimal */
@@ -506,7 +568,7 @@ final class Compiler
             'adx' => 2 * $n('n'),
             'macd' => $n('slow') + $n('signal') - 1,
             'stoch' => $n('k') + $n('d') - 1,
-            'vwap' => 1,
+            'vwap', 'rank', 'percentile', 'top', 'bottom' => 1,
             default => 0,
         };
         $source = 0;

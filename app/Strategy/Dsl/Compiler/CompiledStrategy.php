@@ -18,6 +18,7 @@ use App\Strategy\Data\StrategyContext;
 use App\Strategy\Data\StrategyIdentity;
 use App\Strategy\Data\StrategyLimits;
 use App\Strategy\Data\Subscription;
+use App\Strategy\Data\UniverseSchedule;
 use App\Strategy\Dsl\Ast\Argument;
 use App\Strategy\Dsl\Ast\Binary;
 use App\Strategy\Dsl\Ast\Call;
@@ -34,6 +35,7 @@ use App\Strategy\Dsl\Document\EntrySpec;
 use App\Strategy\Dsl\Document\ParameterSpec;
 use App\Strategy\Dsl\Document\StrategySpec;
 use App\Strategy\Dsl\Functions\Group;
+use App\Strategy\Dsl\Rankings;
 use App\Strategy\Dsl\Scope;
 use App\Strategy\Dsl\TypeChecker;
 use App\Strategy\Dsl\Types\Kind;
@@ -79,6 +81,8 @@ final class CompiledStrategy implements LimitedStrategy
             $spec->market === MarketType::Perp,
             array_map(fn (ParameterSpec $p): Type => Type::of($p->kind), $spec->params),
             array_map(fn (ParameterSpec $p): bool => $p->whole, $spec->params),
+            [],
+            $spec->universe !== null,
         );
         $probe = $this->program();
         $timeframes = array_map(fn (string $value): Timeframe => Timeframe::from($value), $probe->timeframes());
@@ -89,11 +93,11 @@ final class CompiledStrategy implements LimitedStrategy
 
     /**
      * Builds the strategy of a document with its parameters' defaults, overridden by $overrides (by name, as text:
-     * 20 or 1.5%).
+     * 20 or 1.5%). A universe strategy (D-92) also needs $universe, who its members are month by month.
      *
      * @param  array<string, string>  $overrides
      */
-    public static function fromSpec(StrategySpec $spec, array $overrides = [], int $version = 1): Strategy
+    public static function fromSpec(StrategySpec $spec, array $overrides = [], int $version = 1, ?UniverseSchedule $universe = null): Strategy
     {
         if ($spec->template !== null) {
             $carry = FundingCarry::build($spec->template->parameters(), [$spec->template->perpetual]);
@@ -125,7 +129,15 @@ final class CompiledStrategy implements LimitedStrategy
             $values[$name] = $value;
         }
 
-        return new self($spec, $values, $version);
+        if ($spec->universe === null) {
+            return new self($spec, $values, $version);
+        }
+
+        if ($universe === null) {
+            throw new InvalidArgumentException("{$spec->id} trades a universe: it needs the universe's members to run.");
+        }
+
+        return new UniverseStrategy(new self($spec, $values, $version), $spec, $universe);
     }
 
     public function identity(): StrategyIdentity
@@ -164,9 +176,8 @@ final class CompiledStrategy implements LimitedStrategy
 
     public function onCandle(StrategyContext $context): array
     {
-        $key = (string) $context->symbol;
-        $program = $this->programs[$key] ??= $this->program();
-        $frame = new Frame($context->candle, $context->time, $context->position, $context->funding, $this->trades[$key] ?? null, $context->perpetual);
+        $program = $this->programs[(string) $context->symbol] ??= $this->program();
+        $frame = $this->frame($context);
 
         if ($context->candle->timeframe !== $this->spec->timeframe) {
             $program->update($context->candle->timeframe->value, $frame);
@@ -174,13 +185,71 @@ final class CompiledStrategy implements LimitedStrategy
             return [];
         }
 
-        $values = $program->evaluate($frame);
+        return $this->decide($context, $program->evaluate($frame));
+    }
 
+    /**
+     * What the expressions of $context's instrument read on its candle.
+     *
+     * @internal for UniverseStrategy
+     */
+    public function frame(StrategyContext $context): Frame
+    {
+        return new Frame($context->candle, $context->time, $context->position, $context->funding, $this->trades[(string) $context->symbol] ?? null, $context->perpetual);
+    }
+
+    /**
+     * The intents of one instrument from its expressions' values: an entry when flat, else the exits.
+     *
+     * @internal for UniverseStrategy
+     *
+     * @param  array<string, mixed>  $values
+     * @return list<Intent>
+     */
+    public function decide(StrategyContext $context, array $values): array
+    {
         if ($context->position === null) {
             return $this->enter($context->symbol, $context->candle->close->value, $values);
         }
 
         return $this->manage($context, $values);
+    }
+
+    /**
+     * The compiled expressions for one member of a universe, whose rankings read $section.
+     *
+     * @internal for UniverseStrategy
+     */
+    public function memberProgram(CrossSection $section, string $member): Program
+    {
+        return $this->program($section, $member);
+    }
+
+    /**
+     * @internal for UniverseStrategy
+     *
+     * @return list<Timeframe> the timeframes read with `on`, longest first
+     */
+    public function longerTimeframes(): array
+    {
+        return $this->timeframes;
+    }
+
+    /**
+     * The ranking that orders the entries of one side among the members (D-92): the first of that side's condition,
+     * else the first of the filters, else none.
+     *
+     * @internal for UniverseStrategy
+     */
+    public function ranking(string $entry): ?Call
+    {
+        $found = isset($this->spec->entries[$entry]) ? Rankings::first($this->spec->entries[$entry]->when->node) : null;
+
+        foreach ($this->spec->filters as $filter) {
+            $found ??= Rankings::first($filter->node);
+        }
+
+        return $found;
     }
 
     /**
@@ -374,10 +443,10 @@ final class CompiledStrategy implements LimitedStrategy
         return array_keys($used);
     }
 
-    private function program(): Program
+    private function program(?CrossSection $section = null, string $member = ''): Program
     {
         $program = new Program;
-        $compiler = new Compiler($this->scope, $this->values);
+        $compiler = new Compiler($this->scope, $this->values, $section, $member);
 
         foreach ($this->spec->filters as $index => $filter) {
             $compiler->add($program, "filter.{$index}", $filter->node);
