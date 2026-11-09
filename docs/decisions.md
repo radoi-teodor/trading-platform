@@ -563,6 +563,14 @@ section 2 already allows. The processes run under `concurrently`, which restarts
 starts with the streams, because without them `platform:health` fails every minute. Docker Compose stays the setup
 for every other machine and for CI.
 
+**D-86. The authenticator is set up from a QR code in the terminal** (2026-11-09, accepted; the operator could not
+set up the app from the key as text)
+`user:create` draws the `otpauth://` URL as a QR code with Unicode half blocks, one text line for two rows of
+modules, inside a light border of four modules: about 45 columns by 23 lines, which fits a default cmd window.
+When the console has colours, each cell has an explicit black and bright white, so the code reads the same on a
+dark or light theme; without colours, light modules are drawn on the dark background of cmd and PowerShell. The key
+stays below the code as text for an app that cannot scan; nothing is written to disk.
+
 ## Open
 
 | Id | Question | Blocks |

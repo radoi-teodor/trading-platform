@@ -11,7 +11,8 @@ use Laravel\Fortify\Contracts\TwoFactorAuthenticationProvider;
 
 /**
  * Creates the one operator (D-5, docs/security.md section 3): the password is asked twice without echo, and the TOTP
- * secret is shown once and confirmed with a code from the authenticator app before the account exists.
+ * secret is shown once, as a QR code with the key below it (D-86), and confirmed with a code from the authenticator
+ * app before the account exists.
  */
 final class CreateUser extends Command
 {
@@ -19,7 +20,7 @@ final class CreateUser extends Command
 
     protected $description = 'Create the operator, with a password and a TOTP authenticator';
 
-    public function handle(TwoFactorAuthenticationProvider $totp, Clock $clock): int
+    public function handle(TwoFactorAuthenticationProvider $totp, Clock $clock, TerminalQrCode $qrCode): int
     {
         $email = (string) $this->argument('email');
 
@@ -44,8 +45,9 @@ final class CreateUser extends Command
         }
 
         $secret = $totp->generateSecretKey();
-        $this->line('Add this key to your authenticator app (shown once): '.$secret);
-        $this->line('Or open: '.$totp->qrCodeUrl('Trading X', $email, $secret));
+        $this->line('Scan this code with your authenticator app (shown once):');
+        $this->output->write($qrCode->render($totp->qrCodeUrl('Trading X', $email, $secret), $this->output->isDecorated()));
+        $this->line('If the app cannot scan, type this key: '.$secret);
         $code = $this->ask('A code from the app');
 
         if (! is_string($code) || ! $totp->verify($secret, $code)) {

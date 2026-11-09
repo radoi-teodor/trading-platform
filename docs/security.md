@@ -35,7 +35,7 @@ in a public repository. This document lists what is protected, from whom, and ho
   by an artisan command that asks for the password interactively.
 - Password plus TOTP. Login throttled. Sessions expire after inactivity.
 - Built with Laravel Fortify: the first user comes from `php artisan user:create`, which asks for the password and
-  shows the TOTP secret once; there is no registration or password reset by email. Re-authentication asks for the
+  shows the TOTP secret once, as a QR code with the key below it (D-86); there is no registration or password reset by email. Re-authentication asks for the
   password and a fresh TOTP code and lasts 10 minutes.
 - Re-authentication (password and TOTP) for: raising a risk limit, promoting to a live stage, adding, replacing or
   deleting exchange keys, changing the Telegram token or chat id, creating an MCP token, enabling perpetuals,

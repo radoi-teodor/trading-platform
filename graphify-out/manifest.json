@@ -1159,9 +1159,9 @@
     "semantic_hash": "4252114042a37a72787d6df3cd4a9231"
   },
   "composer.json": {
-    "mtime": 1794234536.9751182,
-    "seen": 1794237954.261093,
-    "ast_hash": "19d7e71a49514b849c27d418703b0adf",
+    "mtime": 1794238875.8778195,
+    "seen": 1794239327.0288982,
+    "ast_hash": "d2d8c32ef2ccf1cae79945502c4e8b15",
     "semantic_hash": ""
   },
   "config/app.php": {
@@ -1864,9 +1864,9 @@
     "semantic_hash": ""
   },
   "docs/decisions.md": {
-    "mtime": 1794236960.731912,
-    "seen": 1794237954.2633712,
-    "ast_hash": "b6e9db5cc019cfd380268a55f7165980",
+    "mtime": 1794238905.832952,
+    "seen": 1794239327.0769029,
+    "ast_hash": "aaa2efed7f2ff7d7bd2b7d14b34c821c",
     "semantic_hash": ""
   },
   "docs/engine.md": {
@@ -1894,15 +1894,15 @@
     "semantic_hash": ""
   },
   "docs/runbook.md": {
-    "mtime": 1794234537.0318582,
-    "seen": 1794237954.2634194,
-    "ast_hash": "9b46e55c8ea3cb71c8d85547d9d63b6e",
+    "mtime": 1794238910.5092134,
+    "seen": 1794239327.0778315,
+    "ast_hash": "4ad5d7b74168d7e11dc5a0c2e12fca95",
     "semantic_hash": ""
   },
   "docs/security.md": {
-    "mtime": 1794234537.0339248,
-    "seen": 1794237954.263429,
-    "ast_hash": "ca6a51cae551b3e3ed51955eda31d9ca",
+    "mtime": 1794238909.352097,
+    "seen": 1794239327.0778422,
+    "ast_hash": "f179777f99b59d4bd2fd1b27f17a60fc",
     "semantic_hash": ""
   },
   "docs/simulation.md": {
@@ -3130,9 +3130,9 @@
     "semantic_hash": ""
   },
   "app/Web/Console/CreateUser.php": {
-    "mtime": 1794234536.9548478,
-    "seen": 1794237954.2608612,
-    "ast_hash": "3cbe862767d8ab78d6698b807ee57dde",
+    "mtime": 1794238864.2624886,
+    "seen": 1794239327.0261927,
+    "ast_hash": "af1d403d41a237b481bdf9ad6f43031a",
     "semantic_hash": ""
   },
   "config/fortify.php": {
@@ -3232,9 +3232,9 @@
     "semantic_hash": ""
   },
   "tests/Feature/Web/ScreensTest.php": {
-    "mtime": 1794234537.220492,
-    "seen": 1794237954.2622316,
-    "ast_hash": "463b5948ac9d7f5e2768f6f78d497f8a",
+    "mtime": 1794238836.6680133,
+    "seen": 1794239327.051511,
+    "ast_hash": "b2f3efc2a571ba9259b30ae726d7cf2a",
     "semantic_hash": ""
   },
   "app/Agents/Tokens.php": {
@@ -3739,6 +3739,18 @@
     "mtime": 1794236960.731912,
     "seen": 1794237954.261798,
     "ast_hash": "359fa58bcf573a8448e9ef8ca41eb5ef",
+    "semantic_hash": ""
+  },
+  "app/Web/Console/TerminalQrCode.php": {
+    "mtime": 1794238863.9246802,
+    "seen": 1794239327.026207,
+    "ast_hash": "f918d6aab0a093d7da96b6ef1e6bd512",
+    "semantic_hash": ""
+  },
+  "tests/Unit/Web/TerminalQrCodeTest.php": {
+    "mtime": 1794238830.2522883,
+    "seen": 1794239327.0715888,
+    "ast_hash": "86256d2629d3588f1f460ee70f601bd9",
     "semantic_hash": ""
   },
   "package-lock.json": {

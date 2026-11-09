@@ -288,7 +288,7 @@ some regions: run it from where your account works.
 
 | Task | Command |
 |------|---------|
-| Create the operator (once) | `php artisan user:create you@example.com`: the password twice, then add the TOTP key it shows to your authenticator and type a code |
+| Create the operator (once) | `php artisan user:create you@example.com`: the password twice, then scan the QR code it draws with your authenticator (or type the key below it) and type a code |
 | Build the front end | `npm ci && npm run build` |
 | Serve it on this machine | `php artisan serve` and open `http://127.0.0.1:8000` |
 

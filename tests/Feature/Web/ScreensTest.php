@@ -68,6 +68,10 @@ it('creates the one operator with a confirmed authenticator, and no second one',
 
     $command->expectsQuestion('Password (hidden, at least 12 characters)', 'a long test password')
         ->expectsQuestion('The same password again', 'a long test password')
+        ->expectsOutputToContain('Scan this code with your authenticator app')
+        ->expectsOutputToContain('█')
+        ->expectsOutputToContain('If the app cannot scan, type this key: '.OPERATOR_SECRET)
+        ->doesntExpectOutputToContain('otpauth://')
         ->expectsQuestion('A code from the app', '123456')
         ->assertSuccessful()
         ->run();
