@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Livewire;
 
+use App\Market\Data\Candle;
 use App\Market\Models\Instrument;
 use App\Simulation\Charts\ChartSeries;
 use App\Strategy\Dsl\DslError;
@@ -97,6 +98,7 @@ final class ChartScreen extends Component
     {
         $payload = ['candles' => [], 'series' => [], 'types' => [], 'profile' => []];
         $this->error = '';
+        $through = '';
 
         try {
             $timeframe = Timeframe::tryFrom($this->timeframe) ?? throw new InvalidArgumentException('Pick a timeframe.');
@@ -105,6 +107,7 @@ final class ChartScreen extends Component
                 ->where('instruments.symbol', (string) $symbol)->where('instruments.market', $symbol->isPerpetual() ? 'perp' : 'spot')
                 ->where('candles.timeframe', '1m')->max('candles.open_time');
             $to = is_string($last) ? $timeframe->openTimeContaining(CarbonImmutable::parse($last, 'UTC')->addMinute()) : throw new InvalidArgumentException("{$symbol} has no stored candles.");
+            $through = CarbonImmutable::parse($last, 'UTC')->utc()->toIso8601String();
             $count = max(20, min(1000, $this->candles));
             $payload = $chart->compute($symbol, $timeframe, $to->subSeconds($count * $timeframe->seconds()), $to, $this->layers) + ['profile' => []];
             $payload['profile'] = self::profile($payload['candles']);
@@ -113,6 +116,10 @@ final class ChartScreen extends Component
         }
 
         $functions = array_values(array_filter(Library::all(), fn (FunctionSpec $f): bool => $f->refused === null && in_array($f->group, [Group::Price, Group::Indicator, Group::Perpetual], true)));
+        // The view keeps the operator's zoom while the key stays the same, and fits the new data when it changes. The
+        // live read (D-87, /chart/live) needs the instrument, the timeframe and the last minute computed through.
+        $payload['key'] = "{$this->symbol}|{$this->timeframe}|{$this->candles}";
+        $payload['live'] = ['symbol' => $this->symbol, 'timeframe' => $this->timeframe, 'through' => $through];
         $this->dispatch('chart-data', payload: $payload);
 
         return view('livewire.chart-screen', [

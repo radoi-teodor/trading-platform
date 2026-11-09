@@ -8,6 +8,8 @@ test('adds and removes layers, changes the timeframe and shows the table', async
     const layers = page.getByLabel('Layers');
     await expect(layers).toContainText('ema(9)a price series');
     await expect(layers).toContainText('ema(21)a price series');
+    // No stream runs in this suite: the chart says so within a second or two (D-87).
+    await expect(page.getByRole('status').filter({ hasText: 'market:stream' })).toContainText('Not live');
 
     await page.getByPlaceholder('ema(21) on 4h').fill('rsi(14)');
     await page.getByRole('button', { name: 'Add layer' }).click();

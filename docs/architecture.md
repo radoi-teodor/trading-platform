@@ -25,7 +25,7 @@ database between two codebases.
 | Process | Command | Owns | Notes |
 |---------|---------|------|-------|
 | web | `php artisan serve` / PHP-FPM | HTTP, Livewire UI, MCP endpoint | Never waits on the engine or the network; reads state, writes commands |
-| reverb | `php artisan reverb:start` | WebSockets to the browser | Throttled broadcasts (prices at most 4 per second per instrument) |
+| reverb | `php artisan reverb:start` | WebSockets to the browser | Throttled broadcasts (prices at most 4 per second per instrument). Not installed yet: the Chart screen polls once a second instead (D-87) |
 | market-data | `php artisan market:stream spot` and `market:stream perp` | One combined WebSocket stream per market | Blocking client, one process per market; stores closed candles and, for perpetuals with scalping data, the mark price, trade flow, premium index and open interest (D-81); repairs gaps on reconnect (`docs/market-data.md`) |
 | engine | `php artisan engine:run {account}` | Orders, positions, ledger of one account, in the account's mode (paper, testnet, or live once approved, D-82) | The only writer of trading state for that account; reads closed minutes from the database (D-67), restarts by replay (D-68) |
 | queue workers | `php artisan queue:work --queue=notifications,default` and the simulation worker below | Queued jobs | Horizon once Redis is installed |

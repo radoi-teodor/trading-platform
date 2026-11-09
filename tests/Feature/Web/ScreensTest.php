@@ -8,13 +8,20 @@ use App\Livewire\AccountScreen;
 use App\Livewire\ChartScreen;
 use App\Livewire\HaltButton;
 use App\Livewire\StrategiesScreen;
+use App\Market\CandleRepository;
+use App\Market\Data\Candle;
+use App\Market\Data\CandleSource;
 use App\Market\Data\MarketType;
+use App\Market\FormingCandles;
 use App\Market\Models\Instrument;
 use App\Models\User;
 use App\Simulation\Models\SimulationJob;
 use App\Strategy\Dsl\Functions\Library;
 use App\Strategy\Versions\StrategyVersion;
+use App\Support\Clock\Clock;
+use App\Support\Number\Decimal;
 use App\Support\Symbol;
+use App\Support\Timeframe;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
@@ -22,6 +29,7 @@ use Illuminate\Testing\PendingCommand;
 use Laravel\Fortify\Contracts\TwoFactorAuthenticationProvider;
 use Livewire\Livewire;
 use PragmaRX\Google2FA\Google2FA;
+use Tests\Support\CandleFactory;
 
 uses(RefreshDatabase::class);
 
@@ -120,6 +128,73 @@ it('draws candles and layers with their types, and says why an expression cannot
         ->and(ChartScreen::template(Library::get('bb')))->toBe('bb().upper');
 
     Livewire::test(ChartScreen::class)->set('layers', ['ema(9'])->assertSee('expected ) to close the call to ema');
+});
+
+/** The spot fixture of two days, three closed minutes of 2026-10-03, and the minute 00:03 forming (D-87). */
+function liveChartFixture(bool $forming = true): Instrument
+{
+    $btc = backtestFixture(days: 2);
+    app(CandleRepository::class)->upsert($btc, CandleSource::Archive, CandleFactory::walk('2026-10-03 00:00:00', 3, seed: 5));
+
+    if ($forming) {
+        app(FormingCandles::class)->put($btc, Candle::fromStrings(CarbonImmutable::parse('2026-10-03 00:03:00', 'UTC'), Timeframe::OneMinute, '100', '999999', '1', '123.45', '2', '200', 3, '1'), app(Clock::class)->now()->subSecond());
+    }
+
+    return $btc;
+}
+
+/** The chart's live query (D-87) as the screen renders it for a timeframe. */
+function chartLiveQuery(string $timeframe): string
+{
+    $live = data_get(Livewire::test(ChartScreen::class)->set('timeframe', $timeframe)->viewData('payload'), 'live');
+
+    return http_build_query(is_array($live) ? $live : throw new LogicException('The payload has no live query.'));
+}
+
+it('moves the forming candle every second without recomputing the chart (D-87)', function (): void {
+    web()->actingAs(operator());
+    $btc = liveChartFixture();
+    $minutes = app(CandleRepository::class)->range($btc, Timeframe::OneMinute, CarbonImmutable::parse('2026-10-03 00:00:00', 'UTC'), CarbonImmutable::parse('2026-10-03 00:02:00', 'UTC'));
+    $volume = array_reduce($minutes, fn (Decimal $sum, Candle $c): Decimal => $sum->plus($c->volume), Decimal::of('2'));
+    $query = chartLiveQuery('1h');
+
+    $response = web()->getJson('/chart/live?'.$query)->assertOk();
+    $barVolume = $response->json('bar.volume');
+
+    expect($query)->toBe(http_build_query(['symbol' => 'BTC/USDT', 'timeframe' => '1h', 'through' => '2026-10-03T00:02:00+00:00']))
+        ->and($response->json('closed'))->toBeFalse()
+        ->and($response->json('bar.time'))->toBe('2026-10-03T00:00:00Z')
+        ->and($response->json('bar.open'))->toBe((string) $minutes[0]->open)
+        ->and($response->json('bar.high'))->toBe('999999')
+        ->and($response->json('bar.close'))->toBe('123.45')
+        ->and(is_string($barVolume) && Decimal::of($barVolume)->equals($volume))->toBeTrue()
+        ->and($response->json('status'))->toStartWith('Live');
+});
+
+it('says when a candle of the chart timeframe has closed, and the chart then has it with its layers', function (): void {
+    web()->actingAs(operator());
+    $btc = liveChartFixture();
+    $query = chartLiveQuery('1m');
+    app(CandleRepository::class)->upsert($btc, CandleSource::Stream, CandleFactory::walk('2026-10-03 00:03:00', 1, seed: 6));
+
+    web()->getJson('/chart/live?'.$query)->assertOk()->assertJson(['closed' => true]);
+    $payload = Livewire::test(ChartScreen::class)->set('timeframe', '1m')->viewData('payload');
+    $candles = data_get($payload, 'candles');
+
+    expect(data_get($payload, 'candles.*.time'))->toContain('2026-10-03T00:03:00Z')
+        ->and(data_get($payload, 'series.ema(9)'))->toHaveCount(is_array($candles) ? count($candles) : -1);
+});
+
+it('says the chart is not live when the stream does not write, and only to the operator', function (): void {
+    liveChartFixture(forming: false);
+    $query = ['symbol' => 'BTC/USDT', 'timeframe' => '1m', 'through' => '2026-10-03T00:02:00+00:00'];
+
+    web()->getJson('/chart/live?'.http_build_query($query))->assertUnauthorized();
+    web()->actingAs(operator());
+    $response = web()->getJson('/chart/live?'.http_build_query($query))->assertOk();
+
+    expect($response->json('bar'))->toBeNull()
+        ->and($response->json('status'))->toContain('market:stream is not running');
 });
 
 it('compiles as the operator types, reads the strategy back, saves it and runs it in the background', function (): void {

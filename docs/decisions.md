@@ -573,6 +573,18 @@ When the console has colours, each cell has an explicit black and bright white, 
 dark or light theme; without colours, light modules are drawn on the dark background of cmd and PowerShell. The key
 stays below the code as text for an app that cannot scan; nothing is written to disk.
 
+**D-87. The chart follows the market live** (2026-11-09, accepted; the operator chose layers that change only when
+a candle closes)
+`market:stream` keeps the minute still forming of each instrument in `forming_candles` (one row each, at most one
+write a second, with the time received); closed candles are stored as before. The Chart screen asks
+`GET /chart/live` once a second, apart from Livewire (a poll inside the component travelled in the same request as
+the operator's clicks and swallowed their re-render):
+when a candle of its timeframe has closed it recomputes candles and layers with the backtest's formulas, otherwise
+it only moves the bar still forming (the period's stored minutes plus the forming one). Layers have no value on
+the forming bar, so what the operator sees is what a strategy sees (D-67). The forming row is for display: an
+architecture test keeps Strategy, Risk, Portfolio, Execution, Simulation and Agents from reading it, so D-8 and
+replay are untouched. A one second poll replaces Reverb for now: one operator, one machine, a few rows a second.
+
 ## Open
 
 | Id | Question | Blocks |

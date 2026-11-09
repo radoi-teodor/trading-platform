@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\ChartLiveController;
 use App\Http\Controllers\ReauthController;
 use App\Livewire\AccountScreen;
 use App\Livewire\ChartScreen;
@@ -13,6 +14,7 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('auth')->group(function (): void {
     Route::redirect('/', '/chart');
     Route::get('/chart', ChartScreen::class)->name('chart');
+    Route::get('/chart/live', ChartLiveController::class)->name('chart.live');
     Route::get('/strategies', StrategiesScreen::class)->name('strategies');
     Route::get('/account', AccountScreen::class)->name('account');
     Route::get('/settings', SettingsScreen::class)->name('settings');

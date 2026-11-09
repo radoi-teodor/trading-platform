@@ -17,7 +17,7 @@ official public-data hosts below are not known to ccxt.
 | Candle history | Monthly and daily archives with a SHA-256 `.CHECKSUM` | `https://data.binance.vision` (`exchanges.binance.archive`) |
 | Funding history | Monthly archives; recent rates from `GET /fapi/v1/fundingRate` | same |
 | Recent candles | `GET /api/v3/klines` (1000 per page), `GET /fapi/v1/klines` (1500 per page) | the REST hosts above |
-| Live candles | Combined WebSocket streams `<symbol>@kline_1m` | `wss://data-stream.binance.vision` (spot), `wss://fstream.binance.com` (perp) |
+| Live candles | Combined WebSocket streams `<symbol>@kline_1m` | `wss://data-stream.binance.vision` (spot), `wss://fstream.binance.com/market` (perp: the market streams moved under `/market`; the bare host connects and sends nothing) |
 
 `data-api.binance.vision`, `data-stream.binance.vision` and `data.binance.vision` are Binance's own public-data
 hosts. They are the spot defaults because public reads should not spend the trading API's request weight, and
@@ -84,6 +84,9 @@ an error. Funding `calc_time` can carry a few milliseconds of jitter (`...800005
 combined WebSocket stream for all instruments of that market in the universe.
 
 - Only closed candles (`k.x = true`) are stored, with `source = stream`.
+- The minute still forming (`k.x = false`) is kept for the live chart only (D-87): one row per instrument in
+  `forming_candles`, rewritten at most once a second with the time it was received. Strategies, the engine,
+  backtests and agents never read it (an architecture test).
 - The client answers server pings; Binance closes connections after 24 hours, so the process reconnects
   before that on its own.
 - After every connect or reconnect the process repairs the gap: for each instrument it fetches from REST

@@ -1,3 +1,4 @@
+{{-- The chart follows the market (D-87): every second the forming candle moves; layers change when a candle closes. --}}
 <div class="flex flex-col gap-3">
     <div class="flex flex-wrap items-end gap-2 rounded-card border border-border bg-surface p-card">
         <label class="flex flex-col gap-1">
@@ -47,7 +48,8 @@
         <div class="rounded-card border border-down bg-surface p-card text-sm text-down" role="alert">{{ $error }}</div>
     @endif
 
-    <div wire:ignore x-data="priceChart(@js($payload))" class="relative rounded-card border border-border bg-surface p-card">
+    <div wire:ignore x-data="priceChart(@js($payload), @js(route('chart.live')))" class="relative rounded-card border border-border bg-surface p-card">
+        <p class="mb-2 font-mono text-2xs text-muted" role="status" x-text="status"></p>
         <div x-ref="main" class="h-[420px] w-full"></div>
         <div x-ref="profile" class="pointer-events-none absolute inset-y-3 right-16 z-10 w-16 sm:w-32" aria-hidden="true"></div>
         <div x-ref="panels" class="flex flex-col gap-2"></div>
