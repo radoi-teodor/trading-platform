@@ -66,7 +66,7 @@
         <div class="mb-3 overflow-x-auto">
             <table class="w-full text-left text-sm">
                 <thead class="text-2xs uppercase tracking-wider text-muted">
-                    <tr><th class="py-1 pr-3 font-normal">Name</th><th class="pr-3 font-normal">Mode</th><th class="hidden pr-3 font-normal sm:table-cell">Starts</th><th class="hidden pr-3 font-normal md:table-cell">Follows</th><th class="font-normal">Key</th></tr>
+                    <tr><th class="py-1 pr-3 font-normal">Name</th><th class="pr-3 font-normal">Mode</th><th class="hidden pr-3 font-normal sm:table-cell">Starts</th><th class="hidden pr-3 font-normal md:table-cell">Follows</th><th class="pr-3 font-normal">Key</th><th class="font-normal">Watched</th></tr>
                 </thead>
                 <tbody class="font-mono">
                     @forelse ($accounts as $a)
@@ -75,10 +75,11 @@
                             <td class="pr-3">{{ $a->mode->value }}</td>
                             <td class="hidden whitespace-nowrap pr-3 sm:table-cell">{{ $a->started_at->format('Y-m-d H:i') }}</td>
                             <td class="hidden pr-3 md:table-cell">{{ implode(', ', $a->symbols) }}</td>
-                            <td class="text-muted">{{ $a->mode === \App\Execution\Data\EngineMode::Testnet ? ($hints[$a->id] ?? 'none') : 'not needed' }}</td>
+                            <td class="pr-3 text-muted">{{ $a->mode === \App\Execution\Data\EngineMode::Testnet ? ($hints[$a->id] ?? 'none') : 'not needed' }}</td>
+                            <td><input type="checkbox" class="size-4 accent-[var(--accent)]" aria-label="Health check watches {{ $a->name }}" @checked($a->monitored) wire:click="monitor({{ $a->id }}, {{ $a->monitored ? 'false' : 'true' }})"></td>
                         </tr>
                     @empty
-                        <tr><td colspan="5" class="py-2 text-muted">No account yet.</td></tr>
+                        <tr><td colspan="6" class="py-2 text-muted">No account yet.</td></tr>
                     @endforelse
                 </tbody>
             </table>

@@ -20,6 +20,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $spot_balance
  * @property string $futures_balance
  * @property list<string> $symbols
+ * @property bool $monitored whether the health check watches its engine (D-78)
  * @property CarbonImmutable $started_at
  * @property CarbonImmutable $created_at
  */
@@ -27,7 +28,7 @@ final class Account extends Model
 {
     public const UPDATED_AT = null;
 
-    protected $fillable = ['name', 'mode', 'quote', 'spot_balance', 'futures_balance', 'symbols', 'started_at', 'created_at'];
+    protected $fillable = ['name', 'mode', 'quote', 'spot_balance', 'futures_balance', 'symbols', 'started_at', 'created_at', 'monitored'];
 
     /** @return HasMany<Deployment, $this> */
     public function deployments(): HasMany
@@ -37,6 +38,6 @@ final class Account extends Model
 
     protected function casts(): array
     {
-        return ['mode' => EngineMode::class, 'symbols' => 'array', 'started_at' => 'immutable_datetime', 'created_at' => 'immutable_datetime'];
+        return ['mode' => EngineMode::class, 'symbols' => 'array', 'monitored' => 'boolean', 'started_at' => 'immutable_datetime', 'created_at' => 'immutable_datetime'];
     }
 }

@@ -15,6 +15,8 @@ use App\Market\Feed\DatabaseCandleFeed;
 use App\Market\Instruments\StoredInstruments;
 use App\Market\Stream\PhrityTransport;
 use App\Market\Stream\StreamTransport;
+use App\Notifications\Health\DiskUsage;
+use App\Notifications\Health\LocalDiskUsage;
 use App\Notifications\TelegramNotifier;
 use App\Risk\RiskPolicy;
 use App\Simulation\SimulationQueue;
@@ -66,6 +68,7 @@ final class AppServiceProvider extends ServiceProvider
             cacheDirectory: Config::string('exchanges.binance.archive_cache'),
             timeoutSeconds: 120,
         ));
+        $this->app->bind(DiskUsage::class, fn (): DiskUsage => new LocalDiskUsage(storage_path()));
     }
 
     /**

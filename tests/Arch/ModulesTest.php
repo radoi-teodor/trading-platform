@@ -20,7 +20,7 @@ const ALLOWED_DEPENDENCIES = [
     'Simulation' => ['Support', 'Market', 'Strategy', 'Risk', 'Portfolio', 'Execution'],
     'Agents' => ['Support', 'Market', 'Strategy', 'Simulation', 'Portfolio', 'Journal'],
     'Journal' => ['Support'],
-    'Notifications' => ['Support', 'Journal', 'Execution'],
+    'Notifications' => ['Support', 'Market', 'Journal', 'Execution'],
 ];
 
 foreach (ALLOWED_DEPENDENCIES as $module => $allowed) {

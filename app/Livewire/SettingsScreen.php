@@ -143,6 +143,17 @@ final class SettingsScreen extends Component
         $this->accountMessage = "{$account->name} ({$account->mode->value}) is open from {$account->started_at->format('Y-m-d H:i')} UTC. Run it with php artisan engine:run {$account->name}.";
     }
 
+    /** Lowers what is watched, so it needs no re-authentication: the alert it silences is the operator's own. */
+    public function monitor(int $account, bool $on): void
+    {
+        $found = Account::query()->find($account);
+
+        if ($found !== null) {
+            $found->update(['monitored' => $on]);
+            $this->accountMessage = $on ? "The health check watches {$found->name} again." : "The health check no longer watches {$found->name}.";
+        }
+    }
+
     public function saveKey(OpenAccount $accounts): void
     {
         [$key, $secret] = [trim($this->apiKey), trim($this->apiSecret)];

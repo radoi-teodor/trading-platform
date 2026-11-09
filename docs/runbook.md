@@ -20,8 +20,12 @@ created in the phase that needs it and this file is updated with it.
 | scheduler | `php artisan schedule:work` | The daily report arrives each morning (D-77); `php artisan schedule:list` shows the jobs |
 | web | `php artisan serve` (or PHP-FPM behind a reverse proxy) | `/up` answers |
 
-All run under a supervisor with restart on failure. The Account screen shows each account's last handled minute; a
-health command that prints these checks is not built yet.
+All run under a supervisor with restart on failure. `php artisan platform:health` prints the checks of D-78 (each
+stream's heartbeat and the latest candle of every streamed instrument, each watched engine's last publish, the
+notification and simulation queues, the disk) and exits non-zero when one fails. The scheduler runs it every minute
+and tells you on Telegram, directly and not through the queue: once when a check fails, every hour while it does,
+and when it recovers. Turn the watch of one account off on Settings, Accounts (a paper account you do not run). If
+the whole machine stops, nothing can tell you: the missing daily report is the sign.
 
 A supervisord file for the always-on machine, `/etc/supervisor/conf.d/trading.conf` (change the path and the user;
 `supervisorctl reread && supervisorctl update` loads it). The web server is left out: run it as you serve PHP.

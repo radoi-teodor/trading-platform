@@ -173,3 +173,13 @@ it('shows the risk limits and breaker thresholds without a way to change them', 
         ->assertSee('Volatility shock')
         ->assertSee('Changing a limit is a code change with a test (D-19).');
 });
+
+it('turns the health check of an account off and on without re-authentication', function (): void {
+    $account = app(OpenAccount::class)->open('paper', 'paper', '1', '0', [], null);
+
+    Livewire::test(SettingsScreen::class)->call('monitor', $account->id, false)->assertSee('The health check no longer watches paper.');
+    expect($account->refresh()->monitored)->toBeFalse();
+
+    Livewire::test(SettingsScreen::class)->call('monitor', $account->id, true);
+    expect($account->refresh()->monitored)->toBeTrue();
+});

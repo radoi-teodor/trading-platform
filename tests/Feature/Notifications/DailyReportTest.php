@@ -14,6 +14,7 @@ use App\Notifications\TelegramSettings;
 use App\Support\Clock\Clock;
 use App\Support\Clock\SimClock;
 use Carbon\CarbonImmutable;
+use Illuminate\Console\Scheduling\Event;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
@@ -116,7 +117,7 @@ it('sends one message per account, unless the operator turned the report off', f
 });
 
 it('runs every day at the configured time, in Bucharest by default', function (): void {
-    $events = collect(app(Schedule::class)->events())->filter(fn ($e): bool => str_contains((string) $e->command, 'report:daily'));
+    $events = collect(app(Schedule::class)->events())->filter(fn (Event $e): bool => str_contains($e->command ?? '', 'report:daily'));
 
     expect($events)->toHaveCount(1)
         ->and($events->first()?->expression)->toBe('0 8 * * *')
