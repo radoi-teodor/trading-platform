@@ -70,7 +70,7 @@ final class GridBacktest extends Command
             $from = $this->day('from');
             $to = $this->day('to');
             $equity = is_string($this->option('equity')) ? $this->option('equity') : $this->text($config, 'simulation.initial_equity');
-            $this->info(count($sets)." parameter sets of {$spec->id} on ".implode(', ', array_map('strval', $spec->instruments))." from {$from->toDateString()} to {$to->toDateString()}, in one pass"
+            $this->info(count($sets)." parameter sets of {$spec->id} on ".self::traded($spec)." from {$from->toDateString()} to {$to->toDateString()}, in one pass"
                 .($workers > 1 ? " split over {$workers} workers" : '').'...');
             $started = $clock->now();
             $run = $this->runSets($config, $quality, $funding, $db, $spec, $document, $sets, $version, $from, $to, $equity, workers: $workers, processes: $processes);

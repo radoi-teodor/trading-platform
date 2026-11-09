@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Simulation\Console;
 
+use App\Market\CandleRepository;
 use App\Market\Data\Candle;
 use App\Market\FundingRateRepository;
+use App\Market\Instruments\ResearchUniverse;
 use App\Market\Quality\QualityCheck;
 use App\Simulation\Data\SetOutcome;
 use App\Simulation\Metrics\Statistics;
@@ -18,8 +20,10 @@ use App\Simulation\Validation\RegimeLabels;
 use App\Simulation\Validation\WalkForward;
 use App\Simulation\Validation\WalkForwardSet;
 use App\Strategy\Contracts\Strategy;
+use App\Strategy\Data\UniverseSchedule;
 use App\Strategy\Dsl\Compiler\CompiledStrategy;
 use App\Strategy\Dsl\Document\StrategySpec;
+use App\Strategy\Dsl\Document\UniverseRule;
 use App\Support\Clock\Clock;
 use App\Support\Number\Decimal;
 use App\Support\Symbol;
@@ -82,7 +86,7 @@ final class StrategyGates extends Command
             $workers = $this->workers();
             $seed = $this->seed();
             $sets = $this->declaredSets($spec);
-            $defaults = CompiledStrategy::fromSpec($spec, [], $number);
+            $defaults = self::shape($spec, [], $number);
             [$from, $to] = $this->history($db, $spec, $sets, $number);
             $days = intdiv($to->getTimestamp() - $from->getTimestamp(), 86_400);
             $holdoutFrom = $to->subDays(max(1, intdiv($days * self::HOLDOUT_PERCENT + 50, 100)));
@@ -160,7 +164,7 @@ final class StrategyGates extends Command
         $stressed = $run([$chosen], $firstOut, $to, true)['outcomes'][0];
         $nets = array_map(fn (array $trip): Decimal => $trip['net'], $outOfSample);
         $monteCarlo = MonteCarlo::run($nets, $holdout->daily, Decimal::of($equity), $seed);
-        $regimes = RegimeLabels::fromDailyCandles($this->dailyCandles($db, $spec->instruments[0], $from->subDays(60), $to))->breakdown($outOfSample);
+        $regimes = RegimeLabels::fromDailyCandles($this->dailyCandles($db, $this->regimeInstrument($spec, $from), $from->subDays(60), $to))->breakdown($outOfSample);
         $limit = Decimal::of($this->text($config, 'risk.account.drawdown_halt'));
         $checks = Gates::evaluate(
             $nets, count($walked->windows), $walked->positiveWindows, self::probability($validation), $robust, $stressed->expectancy,
@@ -199,12 +203,84 @@ final class StrategyGates extends Command
     }
 
     /**
-     * The history: the options, or the stored candles of every instrument, less the warmup of the slowest set.
+     * The history: the options, or what is stored for the strategy.
      *
      * @param  list<array<string, string>>  $sets
      * @return array{CarbonImmutable, CarbonImmutable}
      */
     private function history(ConnectionInterface $db, StrategySpec $spec, array $sets, int $number): array
+    {
+        [$from, $to] = $spec->universe === null ? $this->stored($db, $spec, $sets, $number) : $this->built($spec->universe);
+        $from = is_string($this->option('from')) ? $this->day('from') : $from;
+        $to = is_string($this->option('to')) ? $this->day('to') : $to;
+
+        if ($to <= $from->addDays(30)) {
+            throw new InvalidArgumentException("The history from {$from->toDateString()} to {$to->toDateString()} is too short for gates: backfill more.");
+        }
+
+        return [$from, $to];
+    }
+
+    /**
+     * The history of a universe strategy (D-92): the months the research universe is built for, to the end of what
+     * is stored of the members of the last one that still trade. It is not the days every member has in common,
+     * which a universe whose members come and go does not have. The import brings each member from a month before
+     * it joins, so the first month has its warmup.
+     *
+     * @return array{CarbonImmutable, CarbonImmutable}
+     */
+    private function built(UniverseRule $rule): array
+    {
+        $research = $this->laravel->make(ResearchUniverse::class);
+        $candles = $this->laravel->make(CandleRepository::class);
+        $built = $research->built() ?? throw new InvalidArgumentException('The research universe is not built: run market:universe:build first.');
+        $last = CarbonImmutable::parse("{$built['to']}-01", 'UTC');
+        $to = $last->addMonth();
+
+        foreach ($research->months($rule->n, $last, $last)[$built['to']] ?? [] as $symbol) {
+            $instrument = self::instrument(Symbol::parse($symbol));
+
+            if ($instrument === null || $instrument->delisted_at !== null) {
+                continue;
+            }
+
+            $stored = $candles->latestOpenTime($instrument, Timeframe::OneMinute)?->addMinute()->startOfDay() ?? throw new InvalidArgumentException("{$symbol} has no stored candles.");
+            $to = $stored < $to ? $stored : $to;
+        }
+
+        return [CarbonImmutable::parse("{$built['from']}-01", 'UTC'), $to];
+    }
+
+    /** The instrument whose days label the regimes: the first one named, or the first of the universe when the history starts. */
+    private function regimeInstrument(StrategySpec $spec, CarbonImmutable $from): Symbol
+    {
+        if ($spec->universe === null) {
+            return $spec->instruments[0];
+        }
+
+        $first = $this->laravel->make(ResearchUniverse::class)->months(1, $from, $from)[$from->format('Y-m')][0]
+            ?? throw new InvalidArgumentException("The research universe has no members for {$from->format('Y-m')}.");
+
+        return Symbol::parse($first);
+    }
+
+    /**
+     * A strategy compiled to be read, not run: a universe strategy with nobody in its universe.
+     *
+     * @param  array<string, string>  $set
+     */
+    private static function shape(StrategySpec $spec, array $set, int $number): Strategy
+    {
+        return CompiledStrategy::fromSpec($spec, $set, $number, $spec->universe === null ? null : UniverseSchedule::none());
+    }
+
+    /**
+     * The stored candles every instrument of the strategy has in common, less the warmup of the slowest set.
+     *
+     * @param  list<array<string, string>>  $sets
+     * @return array{CarbonImmutable, CarbonImmutable}
+     */
+    private function stored(ConnectionInterface $db, StrategySpec $spec, array $sets, int $number): array
     {
         $first = null;
         $last = null;
@@ -225,14 +301,7 @@ final class StrategyGates extends Command
             $longest = max($longest, $first->getTimestamp() - self::warmupFrom(CompiledStrategy::fromSpec($spec, $set, $number), $first)->getTimestamp());
         }
 
-        $from = is_string($this->option('from')) ? $this->day('from') : $first->addSeconds($longest)->startOfDay()->addDay();
-        $to = is_string($this->option('to')) ? $this->day('to') : ($last ?? $first)->addMinute()->startOfDay();
-
-        if ($to <= $from->addDays(30)) {
-            throw new InvalidArgumentException("The history from {$from->toDateString()} to {$to->toDateString()} is too short for gates: backfill more.");
-        }
-
-        return [$from, $to];
+        return [$first->addSeconds($longest)->startOfDay()->addDay(), ($last ?? $first)->addMinute()->startOfDay()];
     }
 
     /**

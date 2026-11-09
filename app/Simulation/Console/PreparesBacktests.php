@@ -353,6 +353,14 @@ trait PreparesBacktests
         return null;
     }
 
+    /** What a document trades, for a line of output: its instruments, or the rule of its universe (D-92). */
+    protected static function traded(StrategySpec $spec): string
+    {
+        return $spec->universe === null
+            ? implode(', ', array_map('strval', $spec->instruments))
+            : "the {$spec->universe->rule} {$spec->universe->n} by {$spec->universe->by}";
+    }
+
     /** @return list<Symbol> the instruments the strategy subscribes to, in subscription order */
     protected static function followed(Strategy $strategy): array
     {
@@ -467,9 +475,12 @@ trait PreparesBacktests
         array $sets, int $version, CarbonImmutable $from, CarbonImmutable $to, string $equityText, bool $stressed = false, int $workers = 1,
         ?Processes $processes = null, ?CarbonImmutable $warmupFrom = null,
     ): array {
-        $strategies = array_map(fn (array $set): Strategy => CompiledStrategy::fromSpec($spec, $set, $version), $sets);
+        // Every set of a universe strategy trades the same members (D-92): they are read once.
+        $universe = $spec->universe === null ? null : $this->laravel->make(Universes::class)->schedule($spec, $from, $to->subMinute());
+        $strategies = array_map(fn (array $set): Strategy => CompiledStrategy::fromSpec($spec, $set, $version, $universe), $sets);
         $symbols = self::followed($strategies[0]);
         $rules = $this->rules($symbols);
+        $stops = $this->stops($symbols);
 
         if ($warmupFrom === null) {
             $warmupFrom = $from;
@@ -479,13 +490,10 @@ trait PreparesBacktests
                 $warmupFrom = $start < $warmupFrom ? $start : $warmupFrom;
             }
 
-            foreach ($symbols as $symbol) {
-                $problem = $this->coverage($quality, $symbol, $warmupFrom, $to) ?? $this->fundingCoverage($funding, $symbol, $warmupFrom, $to)
-                    ?? $this->scalpingCoverage($strategies[0], $symbol, $from, $to);
+            $problem = $this->historyProblem($quality, $funding, $strategies[0], $symbols, $warmupFrom, $from, $to, $stops);
 
-                if ($problem !== null) {
-                    throw new InvalidArgumentException("{$symbol}: {$problem}. Backfill it before backtesting (market:backfill).");
-                }
+            if ($problem !== null) {
+                throw new InvalidArgumentException("{$problem}. Backfill it before backtesting (market:backfill).");
             }
         }
 
@@ -525,7 +533,7 @@ trait PreparesBacktests
             fn (Strategy $strategy): Participant => new Participant(implode(' ', array_map(fn (string $k, string $v): string => "{$k}={$v}", array_keys($strategy->identity()->parameters), $strategy->identity()->parameters)) ?: 'defaults', $strategy, $policy, self::warmupFrom($strategy, $from)),
             $strategies,
         );
-        $run = (new Backtest(new DatabaseCandleFeed($db)))->run($definition, $participants[0], $rules, array_slice($participants, 1));
+        $run = (new Backtest(new DatabaseCandleFeed($db)))->run($definition, $participants[0], $rules, array_slice($participants, 1), $stops);
 
         return [
             'outcomes' => array_map(SetOutcome::of(...), [$run->main, ...$run->benchmarks]),

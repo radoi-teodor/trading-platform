@@ -158,20 +158,33 @@ const UNIVERSE_FIXTURE_DOCUMENT = <<<'YAML'
       risk_per_trade: 0.02%
     YAML;
 
+/** The fixture document with a declared parameter of two values, over the top $top with $picks held a side. */
+function universeGridDocument(int $top = 6, int $picks = 2, string $timeframe = '5m'): string
+{
+    return str_replace(
+        ['strategy: xs-fixture', 'universe:', 'n: 6', 'timeframe: 5m', '(2, roc(6))', 'rank(roc(6)) > 2 and rank(roc(6)) <= count - 2'],
+        [
+            'strategy: xs-grid', "params:\n  look: { default: 6, range: [6, 9], step: 3 }\n\nuniverse:", "n: {$top}", "timeframe: {$timeframe}", "({$picks}, roc(\$look))",
+            "rank(roc(\$look)) > {$picks} and rank(roc(\$look)) <= count - {$picks}",
+        ],
+        UNIVERSE_FIXTURE_DOCUMENT,
+    );
+}
+
 /**
- * The research universe of October 2026: six liquid perpetuals, AAA to FFF by rank, with minutes and funding from
- * 2026-10-01 for $days days, next to the spot fixture. FFF is known only from the archives: it has no filters and
- * stopped trading on 2026-10-02 at 12:00.
+ * The research universe from October 2026: the first $members of six liquid perpetuals, AAA to FFF by rank, with
+ * minutes and funding from 2026-10-01 for $days days, next to the spot fixture, members of every month those days
+ * touch. FFF is known only from the archives: it has no filters and stopped trading on 2026-10-02 at 12:00.
  *
  * @return array<string, Instrument> by unified symbol
  */
-function universeFixture(int $days = 2): array
+function universeFixture(int $days = 2, int $members = 6): array
 {
     backtestFixture($days);
     $start = CarbonImmutable::parse('2026-10-01 00:00:00', 'UTC');
     $perps = [];
 
-    foreach (UNIVERSE_SYMBOLS_FIXTURE as $index => $symbol) {
+    foreach (array_slice(UNIVERSE_SYMBOLS_FIXTURE, 0, $members) as $index => $symbol) {
         $gone = $symbol === 'FFF/USDT:USDT';
         $minutes = $gone ? 2160 : $days * 1440;
         $perp = Instrument::register('binance', MarketType::Perp, Symbol::parse($symbol), CarbonImmutable::parse('2026-11-08 12:00:00', 'UTC'), $gone ? InstrumentStatus::Delisted : InstrumentStatus::Trading);
@@ -193,7 +206,11 @@ function universeFixture(int $days = 2): array
         }
 
         app(FundingRateRepository::class)->upsert($perp, CandleSource::Archive, $rates);
-        DB::table('universe_members')->insert(['month' => '2026-10-01', 'instrument_id' => $perp->id, 'rank' => $index + 1, 'quote_volume_30d' => (string) (600 - 100 * $index)]);
+
+        for ($month = $start; $month < $start->addDays($days); $month = $month->addMonth()) {
+            DB::table('universe_members')->insert(['month' => $month->toDateString(), 'instrument_id' => $perp->id, 'rank' => $index + 1, 'quote_volume_30d' => (string) (600 - 100 * $index)]);
+        }
+
         $perps[$symbol] = $perp;
     }
 

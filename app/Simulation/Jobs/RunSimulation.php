@@ -22,9 +22,18 @@ final class RunSimulation implements ShouldQueue
 
     public int $tries = 1;
 
-    public int $timeout = 3600;
+    /** Seconds a run of a strategy that names its instruments may take. */
+    public const int TIMEOUT = 3600;
 
-    public function __construct(public readonly int $jobId) {}
+    /** Seconds a run over a universe may take: it reads ten times the instruments (D-92). */
+    public const int UNIVERSE_TIMEOUT = 6 * 3600;
+
+    public int $timeout;
+
+    public function __construct(public readonly int $jobId, int $timeout = self::TIMEOUT)
+    {
+        $this->timeout = $timeout;
+    }
 
     public function handle(Kernel $console, Clock $clock): void
     {

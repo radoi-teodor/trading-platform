@@ -287,6 +287,13 @@ final class AccountRuntime
             $version = $deployment->version ?? throw new LogicException("Deployment {$deployment->id} has no version.");
             $result = DocumentChecker::check($version->document, new StoredInstruments, $limits);
             $spec = $result->spec ?? throw new InvalidArgumentException("{$version->label()} no longer compiles: ".implode(' ', array_map(fn ($e): string => $e->getMessage(), $result->errors)));
+
+            // An account follows its instruments minute by minute and does not yet follow a universe whose members
+            // change with the month (D-92): it is refused here, in every mode, before anything is traded.
+            if ($spec->universe !== null) {
+                throw new InvalidArgumentException("{$version->label()} trades a universe: an account cannot run one yet; it runs in backtests, grids and gates (D-92).");
+            }
+
             $strategy = CompiledStrategy::fromSpec($spec, $deployment->parameters, $version->version);
             $multiplier = Decimal::of($deployment->size_multiplier);
             // A step of the ladder below full size, or live micro's notional cap, tightens the strategy's limits (D-83).

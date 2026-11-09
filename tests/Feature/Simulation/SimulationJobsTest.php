@@ -72,3 +72,26 @@ it('refuses what a run cannot be, and more than two waiting runs per author', fu
     Queue::assertPushed(RunSimulation::class, 2);
     expect(SimulationJob::query()->where('status', 'queued')->count())->toBe(2);
 });
+
+it('gives a universe run six hours, and refuses a run of more instrument-days than the background takes (D-92)', function (): void {
+    Queue::fake();
+    backtestFixture();
+    Artisan::call('strategy:import', ['path' => strategyFile(EMA_CROSS_DOCUMENT)]);
+    Artisan::call('strategy:import', ['path' => strategyFile(UNIVERSE_FIXTURE_DOCUMENT)]);
+    $queue = app(SimulationQueue::class);
+    $days = ['from' => '2026-10-02', 'to' => '2026-10-03'];
+
+    $queue->submit('backtest', ['strategy' => 'ema-cross-test@v1', ...$days], 'operator');
+    $queue->submit('gates', ['strategy' => 'xs-fixture@v1'], 'operator');
+    $queue->submit('grid', ['strategy' => 'xs-fixture@v1', ...$days], 'agent:desk');
+    $timeouts = Queue::pushed(RunSimulation::class)->map(fn (mixed $job): int => $job instanceof RunSimulation ? $job->timeout : 0)->all();
+
+    // 6 instruments over 6667 days are 40,002 instrument-days, two more than a run may have; one day less is taken.
+    expect($timeouts)->toBe([3600, 21600, 21600])
+        ->and(config('queue.connections.simulation.retry_after'))->toBeGreaterThan(21600)
+        ->and(fn () => $queue->submit('backtest', ['strategy' => 'xs-fixture@v1', 'from' => '2008-07-01', 'to' => '2026-10-02'], 'agent:desk'))
+        ->toThrow(InvalidArgumentException::class, 'xs-fixture@v1 from 2008-07-01 to 2026-10-02 is 6 instruments over 6667 days, 40002 instrument-days; a background run takes at most 40000. Shorten the window.')
+        ->and($queue->submit('backtest', ['strategy' => 'xs-fixture@v1', 'from' => '2008-07-02', 'to' => '2026-10-02'], 'agent:desk')->status)->toBe('queued')
+        // One instrument over the same days is far below it.
+        ->and($queue->submit('backtest', ['strategy' => 'ema-cross-test@v1', 'from' => '2008-07-01', 'to' => '2026-10-02'], 'agent:night')->status)->toBe('queued');
+});

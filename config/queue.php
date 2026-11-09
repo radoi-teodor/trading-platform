@@ -46,14 +46,15 @@ return [
             'after_commit' => false,
         ],
 
-        // Background backtests and grids (D-62): one try, and a retry window longer than the longest run, so that a
-        // grid still running is never started a second time.
+        // Background backtests and grids (D-62): one try, and a retry window longer than the longest run, which is six
+        // hours for a run over a universe (D-92) and for a history import, so that a grid still running is never
+        // started a second time.
         'simulation' => [
             'driver' => 'database',
             'connection' => env('DB_QUEUE_CONNECTION'),
             'table' => env('DB_QUEUE_TABLE', 'jobs'),
             'queue' => 'simulation',
-            'retry_after' => 7200,
+            'retry_after' => 23400,
             'after_commit' => false,
         ],
 

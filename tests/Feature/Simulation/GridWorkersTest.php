@@ -36,3 +36,18 @@ it('gives the same sets split over workers as in one process', function (): void
         ->and(Artisan::call('backtest:grid', ['--file' => strategyFile(EMA_CROSS_DOCUMENT), '--from' => '2026-10-02', '--to' => '2026-10-03', '--workers' => '0']))->toBe(1)
         ->and(Artisan::output())->toContain('--workers is a whole number from 1 to 32.');
 });
+
+it('gives the same sets of a universe strategy split over workers, one member delisted during the run (D-92)', function (): void {
+    universeFixture();
+    $grid = fn (string $workers): array => (function () use ($workers): array {
+        Artisan::call('backtest:grid', ['--file' => strategyFile(universeGridDocument()), '--from' => '2026-10-02', '--to' => '2026-10-03', '--workers' => $workers, '--json' => true]);
+        $lines = array_values(array_filter(explode("\n", trim(Artisan::output()))));
+        $summary = json_decode((string) end($lines), true);
+
+        return is_array($summary) && is_array($summary['sets'] ?? null) ? $summary['sets'] : [];
+    })();
+
+    $one = $grid('1');
+
+    expect($one)->toHaveCount(2)->and($grid('2'))->toBe($one);
+});

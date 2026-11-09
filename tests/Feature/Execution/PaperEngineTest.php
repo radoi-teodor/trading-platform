@@ -57,6 +57,19 @@ it('handles the stored minutes, publishes the account and journals its decisions
         ->and(JournalEntry::query()->where('account_id', $account->id)->where('kind', 'decision')->count())->toBeGreaterThan(0);
 });
 
+it('refuses to run an account a universe strategy is deployed on: they run in simulation only so far (D-92)', function (): void {
+    $account = paperAccount();
+    $version = app(StrategyLibrary::class)->versions()->save(UNIVERSE_FIXTURE_DOCUMENT, 'operator')->version ?? throw new RuntimeException('No version.');
+    Deployment::query()->create(['account_id' => $account->id, 'strategy_version_id' => $version->id, 'parameters' => [], 'active' => true, 'reason' => 'test', 'created_at' => '2026-10-02']);
+
+    [$exit, $output] = runPaper(['--until' => '2026-10-02 12:00']);
+
+    expect($exit)->toBe(1)
+        ->and($output)->toContain('xs-fixture@v1 trades a universe: an account cannot run one yet; it runs in backtests, grids and gates (D-92).')
+        ->and(AccountSnapshot::query()->count())->toBe(0)
+        ->and(JournalEntry::query()->where('account_id', $account->id)->count())->toBe(0);
+});
+
 it('applies a command at the next minute, and replays it there after a restart (D-68)', function (): void {
     $account = paperAccount();
     Bus::fake([SendTelegram::class]);

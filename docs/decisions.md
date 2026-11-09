@@ -620,6 +620,11 @@ A document may declare `universe:` instead of instruments. `rank`, `percentile`,
 at each close of the strategy's timeframe, in decimals with ties broken by symbol. The engine decides a universe
 strategy in one batch: exits and stop moves first, entries in rank order once those closes have filled. Entries keep
 their stops; per-symbol strategies and `Engine::VERSION` are unchanged.
+Added 2026-11-10: backtests, grids and gates run a universe strategy; an account does not yet, in any mode, and
+`engine:run` refuses to start with one deployed (`universe.md`, section 5; O-7). The plan had a paper run in
+step 6; it was left out because the account's process, not the engine, needs the work: it waits for a candle of
+every instrument each minute, reads the members once at start, and the stream follows five instruments. Background
+universe runs have six hours, and a background backtest or grid reads at most 40,000 instrument-days.
 
 **D-93. Research over MCP** (2026-11-09, accepted with the Phase 7 plan)
 Read-only tools `list_universe`, `screen_market`, `get_depth`, `get_liquidations` and `get_listing_stats`, with row
@@ -637,4 +642,5 @@ unimplemented and the docs say so.
 
 | Id | Question | Blocks |
 |----|----------|--------|
+| O-7 | An account running a universe strategy, paper first: the account's process must wait only for the members that trade, take the next month's members while it runs, and the stream must follow about 50 instruments (D-92). | A universe strategy leaving simulation for paper, and so everything after it |
 | O-6 | Pay Binance fees in BNB (25 % off spot)? Needs a small BNB balance whose price moves. | Live cost model (D-28 reads it from the account either way) |

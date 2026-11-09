@@ -51,6 +51,7 @@ final class AppServiceProvider extends ServiceProvider
             $this->app->make(Dispatcher::class),
             $this->app->make(Clock::class),
             Config::string('simulation.queue_connection'),
+            $this->app->make(StrategyLibrary::class),
         ));
         $this->app->singleton(Sleeper::class, SystemSleeper::class);
         $this->app->bind(Notifier::class, TelegramNotifier::class);

@@ -84,9 +84,38 @@ exits:
   at the last price before `delisted_at`.
 - Per-symbol strategies run exactly as before; the golden reports do not move.
 
-Status: the document, the type rules, the compiler and the read-back are done (step 5). The engine batch, the
-backtest and the gates over a universe are step 6: until then a universe strategy compiles and reads back but a run
-is refused, because nothing gives it its members.
+### In simulation
+
+- `backtest:run`, `backtest:grid` and `strategy:gates` give a universe strategy the members of each month of the
+  run from `universe_members` (`App\Strategy\Dsl\Compiler\Universes`), through the same engine as every other run
+  (D-8). A run is refused when the universe is not built, is built for fewer members than the rule names, or has
+  nobody in a month of the run: a strategy never runs on another universe than the one it names.
+- A member is needed around its months as a member: from a month before them, which is its warmup as the import
+  brings it, to a day after them, where what is held in an instrument that left is closed, and not past the moment
+  it stopped trading. A gap inside that refuses the run, as for any instrument.
+- A perpetual delisted before its exchange filters were ever read has them worked out from its candles
+  (`App\Market\Instruments\AssumedRules`: the finest decimal of its prices and volumes in its last stored month,
+  a least notional of 5), and the report lists it under `data.filters_assumed_before`.
+- In the hour before an instrument stops trading its position is closed (`delisting_close`) and an entry in it is
+  refused (`delisting`).
+- A universe run is compared with holding BTC spot in the quote asset.
+- Gates: the history is the months the universe is built for, to the end of what is stored of the last month's
+  members that still trade, not the days every member has in common. The regimes are those of the member ranked
+  first when the history starts.
+- Background runs (D-62): a run over a universe has six hours instead of one, and a backtest or grid of more than
+  40,000 instrument-days (instruments times days; the top 50 over two years is 36,500) is refused at submission.
+
+### On an account
+
+An account cannot run a universe strategy yet, in paper, testnet or live: `engine:run` refuses to start with one
+deployed (`App\Execution\AccountRuntime`). The engine itself decides a universe batch in every mode alike; what is
+missing is around it, in the account's process: it waits at a minute until every instrument it follows has a
+candle, which a member that is not trading that minute never has; it reads the members once at start, and a
+process that runs for weeks crosses months; and the stream would have to keep about 50 instruments current. This
+is open question O-7.
+
+Status: the document, the compiler, the engine batch, the backtest, the grid and the gates over a universe are done
+(steps 5 and 6). MCP tools are step 7; the import of the members and the example strategy are step 8.
 
 ## 6. Research over MCP (D-93)
 
