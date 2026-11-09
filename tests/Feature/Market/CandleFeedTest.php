@@ -55,6 +55,35 @@ function readFeed(array $symbols, string $from, string $to, int $chunkMinutes = 
     )]);
 }
 
+it('streams a day of 50 instruments without holding the day in memory (D-90)', function (): void {
+    $symbols = [];
+
+    foreach (range(1, 50) as $n) {
+        $symbol = "C{$n}/USDT";
+        $symbols[] = Symbol::parse($symbol);
+        DB::table('candles')->insertUsing(
+            ['instrument_id', 'timeframe', 'open_time', 'open', 'high', 'low', 'close', 'volume', 'quote_volume', 'trade_count', 'taker_buy_volume', 'source', 'received_at'],
+            DB::query()->selectRaw("?, '1m', timestamptz '2026-10-01 00:00:00+00' + make_interval(mins => m), 100, 101, 99, 100, 1, 100, 1, 0.5, 1, now()", [feedInstrument($symbol)->id])
+                ->fromRaw('generate_series(0, 1439) as m'),
+        );
+    }
+
+    $feed = new DatabaseCandleFeed(DB::connection());
+    memory_reset_peak_usage();
+    $before = memory_get_usage();
+    $minutes = 0;
+    $candles = 0;
+
+    foreach ($feed->minutes($symbols, CarbonImmutable::parse('2026-10-01', 'UTC'), CarbonImmutable::parse('2026-10-02', 'UTC')) as $minute) {
+        $minutes++;
+        $candles += count($minute->candles);
+    }
+
+    expect($minutes)->toBe(1440)
+        ->and($candles)->toBe(72_000)
+        ->and(memory_get_peak_usage() - $before)->toBeLessThan(64 * 1024 * 1024);
+});
+
 it('groups the candles of several instruments by minute, in time then symbol order', function (): void {
     $eth = feedInstrument('ETH/USDT');
     $btc = feedInstrument('BTC/USDT');

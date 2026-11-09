@@ -38,23 +38,23 @@ final readonly class BinanceArchive
     ) {}
 
     /** @return Generator<int, Candle> 1-minute candles, oldest first */
-    public function klines(MarketType $market, string $venueSymbol, ArchivePeriod $period): Generator
+    public function klines(MarketType $market, string $venueSymbol, ArchivePeriod $period, Timeframe $timeframe = Timeframe::OneMinute): Generator
     {
         $root = $market === MarketType::Spot ? 'spot' : 'futures/um';
-        $path = "{$root}/{$period->folder()}/klines/{$venueSymbol}/1m/{$venueSymbol}-1m-{$period->label()}.zip";
+        $path = "{$root}/{$period->folder()}/klines/{$venueSymbol}/{$timeframe->value}/{$venueSymbol}-{$timeframe->value}-{$period->label()}.zip";
 
         // Downloaded and verified now, so a missing or corrupt archive fails here; read lazily, since a month of
         // candles held as objects is about 160 MB.
-        return self::candles($this->archive($path));
+        return self::candles($this->archive($path), $timeframe);
     }
 
     /** @return Generator<int, Candle> */
-    private static function candles(string $local): Generator
+    private static function candles(string $local, Timeframe $timeframe): Generator
     {
         foreach (self::lines($local, 12) as $fields) {
             yield Candle::fromStrings(
                 EpochTime::parse($fields[0]),
-                Timeframe::OneMinute,
+                $timeframe,
                 ExchangeNumber::plain($fields[1]),
                 ExchangeNumber::plain($fields[2]),
                 ExchangeNumber::plain($fields[3]),

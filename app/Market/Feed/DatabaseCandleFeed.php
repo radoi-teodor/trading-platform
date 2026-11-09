@@ -25,6 +25,8 @@ use InvalidArgumentException;
 /** Reads stored 1-minute candles chunk by chunk and hands them out minute by minute (docs/engine.md, section 1). */
 final readonly class DatabaseCandleFeed implements CandleFeed
 {
+    private const int MAX_ROWS = 7200;
+
     public function __construct(
         private ConnectionInterface $db,
         private string $exchange = 'binance',
@@ -34,9 +36,12 @@ final readonly class DatabaseCandleFeed implements CandleFeed
     public function minutes(array $symbols, CarbonImmutable $from, CarbonImmutable $to): iterable
     {
         $symbolsById = $this->instrumentIds($symbols);
+        // A chunk holds at most about MAX_ROWS candles, whatever the number of instruments (D-90): a day of 50
+        // perpetuals held at once was 370 MB. Chunks are whole hours, and never longer than asked.
+        $chunkMinutes = max(60, min($this->chunkMinutes, intdiv(intdiv(self::MAX_ROWS, max(1, count($symbolsById))), 60) * 60));
 
-        for ($chunk = $from; $chunk < $to; $chunk = $chunk->addMinutes($this->chunkMinutes)) {
-            $end = $chunk->addMinutes($this->chunkMinutes)->min($to);
+        for ($chunk = $from; $chunk < $to; $chunk = $chunk->addMinutes($chunkMinutes)) {
+            $end = $chunk->addMinutes($chunkMinutes)->min($to);
             $minutes = [];
 
             foreach ($this->rows(array_keys($symbolsById), $chunk, $end) as $row) {
@@ -172,6 +177,6 @@ final readonly class DatabaseCandleFeed implements CandleFeed
             ->where('open_time', '>=', Rows::timestamp($from))
             ->where('open_time', '<', Rows::timestamp($to))
             ->orderBy('open_time')
-            ->get();
+            ->cursor();
     }
 }

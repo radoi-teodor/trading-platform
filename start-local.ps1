@@ -202,7 +202,8 @@ if (Test-PostgresRunning) {
 } else {
     Write-Step "Starting PostgreSQL on 127.0.0.1:$DbPort"
     Invoke-Native (Join-Path $PgBin 'pg_ctl.exe') @('start', '-D', $PgData, '-l', $PgLog, '-w',
-        '-o', "-p $DbPort -c listen_addresses=127.0.0.1")
+        # Room for the research universe (D-90): tens of millions of candles, sorts of a few hundred thousand rows.
+        '-o', "-p $DbPort -c listen_addresses=127.0.0.1 -c shared_buffers=1GB -c work_mem=64MB")
 }
 
 foreach ($db in $DbName, 'trading_test', 'trading_e2e') {

@@ -48,6 +48,35 @@ final readonly class ArchiveCatalog
         return $symbols;
     }
 
+    /**
+     * The months with a monthly kline archive of a USD-M symbol, as YYYY-MM, oldest first: the first is its listing
+     * month and the last its final month for a delisted one.
+     *
+     * @return list<string>
+     */
+    public function months(string $venueSymbol, string $interval = '1d'): array
+    {
+        $prefix = self::KLINES."{$venueSymbol}/{$interval}/";
+        $months = [];
+        $marker = '';
+
+        do {
+            $page = $this->page($prefix, $marker);
+
+            foreach ($page->Contents as $object) {
+                if (preg_match('/-(\d{4}-\d{2})\.zip$/', (string) $object->Key, $match) === 1) {
+                    $months[] = $match[1];
+                }
+            }
+
+            $marker = (string) $page->NextMarker;
+        } while ((string) $page->IsTruncated === 'true' && $marker !== '');
+
+        sort($months);
+
+        return $months;
+    }
+
     /** The unified symbol of a USD-M venue symbol, settled in its quote: SRMUSDT is SRM/USDT:USDT. */
     public static function unified(string $venueSymbol): ?Symbol
     {
