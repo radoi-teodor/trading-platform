@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property bool $notify_command
  * @property bool $notify_volatility_shock
  * @property bool $notify_price_sanity
+ * @property bool $notify_daily_report
  * @property CarbonImmutable|null $updated_at
  */
 final class NotificationSettings extends Model
@@ -26,17 +27,17 @@ final class NotificationSettings extends Model
 
     protected $table = 'notification_settings';
 
-    protected $fillable = ['telegram_token', 'telegram_chat_id', 'telegram_set_at', 'notify_command', 'notify_volatility_shock', 'notify_price_sanity'];
+    protected $fillable = ['telegram_token', 'telegram_chat_id', 'telegram_set_at', 'notify_command', 'notify_volatility_shock', 'notify_price_sanity', 'notify_daily_report'];
 
     protected $hidden = ['telegram_token', 'telegram_chat_id'];
 
-    protected $attributes = ['notify_command' => true, 'notify_volatility_shock' => false, 'notify_price_sanity' => false];
+    protected $attributes = ['notify_command' => true, 'notify_volatility_shock' => false, 'notify_price_sanity' => false, 'notify_daily_report' => true];
 
     protected function casts(): array
     {
         return [
             'telegram_token' => 'encrypted', 'telegram_chat_id' => 'encrypted', 'telegram_set_at' => 'immutable_datetime',
-            'notify_command' => 'boolean', 'notify_volatility_shock' => 'boolean', 'notify_price_sanity' => 'boolean', 'updated_at' => 'immutable_datetime',
+            'notify_command' => 'boolean', 'notify_volatility_shock' => 'boolean', 'notify_price_sanity' => 'boolean', 'notify_daily_report' => 'boolean', 'updated_at' => 'immutable_datetime',
         ];
     }
 }

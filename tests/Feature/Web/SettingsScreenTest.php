@@ -112,7 +112,7 @@ it('turns optional notifications on and off without re-authentication, and not t
         ->call('notify', 'drawdown_halt', false)
         ->assertSee('drawdown_halt is always sent');
 
-    expect(app(TelegramSettings::class)->optional())->toBe(['command' => false, 'volatility_shock' => true, 'price_sanity' => false]);
+    expect(app(TelegramSettings::class)->optional())->toBe(['command' => false, 'volatility_shock' => true, 'price_sanity' => false, 'daily_report' => true]);
 });
 
 it('opens an account and says what the service refuses', function (): void {

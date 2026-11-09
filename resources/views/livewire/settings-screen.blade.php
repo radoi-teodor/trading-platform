@@ -50,7 +50,7 @@
         <section class="{{ $card }}" aria-labelledby="notify-heading">
             <h2 id="notify-heading" class="{{ $heading }}">Notifications</h2>
             <p class="mb-2 text-sm text-muted">Always sent: Halts, reconciliation mismatches, replay divergence, venue errors, clock skew, liquidation and stale data.</p>
-            @foreach (['command' => 'Commands (halt, resume, flatten, pause)', 'volatility_shock' => 'Volatility shock (trips many times a day)', 'price_sanity' => 'Price sanity'] as $kind => $text)
+            @foreach (['command' => 'Commands (halt, resume, flatten, pause)', 'volatility_shock' => 'Volatility shock (trips many times a day)', 'price_sanity' => 'Price sanity', 'daily_report' => 'Daily report ('.config('notifications.daily_report_at').', '.config('notifications.daily_report_timezone').')'] as $kind => $text)
                 <label class="flex min-h-row items-center gap-2 text-sm">
                     <input type="checkbox" class="size-4 accent-[var(--accent)]" @checked($optional[$kind]) wire:click="notify('{{ $kind }}', {{ $optional[$kind] ? 'false' : 'true' }})" data-test="notify-{{ $kind }}">
                     <span>{{ $text }}</span>

@@ -1141,9 +1141,9 @@
     "semantic_hash": "e66bb13691f6184c762c196427d8e685"
   },
   "bootstrap/app.php": {
-    "mtime": 1794193238.5362475,
-    "seen": 1794193957.4388921,
-    "ast_hash": "682576bc6dd1e5587440f0bcba4e2f0f",
+    "mtime": 1794221571.4349318,
+    "seen": 1794222179.1939397,
+    "ast_hash": "cf057a93f27347423542e65caf32e3bd",
     "semantic_hash": ""
   },
   "bootstrap/providers.php": {
@@ -1316,10 +1316,10 @@
     "semantic_hash": ""
   },
   "routes/console.php": {
-    "mtime": 1794145120.3563483,
-    "seen": 1794165296.723418,
-    "ast_hash": "7a16c82c5d795ba30bf07aded760731f",
-    "semantic_hash": "7a16c82c5d795ba30bf07aded760731f"
+    "mtime": 1794221599.344047,
+    "seen": 1794222179.1953175,
+    "ast_hash": "dd10f1458dda1bb90e6b72fea946cec4",
+    "semantic_hash": ""
   },
   "routes/web.php": {
     "mtime": 1794216664.2465067,
@@ -1894,9 +1894,9 @@
     "semantic_hash": ""
   },
   "docs/runbook.md": {
-    "mtime": 1794218832.0067344,
-    "seen": 1794221506.7388399,
-    "ast_hash": "55dd8c0f7e2f47ccd709f60fca465f90",
+    "mtime": 1794222172.7327452,
+    "seen": 1794222179.1985567,
+    "ast_hash": "f38f3f791074568fb6ec9063bed38e3f",
     "semantic_hash": ""
   },
   "docs/security.md": {
@@ -3250,9 +3250,9 @@
     "semantic_hash": ""
   },
   "app/Notifications/Models/NotificationSettings.php": {
-    "mtime": 1794215683.5540562,
-    "seen": 1794216415.980214,
-    "ast_hash": "21ddd47f54d7527c4fa507350ba9da56",
+    "mtime": 1794221571.4343045,
+    "seen": 1794222179.1892464,
+    "ast_hash": "4eccef9440f4f46b19f62bfb27bc06aa",
     "semantic_hash": ""
   },
   "app/Notifications/SettingSource.php": {
@@ -3268,9 +3268,9 @@
     "semantic_hash": ""
   },
   "app/Notifications/TelegramSettings.php": {
-    "mtime": 1794216208.6295567,
-    "seen": 1794216415.9802227,
-    "ast_hash": "58111ce3c9f8e517301d3a9f25ecdaa0",
+    "mtime": 1794221571.4345095,
+    "seen": 1794222179.1893497,
+    "ast_hash": "e6edf9370609494491774cb856ca938e",
     "semantic_hash": ""
   },
   "database/migrations/2026_11_09_000011_create_notification_settings_table.php": {
@@ -3298,15 +3298,15 @@
     "semantic_hash": ""
   },
   "resources/views/livewire/settings-screen.blade.php": {
-    "mtime": 1794218148.1136892,
-    "seen": 1794218790.5228782,
-    "ast_hash": "8a939e8c4b3702ec860263f3404b5a4e",
+    "mtime": 1794221571.4347486,
+    "seen": 1794222179.1952732,
+    "ast_hash": "03312006b25b6014cd4715adea556e99",
     "semantic_hash": ""
   },
   "tests/Feature/Web/SettingsScreenTest.php": {
-    "mtime": 1794219020.4532678,
-    "seen": 1794221506.7358313,
-    "ast_hash": "6d939e9861b9dfb7d67cc8ef1ea9659b",
+    "mtime": 1794221606.3662517,
+    "seen": 1794222179.19611,
+    "ast_hash": "cad4f6cd81f77c04f1cf2b1b3a34a546",
     "semantic_hash": ""
   },
   "tests/Support/web.php": {
@@ -3415,6 +3415,36 @@
     "mtime": 1794220659.1851225,
     "seen": 1794221506.7342527,
     "ast_hash": "6b5ca0df4af8ec16f5a991d437c4e7d0",
+    "semantic_hash": ""
+  },
+  "app/Notifications/Console/SendDailyReport.php": {
+    "mtime": 1794221599.342429,
+    "seen": 1794222179.189242,
+    "ast_hash": "43e888194e034b3901d1800542758917",
+    "semantic_hash": ""
+  },
+  "app/Notifications/DailyReport.php": {
+    "mtime": 1794222151.0831907,
+    "seen": 1794222179.1892443,
+    "ast_hash": "abc114b3802f1ac39090857ad7c35be2",
+    "semantic_hash": ""
+  },
+  "config/notifications.php": {
+    "mtime": 1794221571.4087248,
+    "seen": 1794222179.1943996,
+    "ast_hash": "826cad17ba7060a04873099cc0617fd9",
+    "semantic_hash": ""
+  },
+  "database/migrations/2026_11_09_000013_add_daily_report_to_notification_settings.php": {
+    "mtime": 1794221571.4102561,
+    "seen": 1794222179.194817,
+    "ast_hash": "a326b52c3b4cdbf1582eaf645f10e666",
+    "semantic_hash": ""
+  },
+  "tests/Feature/Notifications/DailyReportTest.php": {
+    "mtime": 1794221549.2791548,
+    "seen": 1794222179.195807,
+    "ast_hash": "bb750019bf414a523d04973c8d7b6a44",
     "semantic_hash": ""
   },
   "package-lock.json": {

@@ -2,9 +2,11 @@
 
 declare(strict_types=1);
 
-use Illuminate\Foundation\Inspiring;
-use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schedule;
 
-Artisan::command('inspire', function () {
-    $this->comment(Inspiring::quote());
-})->purpose('Display an inspiring quote');
+// Timed jobs, run by `php artisan schedule:work` (docs/runbook.md, section 2).
+
+$at = config('notifications.daily_report_at');
+$zone = config('notifications.daily_report_timezone');
+
+Schedule::command('report:daily')->dailyAt(is_string($at) ? $at : '08:00')->timezone(is_string($zone) ? $zone : 'Europe/Bucharest')->withoutOverlapping();

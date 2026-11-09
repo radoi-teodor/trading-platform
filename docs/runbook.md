@@ -17,6 +17,7 @@ created in the phase that needs it and this file is updated with it.
 | engine | `php artisan engine:run <account>` (the account's mode: paper or testnet) | The account's snapshot is under 2 minutes old, no open reconciliation mismatch |
 | notifications | `php artisan queue:work database --queue=notifications` | No failed jobs |
 | simulation worker | `php artisan queue:work simulation --queue=simulation --timeout=3600 --tries=1` | Runs leave `queued` |
+| scheduler | `php artisan schedule:work` | The daily report arrives each morning (D-77); `php artisan schedule:list` shows the jobs |
 | web | `php artisan serve` (or PHP-FPM behind a reverse proxy) | `/up` answers |
 
 All run under a supervisor with restart on failure. The Account screen shows each account's last handled minute; a
@@ -27,7 +28,7 @@ A supervisord file for the always-on machine, `/etc/supervisor/conf.d/trading.co
 
 ```ini
 [group:trading]
-programs=stream-spot,stream-perp,engine-paper,notifications,simulation
+programs=stream-spot,stream-perp,engine-paper,notifications,simulation,scheduler
 
 [program:stream-spot]
 command=php artisan market:stream spot
@@ -66,6 +67,14 @@ user=trading
 autorestart=true
 redirect_stderr=true
 stdout_logfile=/srv/trading-platform/storage/logs/notifications.log
+
+[program:scheduler]
+command=php artisan schedule:work
+directory=/srv/trading-platform
+user=trading
+autorestart=true
+redirect_stderr=true
+stdout_logfile=/srv/trading-platform/storage/logs/scheduler.log
 
 [program:simulation]
 command=php artisan queue:work simulation --queue=simulation --timeout=3600 --tries=1
@@ -243,6 +252,11 @@ one is used (D-75). Never put them in the repository or a chat. Halts, reconcili
 divergences, venue errors, clock skew, liquidation and stale data always send a message; commands, volatility shocks
 and price sanity are switches on the same screen (commands on, the other two off, since they trip many times a day,
 D-73).
+
+**Daily report (D-77).** At 08:00 Bucharest time (`DAILY_REPORT_AT`, `DAILY_REPORT_TIMEZONE` in `.env`) the scheduler
+sends each account's last 24 hours: equity and its change, trades closed, halts and commands, breakers, stale data
+and mismatches. `php artisan report:daily --print` shows it now without sending. Turn it off in Settings,
+Notifications. No report in the morning means the scheduler or the notifications worker is down.
 
 ## 12. Testnet
 

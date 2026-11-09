@@ -16,7 +16,7 @@ use InvalidArgumentException;
 final readonly class TelegramSettings
 {
     /** The notifications the operator may turn off or on; every other one is always sent. */
-    public const array OPTIONAL = ['command' => 'notify_command', 'volatility_shock' => 'notify_volatility_shock', 'price_sanity' => 'notify_price_sanity'];
+    public const array OPTIONAL = ['command' => 'notify_command', 'volatility_shock' => 'notify_volatility_shock', 'price_sanity' => 'notify_price_sanity', 'daily_report' => 'notify_daily_report'];
 
     public function __construct(private Repository $config) {}
 
