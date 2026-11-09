@@ -66,15 +66,15 @@
         <div class="mb-3 overflow-x-auto">
             <table class="w-full text-left text-sm">
                 <thead class="text-2xs uppercase tracking-wider text-muted">
-                    <tr><th class="py-1 pr-3 font-normal">Name</th><th class="pr-3 font-normal">Mode</th><th class="pr-3 font-normal">Starts</th><th class="pr-3 font-normal">Follows</th><th class="font-normal">Key</th></tr>
+                    <tr><th class="py-1 pr-3 font-normal">Name</th><th class="pr-3 font-normal">Mode</th><th class="hidden pr-3 font-normal sm:table-cell">Starts</th><th class="hidden pr-3 font-normal md:table-cell">Follows</th><th class="font-normal">Key</th></tr>
                 </thead>
                 <tbody class="font-mono">
                     @forelse ($accounts as $a)
                         <tr class="h-row border-t border-border">
                             <td class="pr-3">{{ $a->name }}</td>
                             <td class="pr-3">{{ $a->mode->value }}</td>
-                            <td class="whitespace-nowrap pr-3">{{ $a->started_at->format('Y-m-d H:i') }}</td>
-                            <td class="pr-3">{{ implode(', ', $a->symbols) }}</td>
+                            <td class="hidden whitespace-nowrap pr-3 sm:table-cell">{{ $a->started_at->format('Y-m-d H:i') }}</td>
+                            <td class="hidden pr-3 md:table-cell">{{ implode(', ', $a->symbols) }}</td>
                             <td class="text-muted">{{ $a->mode === \App\Execution\Data\EngineMode::Testnet ? ($hints[$a->id] ?? 'none') : 'not needed' }}</td>
                         </tr>
                     @empty

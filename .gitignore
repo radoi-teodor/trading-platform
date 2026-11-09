@@ -48,3 +48,6 @@ _ide_helper.php
 /graphify-out/graph.html
 /graphify-out/.graphify_root
 /graphify-out/20[0-9][0-9]-[0-9][0-9]-[0-9][0-9]/
+
+# End-to-end suite output
+/storage/e2e

@@ -23,7 +23,7 @@
                     @foreach ($functions as $name)<option value="{{ $name }}">{{ $name }}</option>@endforeach
                 </select>
             </label>
-            <label class="flex min-w-0 flex-1 flex-col gap-1 sm:flex-none">
+            <label class="flex min-w-[9rem] flex-1 flex-col gap-1 sm:flex-none">
                 <span class="text-2xs uppercase tracking-wider text-muted">Or an expression</span>
                 <input type="text" wire:model="expression" placeholder="ema(21) on 4h" class="h-row w-full rounded-control sm:w-48 border border-border bg-surface-2 px-2 font-mono text-sm">
             </label>
@@ -49,7 +49,7 @@
 
     <div wire:ignore x-data="priceChart(@js($payload))" class="relative rounded-card border border-border bg-surface p-card">
         <div x-ref="main" class="h-[420px] w-full"></div>
-        <div x-ref="profile" class="pointer-events-none absolute inset-y-3 right-16 z-10 w-32" aria-hidden="true"></div>
+        <div x-ref="profile" class="pointer-events-none absolute inset-y-3 right-16 z-10 w-16 sm:w-32" aria-hidden="true"></div>
         <div x-ref="panels" class="flex flex-col gap-2"></div>
     </div>
 

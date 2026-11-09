@@ -84,6 +84,47 @@ jobs:
       - run: npm ci
       - run: npm run build
 
+  e2e:
+    name: End-to-end (six widths)
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: trading
+          POSTGRES_PASSWORD: trading
+          POSTGRES_DB: trading_e2e
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U trading"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: bcmath, intl, pdo_pgsql, zip
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: composer install --no-interaction --prefer-dist
+      - run: npm ci
+      - run: npm run build
+      - run: cp .env.example .env && php artisan key:generate
+      - run: npx playwright install --with-deps chromium
+      # The real app on the scratch database trading_e2e, with a fake Telegram (tests/e2e).
+      - run: npm run e2e
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-screens
+          path: storage/e2e
+          retention-days: 14
+
   audit:
     name: Dependency audit
     runs-on: ubuntu-24.04

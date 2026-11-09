@@ -21,7 +21,8 @@
             @endforeach
         </nav>
         <div class="flex min-w-0 flex-1 flex-col">
-            <header class="flex min-h-12 flex-wrap items-center gap-x-3 gap-y-1 border-b border-border bg-surface px-3 py-1">
+            {{-- Sticky, so Halt stays on screen at any scroll position (docs/risk-policy.md, section 5). --}}
+            <header class="sticky top-0 z-20 flex min-h-12 flex-wrap items-center gap-x-3 gap-y-1 border-b border-border bg-surface px-3 py-1">
                 <span class="hidden font-semibold sm:inline lg:hidden">Trading X</span>
                 {{-- Below the sidebar's width: every screen on a second row of the header (docs/brand.md, A6). --}}
                 <nav class="order-last -mx-3 flex w-[calc(100%+1.5rem)] gap-4 overflow-x-auto border-t border-border px-3 py-1 text-sm lg:hidden" aria-label="Screens">
