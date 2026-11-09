@@ -19,6 +19,7 @@ use App\Execution\Data\VenueFill;
 use App\Market\Data\Candle;
 use App\Market\Data\FundingRate;
 use App\Market\Data\InstrumentRules;
+use App\Market\Data\MinuteCandles;
 use App\Market\Data\RulesHistory;
 use App\Support\Asset;
 use App\Support\Clock\Clock;
@@ -212,6 +213,23 @@ final class SimulatedVenue implements Venue
     }
 
     /** Matches the working orders of $symbol against one closed 1-minute candle. */
+    /**
+     * The venue's side of one minute, before the engine handles it: match the working orders against each candle,
+     * then settle funding on the positions open at that minute's end (D-44). Backtests and paper call the same steps.
+     */
+    public function advance(MinuteCandles $minute): void
+    {
+        foreach ($minute->candles as $symbol => $candle) {
+            $this->match(Symbol::parse($symbol), $candle);
+        }
+
+        foreach ($minute->funding as $symbol => $rate) {
+            if (isset($minute->candles[$symbol])) {
+                $this->settleFunding(Symbol::parse($symbol), $rate, $minute->candles[$symbol]->close);
+            }
+        }
+    }
+
     public function match(Symbol $symbol, Candle $minute): void
     {
         if ($symbol->isPerpetual()) {

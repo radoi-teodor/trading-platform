@@ -62,8 +62,6 @@ final readonly class Backtest
 
         $fingerprint = hash_init('sha256');
         $candles = 0;
-        $symbols = [];
-
         foreach ($this->feed->minutes(self::symbols($definition, $participants), $feedFrom, $definition->to) as $minute) {
             $clock->advanceTo($minute->closedAt);
 
@@ -76,17 +74,7 @@ final readonly class Backtest
             }
 
             foreach ($runs as [, $venue, $engine, , $tracker]) {
-                foreach ($minute->candles as $symbol => $candle) {
-                    $venue->match($symbols[$symbol] ??= Symbol::parse($symbol), $candle);
-                }
-
-                // Funding at the end of the minute, on the positions open then, at that minute's close (D-44).
-                foreach ($minute->funding as $symbol => $rate) {
-                    if (isset($minute->candles[$symbol])) {
-                        $venue->settleFunding($symbols[$symbol] ??= Symbol::parse($symbol), $rate, $minute->candles[$symbol]->close);
-                    }
-                }
-
+                $venue->advance($minute);
                 $equity = $engine->handle($minute);
 
                 if ($minute->closedAt > $definition->from) {

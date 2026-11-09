@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Agents\Models\McpToken;
+use App\Execution\Contracts\Notifier;
 use App\Market\Archive\BinanceArchive;
 use App\Market\Binance\BinanceEndpoints;
 use App\Market\Binance\Sleeper;
@@ -14,6 +15,7 @@ use App\Market\Feed\DatabaseCandleFeed;
 use App\Market\Instruments\StoredInstruments;
 use App\Market\Stream\PhrityTransport;
 use App\Market\Stream\StreamTransport;
+use App\Notifications\TelegramNotifier;
 use App\Risk\RiskPolicy;
 use App\Simulation\SimulationQueue;
 use App\Simulation\StrategyLibrary;
@@ -48,6 +50,7 @@ final class AppServiceProvider extends ServiceProvider
             Config::string('simulation.queue_connection'),
         ));
         $this->app->singleton(Sleeper::class, SystemSleeper::class);
+        $this->app->bind(Notifier::class, TelegramNotifier::class);
         $this->app->bind(StreamTransport::class, PhrityTransport::class);
         $this->app->singleton(BinanceEndpoints::class, fn (): BinanceEndpoints => new BinanceEndpoints(
             spotRest: Config::string('exchanges.binance.spot.rest'),

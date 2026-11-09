@@ -37,4 +37,10 @@ return [
         ],
     ],
 
+    // The operator's notifications (Phase 4). Both values live in .env only, never in the repository.
+    'telegram' => [
+        'token' => env('TELEGRAM_BOT_TOKEN'),
+        'chat_id' => env('TELEGRAM_CHAT_ID'),
+    ],
+
 ];

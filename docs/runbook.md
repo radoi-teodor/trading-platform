@@ -13,11 +13,11 @@ created in the phase that needs it and this file is updated with it.
 
 | Process | Start | Healthy when |
 |---------|-------|--------------|
-| market-data | `php artisan market:stream` | Every enabled instrument has a candle less than 2 timeframes old |
-| engine | `php artisan engine:run <account> --mode=<paper\|live>` | Heartbeat under 10 s, no open reconciliation mismatch |
-| horizon | `php artisan horizon` | No queue older than 5 minutes, failed jobs reviewed |
-| scheduler | `php artisan schedule:work` | Last run under 2 minutes ago |
-| reverb | `php artisan reverb:start` | UI shows live prices |
+| market-data | `php artisan market:stream spot` and `php artisan market:stream perp` | Every enabled instrument has a candle less than 2 timeframes old |
+| engine | `php artisan engine:run <account>` (the account's mode: paper or testnet) | The account's snapshot is under 2 minutes old, no open reconciliation mismatch |
+| notifications | `php artisan queue:work --queue=notifications,default` | No failed jobs |
+| simulation worker | `php artisan queue:work simulation --queue=simulation --timeout=3600 --tries=1` | Runs leave `queued` |
+| web | `php artisan serve` (or PHP-FPM behind a reverse proxy) | `/up` answers |
 
 All run under a supervisor with restart on failure. `php artisan platform:health` prints the same checks.
 
@@ -26,10 +26,12 @@ All run under a supervisor with restart on failure. `php artisan platform:health
 | Situation | Command | Effect |
 |-----------|---------|--------|
 | Something looks wrong, not sure what | `php artisan engine:halt <account>` | No new entries; stops stay on the exchange |
-| A strategy misbehaves | `php artisan strategy:pause <strategy> --account=<account>` | That strategy stops emitting intents |
+| A strategy misbehaves | `php artisan engine:pause <account> <id>@v<n>` (`--resume` to resume) | Its intents are rejected; its stops stay |
+| Everything is understood | `php artisan engine:resume <account>` | Lifts the halts (the day's loss lifts by itself at midnight UTC) |
 | Losses must stop now | `php artisan engine:flatten <account>` | Cancels all orders, closes all positions at market, then halts |
 
-The same buttons are on every screen. The commands work when the web process is down. If the server itself is
+The same buttons are on every screen. The commands work when the web process is down: each writes a row of
+`engine_commands`, which the engine applies at its next minute and journals. If the server itself is
 unreachable, use the exchange's own interface: cancel orders, close positions, then disable the API key.
 
 ## 4. Incidents
@@ -159,4 +161,23 @@ The usual flow for an agent: `list_instruments`, `get_indicators` on the chart i
 `run_grid` with a walk-forward on that version, and `get_job` until it is done. Checked on 2026-11-08 with the
 official MCP Python SDK over HTTP on real BTC perpetual candles: a 6-set grid with a 30d/15d walk-forward over
 2026-08-01 to 2026-10-27 took 39 s in the worker.
+
+## 11. Paper trading
+
+| Task | Command |
+|------|---------|
+| Create the paper account | `php artisan account:create paper [--equity=10000] [--symbol=BTC/USDT] [--start="2026-11-10 00:00"]` |
+| Run it | `php artisan engine:run paper` (keeps running; `--once` handles what is stored and stops) |
+| Put a strategy in paper | It happens on its own when `strategy:promote` moves a version to Backtested (D-71); restart the engine to load it |
+
+The engine reads the minutes `market:stream` stores, so the stream must run too. A restart replays every minute
+since the account started and checks each decision against the journal (D-68): "The replay matches the journal."
+A divergence stops the engine with the journal record that differs; nothing more runs until you look. A missing
+minute is never skipped: the engine waits, journals `stale_data` after 2 minutes and tells you on Telegram.
+
+**Telegram.** Create a bot with @BotFather and copy its token; send the bot a message and read your chat id from
+`https://api.telegram.org/bot<token>/getUpdates`. Put both in `.env` as `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`
+(never in the repository or a chat), then restart the notifications worker. Halts, flattening, commands, stale data,
+reconciliation mismatches and replay divergences send a message; volatility shocks and price sanity stay in the
+journal, since they trip many times a day (D-73).
 

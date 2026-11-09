@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Simulation\Console;
 
+use App\Execution\Data\EngineMode;
+use App\Execution\Models\Account;
+use App\Execution\Models\Deployment;
 use App\Simulation\Models\StrategyGateReport;
 use App\Strategy\Versions\StrategyStage;
 use App\Support\Clock\Clock;
@@ -59,7 +62,30 @@ final class PromoteStrategy extends Command
         StrategyStage::query()->create([
             'strategy_version_id' => $version->id, 'stage' => 'backtested', 'reason' => "every gate passed (report {$report->id})", 'created_at' => $clock->now(),
         ]);
-        $this->info("{$label} is backtested. Paper trading comes with phase 4; live needs the operator's explicit approval (D-16).");
+        $chosen = [];
+
+        foreach (is_array($report->report['chosen'] ?? null) ? $report->report['chosen'] : [] as $name => $value) {
+            $chosen[(string) $name] = is_scalar($value) ? (string) $value : '';
+        }
+
+        // Paper follows Backtested automatically, on every paper account (D-71, docs/risk-policy.md section 6).
+        $accounts = Account::query()->where('mode', EngineMode::Paper)->orderBy('id')->get();
+
+        foreach ($accounts as $account) {
+            Deployment::query()->create([
+                'account_id' => $account->id, 'strategy_version_id' => $version->id, 'parameters' => $chosen, 'active' => true,
+                'reason' => "backtested, gate report {$report->id}", 'created_at' => $clock->now(),
+            ]);
+        }
+
+        if ($accounts->isEmpty()) {
+            $this->info("{$label} is backtested. No paper account exists yet: create one with account:create, then deploy it there.");
+
+            return self::SUCCESS;
+        }
+
+        StrategyStage::query()->create(['strategy_version_id' => $version->id, 'stage' => 'paper', 'reason' => 'deployed on '.$accounts->pluck('name')->implode(', '), 'created_at' => $clock->now()]);
+        $this->info("{$label} is backtested and runs in paper on ".$accounts->pluck('name')->implode(', ').' from their next start (D-71). Live needs the operator\'s explicit approval (D-16).');
 
         return self::SUCCESS;
     }

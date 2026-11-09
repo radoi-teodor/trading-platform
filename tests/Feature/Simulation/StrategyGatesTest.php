@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Execution\Models\Deployment;
 use App\Simulation\Models\StrategyGateReport;
 use App\Simulation\Models\StrategyHoldout;
 use App\Simulation\StrategyLibrary;
@@ -76,10 +77,13 @@ it('promotes a draft to backtested only on a passing report, and never further',
         ->and(Artisan::output())->toMatch('/failed its last gate report \\(\\d+\\): trades\\./')
         ->and($version->stage())->toBe('draft');
 
-    StrategyGateReport::query()->create(['strategy_version_id' => $version->id, 'passed' => true, 'report' => ['gates' => []], 'created_at' => now()]);
+    StrategyGateReport::query()->create(['strategy_version_id' => $version->id, 'passed' => true, 'report' => ['gates' => [], 'chosen' => ['fast' => '7', 'slow' => '21']], 'created_at' => now()]);
+    Artisan::call('account:create', ['name' => 'paper']);
 
     expect(Artisan::call('strategy:promote', ['strategy' => $label]))->toBe(0)
-        ->and($version->stage())->toBe('backtested')
+        // paper follows backtested on every paper account, with the parameters the gates judged (D-71)
+        ->and($version->stage())->toBe('paper')
+        ->and(Deployment::query()->sole()->parameters)->toBe(['fast' => '7', 'slow' => '21'])
         ->and(Artisan::call('strategy:promote', ['strategy' => $label]))->toBe(1)
-        ->and(Artisan::output())->toContain('is backtested, not draft');
+        ->and(Artisan::output())->toContain('is paper, not draft');
 });
