@@ -90,6 +90,11 @@ committed `graph.json` changes whole on every rebuild; that diff is expected.
 - Architecture tests guard the module rules in `docs/architecture.md` section 3, the float ban, the clock ban,
   and "no facade in the domain".
 - Tests and UI checks never touch a live account or the operator's production database.
+- End-to-end: `npm run e2e` (Playwright, `tests/e2e`) runs the real app on the scratch database `trading_e2e`
+  (seeded by `Tests\Support\E2eSeeder`, which refuses any other database) with a fake Telegram, and checks every
+  screen at 360, 390, 768, 1024, 1280 and 1920 wide: no horizontal scroll, every control on screen, Halt, the mode
+  and the navigation visible, no console error. A new screen or flow gets its spec there. Screenshots land in
+  `storage/e2e/screens`. Needs `createdb trading_e2e` once.
 
 ## 7. UI
 
@@ -99,7 +104,8 @@ committed `graph.json` changes whole on every rebuild; that diff is expected.
 - The UI never waits on the engine or the exchange: it reads the database or cache and listens to
   Reverb. Long work is a queued job with visible progress.
 - Every number from the market is shown in tabular monospace with the instrument's precision.
-- The current mode (backtest, paper, testnet, live) is visible on every screen.
+- The current mode (backtest, paper, testnet, live) is visible on every screen, and Halt stays on screen at any
+  scroll position (the header is sticky).
 
 ## 8. Agents
 

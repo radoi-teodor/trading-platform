@@ -61,9 +61,11 @@ composer format -- --test   # Pint, from tools/pint
 composer analyse            # PHPStan level max
 composer test               # Pest: feature, architecture and brand suites, no network
 npm run build               # Vite and Tailwind, IBM Plex fonts bundled
+npm run e2e                 # Playwright: every screen at six widths on the scratch database trading_e2e
 ```
 
-`php artisan serve` starts the web process; `/up` is the health check. There are no screens yet.
+`php artisan serve` starts the web process; `/up` is the health check. The screens are Chart, Strategies, Account
+and Settings (`runbook.md` section 13).
 
 Market data (`market-data.md`, commands in `runbook.md` section 8):
 

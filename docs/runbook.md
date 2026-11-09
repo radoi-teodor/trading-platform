@@ -122,8 +122,8 @@ journal of the halt. Resume only with a written reason in the journal.
 ## 5. Key rotation
 
 1. Create a new key on Binance: trading on, withdrawals off, IP restricted.
-2. Settings, Accounts, replace key (re-authentication required).
-3. The engine reconnects at the next event and reconciles.
+2. Settings, Testnet keys, store the new key over the old one (re-authentication required); restart the engine.
+3. The engine reads the new key at its start and reconciles with the exchange.
 4. Delete the old key on Binance.
 
 ## 6. Backups and restore
@@ -203,8 +203,8 @@ strategies, and run backtests, grids and walk-forwards. It cannot trade, change 
 | Task | Command |
 |------|---------|
 | Turn it on | `MCP_ENABLED=true` in `.env`, then restart the web process |
-| Create a token | `php artisan mcp:token <name>`: copy it now, it is shown once and stored only as a hash |
-| Revoke a token | `php artisan mcp:revoke <name>` |
+| Create a token | Settings, MCP tokens (or `php artisan mcp:token <name>`): copy it now, it is shown once and stored only as a hash |
+| Revoke a token | Settings, MCP tokens (or `php artisan mcp:revoke <name>`) |
 | Run queued simulations | `php artisan queue:work simulation --queue=simulation --timeout=3600 --tries=1` |
 
 Connect a client to `http://<host>:8000/mcp` with the header `Authorization: Bearer <token>`. For Claude Code:
@@ -226,7 +226,7 @@ official MCP Python SDK over HTTP on real BTC perpetual candles: a 6-set grid wi
 
 | Task | Command |
 |------|---------|
-| Create the paper account | `php artisan account:create paper [--equity=10000] [--symbol=BTC/USDT] [--start="2026-11-10 00:00"]` |
+| Create the paper account | Settings, Accounts (or `php artisan account:create paper [--equity=10000] [--symbol=BTC/USDT] [--start="2026-11-10 00:00"]`) |
 | Run it | `php artisan engine:run paper` (keeps running; `--once` handles what is stored and stops) |
 | Put a strategy in paper | It happens on its own when `strategy:promote` moves a version to Backtested (D-71); restart the engine to load it |
 
@@ -236,17 +236,20 @@ A divergence stops the engine with the journal record that differs; nothing more
 minute is never skipped: the engine waits, journals `stale_data` after 2 minutes and tells you on Telegram.
 
 **Telegram.** Create a bot with @BotFather and copy its token; send the bot a message and read your chat id from
-`https://api.telegram.org/bot<token>/getUpdates`. Put both in `.env` as `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`
-(never in the repository or a chat), then restart the notifications worker. Halts, flattening, commands, stale data,
-reconciliation mismatches and replay divergences send a message; volatility shocks and price sanity stay in the
-journal, since they trip many times a day (D-73).
+`https://api.telegram.org/bot<token>/getUpdates`. Enter both on the Settings screen (it asks for your password and a
+fresh code first) and press "Send a test message". They are stored encrypted and never shown back; `.env`
+(`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`) still works and applies when the app has none, and the screen says which
+one is used (D-75). Never put them in the repository or a chat. Halts, reconciliation mismatches, replay
+divergences, venue errors, clock skew, liquidation and stale data always send a message; commands, volatility shocks
+and price sanity are switches on the same screen (commands on, the other two off, since they trip many times a day,
+D-73).
 
 ## 12. Testnet
 
 | Task | Command |
 |------|---------|
-| Create the account | `php artisan account:create testnet --mode=testnet [--symbol=BTC/USDT]` |
-| Store its key | `php artisan account:keys testnet` (asked twice, hidden; from testnet.binance.vision, trade only) |
+| Create the account | Settings, Accounts, mode testnet (or `php artisan account:create testnet --mode=testnet [--symbol=BTC/USDT]`) |
+| Store its key | Settings, Testnet keys, after your password and a code (or `php artisan account:keys testnet`, asked twice, hidden); from testnet.binance.vision, trade only. The engine reads it at its next start |
 | Run it | `php artisan engine:run testnet` |
 | Check the venue against the real test network | `TRADING_TESTNET=1 TRADING_TESTNET_KEY=... TRADING_TESTNET_SECRET=... composer test:testnet` |
 
@@ -268,5 +271,8 @@ others in panels, conditions as markers, the window's volume profile on the righ
 the editor compiles as you type, shows errors with their line and column and the read-back, saves versions, runs
 backtests, grids and gate reports in the background (the simulation worker must run) and promotes a passing
 version to Backtested. Account: the snapshot of each account, its journal and its commands; resume, resume a
-strategy and flatten ask for your password and a fresh code, valid 10 minutes. Halt is on every screen.
+strategy and flatten ask for your password and a fresh code, valid 10 minutes. Settings (D-75): Telegram and the
+notification switches, accounts, testnet keys and MCP tokens (a new token is shown once); the risk limits and
+breaker thresholds are shown and change only in code (D-19). Changing Telegram, a key or creating a token asks for
+your password and a fresh code. Halt is on every screen and stays on screen when you scroll.
 
