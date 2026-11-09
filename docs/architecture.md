@@ -52,7 +52,7 @@ A modular monolith under `app/`. Each module has `Contracts/`, `Data/` (immutabl
 | `Simulation` | Backtest runner, walk-forward, Monte Carlo, metrics, reports | Support, Market, Strategy, Risk, Portfolio, Execution (simulated venue only) |
 | `Agents` | The MCP server for external research agents: tools, tokens, call log (D-63, D-64) | Support, Market, Strategy, Simulation, Portfolio (read), Journal |
 | `Journal` | Engine decision records, command log | Support |
-| `Notifications` | Telegram (Phase 4), email | Support, Journal, Execution (its `Notifier` contract and records) |
+| `Notifications` | Telegram (Phase 4) and its settings (D-75), email | Support, Journal, Execution (its `Notifier` contract and records) |
 | `Web` | Livewire components, controllers, MCP server | everything above, read-only except through commands |
 
 The rule that matters most: **`Agents` never depends on `Execution`**, and nothing in `Agents` can produce an

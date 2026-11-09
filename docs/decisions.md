@@ -460,6 +460,25 @@ clock more than a second off Binance's or a bad key, and stops on any other venu
 The opt-in suite reads testnet keys from the shell (`TRADING_TESTNET_KEY`, `TRADING_TESTNET_SECRET`); live keys
 are never read that way.
 
+**D-75. The operator's settings in the app** (2026-11-09, accepted by the operator with the settings plan)
+The Settings screen configures what was `.env` and command-line only: Telegram (bot token, chat id, a test message),
+which optional notifications are sent, paper and testnet accounts, each testnet account's Binance key, and MCP
+tokens. Risk limits and breaker thresholds are shown there read-only: changing them stays a code change with a test
+(D-19). Telegram's token and chat id live in one `notification_settings` row with encrypted casts (D-20); a value set
+in the app wins over `.env` (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`), and the screen names the source of each value
+(set in the app, from .env, not set), so the fallback is never silent. A stored secret is never shown back: the
+screen says it is set and when, and for an exchange key the last 4 characters of the API key (not the secret). The
+fields are emptied after saving. Re-authentication (password and a fresh code, 10 minutes) is asked before changing
+the Telegram token or chat id, adding, replacing or deleting an exchange key, and creating an MCP token: each of
+those gives access or redirects alerts. Revoking a token, turning off an optional notification and creating a paper
+or testnet account do not. Halts, reconciliation, replay divergence, venue errors, clock skew, liquidation and stale
+data always notify; commands notify by default and volatility shocks and price sanity do not (D-73), and those three
+are the operator's choice. The test message is sent at once with a 10 second timeout and reports a status only. A
+new key is used from the engine's next start. The accounts and tokens screens and the commands share one service
+each (`App\Execution\Accounts\OpenAccount`, `App\Agents\Tokens`), so the rules are the same on both paths.
+
+## Open
+
 | Id | Question | Blocks |
 |----|----------|--------|
 | O-6 | Pay Binance fees in BNB (25 % off spot)? Needs a small BNB balance whose price moves. | Live cost model (D-28 reads it from the account either way) |

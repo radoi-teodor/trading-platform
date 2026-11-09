@@ -22,11 +22,12 @@ in a public repository. This document lists what is protected, from whom, and ho
 - Separate keys per account and per environment (testnet, live). A testnet key never works live and the reverse.
 - Rotated at least every 90 days and immediately after any suspicion. Rotation is a runbook procedure.
 - Entered only through `php artisan account:keys <account>` (asked interactively, never as an argument) or the
-  Account screen after re-authentication. Never through chat, a file in the repository or an environment variable.
+  Settings screen after re-authentication; the screen never shows a stored secret back (D-75). Never through chat, a file in the repository or an environment variable.
 - The one exception: the opt-in testnet suite reads a testnet key from `TRADING_TESTNET_KEY` and
   `TRADING_TESTNET_SECRET` in the shell that runs it; testnet keys carry no money (D-74).
-- The Telegram bot token and chat id live in `.env` (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`), never in the
-  repository, the journal or a message.
+- The Telegram bot token and chat id are set on the Settings screen (encrypted in the database, D-75) or in `.env`
+  (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`); the app's value wins. Never in the repository, the journal, a log line
+  or a message.
 
 ## 3. Access to the platform
 
@@ -36,8 +37,9 @@ in a public repository. This document lists what is protected, from whom, and ho
 - Built with Laravel Fortify: the first user comes from `php artisan user:create`, which asks for the password and
   shows the TOTP secret once; there is no registration or password reset by email. Re-authentication asks for the
   password and a fresh TOTP code and lasts 10 minutes.
-- Re-authentication (password and TOTP) for: raising a risk limit, promoting to a live stage, adding or replacing
-  exchange keys, enabling perpetuals, flattening an account.
+- Re-authentication (password and TOTP) for: raising a risk limit, promoting to a live stage, adding, replacing or
+  deleting exchange keys, changing the Telegram token or chat id, creating an MCP token, enabling perpetuals,
+  resuming or flattening an account.
 - The web process is not exposed on `0.0.0.0` without TLS and a reverse proxy. Production runs with
   `APP_DEBUG=false`.
 - The MCP endpoint (D-63) is off by default and authenticated with a bearer token stored only as a SHA-256 hash,
