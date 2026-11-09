@@ -83,9 +83,18 @@ Rules that the compiler enforces:
   shorter than it.
 - Every symbol must exist on the exchange and be tradable in the chosen market type.
 
-**Universe strategies (Phase 7, planned, D-92).** A document may declare `universe: { rule: top, n: 50, by:
-quote_volume_30d }` instead of `market.instruments`, and rank its members with `rank`, `percentile`, `top` and
-`bottom`. `docs/universe.md`, section 5, describes them; this section will hold the rules once they compile.
+**Universe strategies (D-92).** A document may declare `universe: { rule: top, n: 50, by: quote_volume_30d }`
+instead of `market`: it then trades the USDT perpetuals that are members of that universe, month by month, and not
+a list of instruments. Rules:
+
+- `market` and `universe` exclude each other; a template names its own instruments and takes neither.
+- `rule` is `top` and `by` is `quote_volume_30d`, the only universe that is built (`docs/universe.md`, section 2);
+  `n` is a whole number from 2 to 500.
+- Only a universe strategy may use `rank`, `percentile`, `top`, `bottom` and `count`.
+- An entry that ranks nothing, with no ranking in `filters` either, compiles with a warning: every member whose
+  condition holds may enter, in symbol order, until the limits are reached.
+- The document compiles and reads back without the members; running it needs them. Backtests, paper and live runs
+  of a universe strategy come with the engine batch (`docs/universe.md`, section 5).
 
 ## 2. Expression language
 
@@ -150,6 +159,7 @@ arg       = expr | identifier ":" expr ;
 | Position | `in_position`, `bars_in_trade`, `trade_r` (current open result in R) |
 | Time | `hour_utc`, `weekday` |
 | Exits only | `level(series)`, `chandelier(n, k)`, `atr_trail(n, k)` |
+| Universe only | `rank(src)` (1 is the member with the highest `src`), `percentile(src)` (100% for the highest, 0% for the lowest), `top(n, src)` and `bottom(n, src)` (conditions: among the n highest, the n lowest), `count` (the members ranked at this close) |
 
 The perpetual data functions read what phase 5 stores (D-79); a backtest refuses a range where it is missing, and a
 value is `none` when nothing is known yet. The language has no text values and no functions fed by language models
@@ -176,6 +186,20 @@ Each function has a reference test against known values; the old pandas formulas
   (D-54).
 - **Exits** fire in this order on a candle: stop (on the exchange, intrabar), take profit (on the exchange),
   `time_stop`, `when`.
+- **Universe strategies** (D-92) are evaluated for all members at once when a candle of the strategy's timeframe
+  closes, in two phases: every member's ranked values, then every member's conditions, each reading its own place.
+  - A ranking reads the value of its `src` on the candle that just closed. `src` may be any series, also one of a
+    longer timeframe (`rank(roc(30) on 1d)`); the ranking itself is always worked out on the strategy's timeframe.
+    The highest value is rank 1; equal values are ordered by symbol; a member whose `src` has no value yet is not
+    ranked, and its `rank`, `percentile`, `top` and `bottom` are `none`.
+  - A member is ranked in the months it belongs to the universe, and once it has the strategy's warmup in candles
+    without a gap. After a gap its history starts again. Until then it is not counted and cannot enter.
+  - A position in an instrument that is no longer a member is closed, with reason `universe.left`. Other positions
+    are managed as in any strategy, by their own stop, `time_stop` and `when`.
+  - Intents are emitted in this order: closes and stop moves by symbol, then entries from the best ranked. The
+    place of an entry is its rank in the first ranking of that side's `when`, else in the first ranking of
+    `filters`; `bottom` counts from the lowest. A long goes before a short of the same place, then by symbol; an
+    entry nothing ranks goes last. To rank shorts from the weakest use `bottom`, not `rank`.
 
 ### Templates
 

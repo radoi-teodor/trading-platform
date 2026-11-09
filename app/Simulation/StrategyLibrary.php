@@ -6,6 +6,7 @@ namespace App\Simulation;
 
 use App\Market\Contracts\InstrumentDirectory;
 use App\Risk\RiskPolicy;
+use App\Strategy\Data\UniverseSchedule;
 use App\Strategy\Dsl\Compiler\CompiledStrategy;
 use App\Strategy\Dsl\Document\CheckResult;
 use App\Strategy\Dsl\Document\DocumentChecker;
@@ -40,7 +41,7 @@ final readonly class StrategyLibrary
     /**
      * What a checked document compiles to, for a reader.
      *
-     * @return array{strategy: string, title: string, instruments: list<string>, timeframe: string, warmup_candles: int, parameters: array<string, string>, benchmark: bool, read_back: string}|null
+     * @return array{strategy: string, title: string, instruments: list<string>, universe: ?string, timeframe: string, warmup_candles: int, parameters: array<string, string>, benchmark: bool, read_back: string}|null
      */
     public function describe(CheckResult $result): ?array
     {
@@ -50,12 +51,13 @@ final readonly class StrategyLibrary
             return null;
         }
 
-        $strategy = CompiledStrategy::fromSpec($spec);
+        $strategy = CompiledStrategy::fromSpec($spec, [], 1, UniverseSchedule::none());
 
         return [
             'strategy' => $spec->id,
             'title' => $spec->title,
             'instruments' => array_map('strval', $spec->instruments),
+            'universe' => $spec->universe?->text(),
             'timeframe' => $spec->timeframe->value,
             'warmup_candles' => $strategy->warmupBars(),
             'parameters' => $strategy->identity()->parameters,

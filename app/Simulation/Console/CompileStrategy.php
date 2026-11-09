@@ -6,6 +6,7 @@ namespace App\Simulation\Console;
 
 use App\Market\Instruments\StoredInstruments;
 use App\Risk\RiskPolicy;
+use App\Strategy\Data\UniverseSchedule;
 use App\Strategy\Dsl\Compiler\CompiledStrategy;
 use App\Strategy\Dsl\Document\CheckResult;
 use App\Strategy\Dsl\Document\DocumentChecker;
@@ -44,11 +45,12 @@ final class CompileStrategy extends Command
         }
 
         $spec = $result->spec;
-        $strategy = CompiledStrategy::fromSpec($spec);
+        $strategy = CompiledStrategy::fromSpec($spec, [], 1, UniverseSchedule::none());
+        $traded = $spec->universe !== null ? "universe {$spec->universe->text()}" : implode(', ', array_map('strval', $spec->instruments));
         $parameters = array_map(fn (string $name, string $value): string => "{$name} = {$value}", array_keys($strategy->identity()->parameters), $strategy->identity()->parameters);
 
         $this->info("{$spec->id} compiles: {$spec->title}");
-        $this->line(implode(', ', array_map('strval', $spec->instruments))." on {$spec->timeframe->value}".($spec->benchmark ? ', benchmark profile' : ''));
+        $this->line("{$traded} on {$spec->timeframe->value}".($spec->benchmark ? ', benchmark profile' : ''));
         $this->line("Warmup: {$strategy->warmupBars()} candles of the longest timeframe it reads.");
         $this->line('Parameters: '.($parameters === [] ? 'none' : implode(', ', $parameters)));
         $this->newLine();

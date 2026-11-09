@@ -23,6 +23,7 @@ use App\Strategy\Dsl\Document\CarryTemplate;
 use App\Strategy\Dsl\Document\EntrySpec;
 use App\Strategy\Dsl\Document\Expression;
 use App\Strategy\Dsl\Document\StrategySpec;
+use App\Strategy\Dsl\Document\UniverseRule;
 use App\Strategy\Dsl\Functions\Library;
 use App\Strategy\Dsl\Types\Kind;
 use App\Support\Number\Decimal;
@@ -56,6 +57,7 @@ final class ReadBack
         'taker_ratio' => 'the ratio of taker buy to sell volume',
         'long_liquidations' => 'the long positions liquidated during the candle', 'short_liquidations' => 'the short positions liquidated during the candle',
         'large_buy_volume' => 'the volume of large buys', 'large_sell_volume' => 'the volume of large sells', 'large_delta' => 'the large-trade delta',
+        'count' => 'the number of members ranked',
     ];
 
     private const array SHORT_NAMES = [
@@ -92,8 +94,8 @@ final class ReadBack
             return $this->carry($spec->template);
         }
 
-        $where = $this->instruments($spec->instruments, $spec->market);
-        $opening = "On {$where}, every time ".self::article(self::candle($spec->timeframe)).' candle closes: ';
+        $where = $spec->universe !== null ? self::universe($spec->universe) : $this->instruments($spec->instruments, $spec->market);
+        $opening = "On {$where}, every time ".self::article(self::candle($spec->timeframe)).' candle closes'.($spec->universe !== null ? ', for each member' : '').': ';
         $filters = array_map(fn (Expression $e): string => $this->condition($e->node), $spec->filters);
         $entries = array_map(fn (EntrySpec $entry): string => $this->entry($entry), array_values($spec->entries));
         $sentences = [$opening.($filters === [] ? '' : 'if '.self::join($filters).', ').implode(', and ', $entries).'.'];
@@ -126,6 +128,12 @@ final class ReadBack
             ."{$carry->exitPeriods} periods is below ".self::percent($carry->exit).'. '
             ."Perpetual leverage at most {$carry->maxLeverage}, with ".self::percent($carry->marginBuffer).' extra margin; '
             .'at most '.self::percent($carry->maxPosition).' of equity in the position.';
+    }
+
+    /** The rule of a universe strategy in words (D-92); the checker allows only this one. */
+    private static function universe(UniverseRule $rule): string
+    {
+        return "the top {$rule->n} USDT perpetuals by 30-day quote volume, re-ranked on the first day of each month";
     }
 
     /** @param list<Symbol> $symbols */
@@ -321,6 +329,9 @@ final class ReadBack
             'vp_vah' => "the top of the value area of the last {$v('n')} candles",
             'vp_val' => "the bottom of the value area of the last {$v('n')} candles",
             'level' => $v('series'),
+            'top', 'bottom' => ($v('n') === '1' ? 'it is the member' : "it is among the {$v('n')} members").' with the '.($node->name === 'top' ? 'highest' : 'lowest').' '.self::bare($v('src')),
+            'rank' => 'its rank by '.self::bare($v('src')),
+            'percentile' => 'its percentile by '.self::bare($v('src')),
             'chandelier' => "a chandelier stop ({$v('n')}, {$v('k')})",
             'atr_trail' => "an ATR trailing stop ({$v('n')}, {$v('k')})",
             default => (self::SHORT_NAMES[$node->name] ?? strtoupper($node->name))."({$v('n')})".$of(),

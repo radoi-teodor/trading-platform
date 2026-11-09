@@ -132,6 +132,16 @@ it('evaluates indicators exactly as the chart service does', function (): void {
         ->assertHasErrors(['level is an exit level']);
 });
 
+it('compiles a universe strategy and reads it back with its rule (D-92)', function (): void {
+    backtestFixture();
+    mcpToken();
+    actAsToken();
+
+    TradingServer::tool(CompileStrategy::class, ['document' => UNIVERSE_DOCUMENT])
+        ->assertOk()
+        ->assertSee(['xs-momentum-test', '{ rule: top, n: 50, by: quote_volume_30d }', 'On the top 50 USDT perpetuals by 30-day quote volume', 'it is among the 5 members with the highest rate of change(42)']);
+});
+
 it('compiles, saves a draft by the token\'s agent, runs a grid in the background and reports it', function (): void {
     backtestFixture(days: 36);
     mcpToken();

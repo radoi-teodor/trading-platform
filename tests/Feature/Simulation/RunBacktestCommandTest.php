@@ -172,6 +172,19 @@ it('compiles a document and says what it found', function (): void {
         ->and(Artisan::output())->toContain(':13:11: emma is not a function of the DSL. Did you mean ema?');
 });
 
+it('compiles a universe strategy without its members and shows its rule (D-92)', function (): void {
+    backtestFixture();
+
+    $exit = Artisan::call('strategy:compile', ['file' => strategyFile(UNIVERSE_DOCUMENT)]);
+    $output = Artisan::output();
+
+    expect($exit)->toBe(0)
+        ->and($output)->toContain('xs-momentum-test compiles')
+        ->and($output)->toContain('universe { rule: top, n: 50, by: quote_volume_30d } on 4h')
+        ->and($output)->toContain('Warmup: 43 candles')
+        ->and($output)->toContain('On the top 50 USDT perpetuals by 30-day quote volume');
+});
+
 it('runs a grid of parameters in one pass, with the deflated Sharpe ratio and the probability of overfitting', function (): void {
     backtestFixture(days: 36);
 

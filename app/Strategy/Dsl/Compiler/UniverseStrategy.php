@@ -185,11 +185,12 @@ final class UniverseStrategy implements CrossSectionalStrategy, LimitedStrategy
         }
 
         $open = $own?->candle->openTime->getTimestamp();
-        $last = $this->seen[$symbol]['last'] ?? null;
+        $seen = $this->seen[$symbol] ?? null;
+        $last = $seen['last'] ?? null;
 
-        if (! isset($this->programs[$symbol]) || ($open !== null && $last !== null && $open !== $last + $timeframe->seconds())) {
+        if ($seen === null || ! isset($this->programs[$symbol]) || ($open !== null && $last !== null && $open !== $last + $timeframe->seconds())) {
             $this->programs[$symbol] = $this->member->memberProgram($this->section, $symbol);
-            $this->seen[$symbol] = ['bars' => 0, 'longest' => 0, 'last' => null];
+            $seen = ['bars' => 0, 'longest' => 0, 'last' => null];
         }
 
         usort($group, fn (StrategyContext $a, StrategyContext $b): int => $b->candle->timeframe->seconds() <=> $a->candle->timeframe->seconds());
@@ -200,13 +201,15 @@ final class UniverseStrategy implements CrossSectionalStrategy, LimitedStrategy
             }
 
             $this->programs[$symbol]->update($context->candle->timeframe->value, $this->member->frame($context));
-            $this->seen[$symbol]['longest'] += $context->candle->timeframe === $longest ? 1 : 0;
+            $seen['longest'] += $context->candle->timeframe === $longest ? 1 : 0;
         }
 
         if ($own !== null) {
-            $this->seen[$symbol]['bars']++;
-            $this->seen[$symbol]['last'] = $open;
+            $seen['bars']++;
+            $seen['last'] = $open;
         }
+
+        $this->seen[$symbol] = $seen;
 
         return $own;
     }
@@ -218,7 +221,7 @@ final class UniverseStrategy implements CrossSectionalStrategy, LimitedStrategy
         $bars = $this->member->warmupBars();
         $longest = $this->member->longerTimeframes()[0] ?? null;
 
-        if ($seen['bars'] * $this->spec->timeframe->seconds() < $bars * ($longest ?? $this->spec->timeframe)->seconds()) {
+        if ($bars * ($longest ?? $this->spec->timeframe)->seconds() > $seen['bars'] * $this->spec->timeframe->seconds()) {
             return false;
         }
 

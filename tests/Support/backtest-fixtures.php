@@ -105,3 +105,27 @@ const EMA_CROSS_DOCUMENT = <<<'YAML'
       take_profit: 2R
       when: ema($fast) crosses_below ema($slow)
     YAML;
+
+const UNIVERSE_DOCUMENT = <<<'YAML'
+    strategy: xs-momentum-test
+    title: Cross-sectional momentum
+    family: trend
+    hypothesis: The perpetuals that rose most over a week keep rising against those that fell most.
+    fails_when: Sharp reversals of the whole market.
+
+    universe: { rule: top, n: 50, by: quote_volume_30d }
+    timeframe: 4h
+
+    entries:
+      long:
+        when: top(5, roc(42))
+      short:
+        when: bottom(5, roc(42))
+
+    exits:
+      stop_loss: 2 * atr(14)
+      when: rank(roc(42)) > 10 and rank(roc(42)) <= count - 10
+
+    sizing:
+      risk_per_trade: 0.3%
+    YAML;

@@ -32,7 +32,9 @@ million minutes, about 15 GB, instead of about 40 GB to today.
 
 ## 3. Storage at scale (D-90)
 
-50 perpetuals over two years of 1-minute candles are about 52 million rows, about 11 GB. `candles` is partitioned by
+50 perpetuals over two years of 1-minute candles are about 52 million rows, about 11 GB. The universe is point in
+time, so more than 50 are stored: the top 50 from 2024-11 has had 300 members over 435 membership spans, about 15 GB
+of 1-minute candles (D-89 imports a member only over the months it was in). `candles` is partitioned by
 month on `open_time` (PostgreSQL declarative partitioning, no extension). `daily_stats` (per instrument per day:
 open, high, low, close, quote volume, trades, average funding, open interest) serves rankings, screens and listing
 studies without reading minutes; it is filled for every symbol from the daily kline archives. The feed reads many
@@ -44,7 +46,7 @@ instruments with a server-side cursor in hour chunks. `start-local.ps1` gives Po
 | Data | Source | History | Stored |
 |------|--------|---------|--------|
 | Order book depth | `futures/um/daily/bookDepth` archives | from 2023, most symbols | `book_depth`: bid and ask notional within 1, 2 and 5 % of the price, per instrument per 5 minutes |
-| Long/short and taker ratios | `futures/um/daily/metrics` archives (already read for open interest) | as open interest | columns of `open_interest` |
+| Long/short and taker ratios | `futures/um/daily/metrics` archives (already read for open interest) | as open interest | table `positioning` |
 | Liquidations | `!forceOrder@arr` on `wss://fstream.binance.com/market` | from the day collection starts; Binance publishes none before | `liquidation_minutes`: long and short count and notional per instrument per minute |
 
 Binance sends at most one liquidation per symbol per second on that stream, so the liquidation series is a lower
@@ -68,14 +70,23 @@ exits:
 
 - `universe:` replaces `market.instruments`; the rule is part of the version, membership comes from
   `universe_members` at each decision.
-- `rank(expr)` (1 is the highest), `percentile(expr)`, `top(n, expr)`, `bottom(n, expr)` exist only in a universe
-  strategy. At each close of the strategy's timeframe the engine evaluates every member, then ranks them (decimals,
-  ties broken by symbol), then decides.
+- `rank(expr)` (1 is the highest), `percentile(expr)`, `top(n, expr)`, `bottom(n, expr)` and `count` exist only in
+  a universe strategy. At each close of the strategy's timeframe every member's ranked values are worked out, then
+  the members are ranked (decimals, ties broken by symbol), then every member decides
+  (`App\Strategy\Dsl\Compiler\UniverseStrategy`, `CrossSectionalStrategy::onCloses`).
 - Exits and stop moves of the batch go first. Entries go in rank order once those closes have filled, so freed
   positions and risk go to the best ranked. Every entry has a stop, as everywhere.
-- A member enters the ranking after its warmup; a delisting closes its position at the last price before
-  `delisted_at`.
+- The order of entries is the rank in the first ranking of that side's `when`, else of `filters`; `bottom` counts
+  from the lowest; a long goes before a short of the same place, then by symbol.
+- A member enters the ranking in the months it is a member (`universe_members`, by the month of the close in UTC)
+  and after its warmup in candles without a gap; a gap starts its history again.
+- A position in an instrument that left the universe is closed (`universe.left`). A delisting closes its position
+  at the last price before `delisted_at`.
 - Per-symbol strategies run exactly as before; the golden reports do not move.
+
+Status: the document, the type rules, the compiler and the read-back are done (step 5). The engine batch, the
+backtest and the gates over a universe are step 6: until then a universe strategy compiles and reads back but a run
+is refused, because nothing gives it its members.
 
 ## 6. Research over MCP (D-93)
 
@@ -94,6 +105,6 @@ it looks.
 
 | Work | Estimate |
 |------|----------|
-| Import of 50 perpetuals x 2 years | about 11 GB in PostgreSQL, several hours, once |
+| Import of the top 50 from 2024-11, point in time (300 members, 435 spans) | about 15 GB in PostgreSQL, several hours, once |
 | Backtest of a universe strategy over 2 years | 1 to 2 hours |
 | Gates | many hours; run them in the background |

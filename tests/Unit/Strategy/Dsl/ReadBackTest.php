@@ -108,3 +108,33 @@ it('reads the scalping functions in words (D-79)', function (): void {
         ->and($text)->toContain('the volume delta of the last 4 candles is above 0')
         ->and($text)->toContain('the close is above the mark price times 0.999');
 });
+
+it('reads a universe strategy as a rule and a decision for each member (D-92)', function (): void {
+    $spec = readBackSpec(<<<'YAML'
+        strategy: test
+        title: Test
+        family: trend
+        hypothesis: Test.
+        fails_when: Never.
+        universe: { rule: top, n: 50, by: quote_volume_30d }
+        timeframe: 4h
+        filters:
+          - percentile(volume) > 50%
+        entries:
+          long:
+            when: top(5, roc(42))
+          short:
+            when: bottom(1, roc(42) on 1d)
+        exits:
+          stop_loss: 2 * atr(14)
+          when: rank(roc(42)) > 10 and rank(roc(42)) <= count - 10
+        YAML);
+
+    expect(ReadBack::render($spec))->toBe(
+        'On the top 50 USDT perpetuals by 30-day quote volume, re-ranked on the first day of each month, every time a 4-hour candle closes, for each member: '
+        .'if its percentile by volume is above 50 %, buy at market when it is among the 5 members with the highest rate of change(42), '
+        .'and sell short at market when it is the member with the lowest daily rate of change(42). '
+        .'Risk per trade and position size follow the account policy. Stop 2 times ATR(14) below the entry for a long and above it for a short, on the exchange. '
+        .'Leave when its rank by rate of change(42) is above 10 and its rank by rate of change(42) is at or below the number of members ranked minus 10.'
+    );
+});
