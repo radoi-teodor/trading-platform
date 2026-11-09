@@ -64,6 +64,15 @@ npm run build               # Vite and Tailwind, IBM Plex fonts bundled
 npm run e2e                 # Playwright: every screen at six widths on the scratch database trading_e2e
 ```
 
+On Windows without Docker (D-85), `.\start-local.ps1` does the setup on its first run and starts the platform on
+every run: a portable PostgreSQL 17 in `%LOCALAPPDATA%\TradingPlatform` (no service, no administrator rights; the
+databases `trading`, `trading_test` and `trading_e2e`), `.env` with the cache and the default queue on the
+database instead of Redis, the dependencies, the app key, the front-end build and pending migrations. Then it runs
+the web process on http://127.0.0.1:8000, the simulation worker and the notifications worker in one window, and
+restarts one that dies. Ctrl+C stops them and PostgreSQL; `.\start-local.ps1 -Stop` does it after the window was
+closed. `-Stream` adds the market data streams and the scheduler, `-Scheduler` the scheduler alone, `-Engine paper`
+an engine. Create the operator once with `php artisan user:create <email>`.
+
 `php artisan serve` starts the web process; `/up` is the health check. The screens are Chart, Strategies, Account
 and Settings (`runbook.md` section 13).
 

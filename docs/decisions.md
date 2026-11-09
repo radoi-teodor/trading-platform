@@ -555,6 +555,14 @@ from the archives is unaffected; the days the stream recorded keep the stream's 
 minute's flow, mark and premium, and at each 5-minute mark for the open interest, on the instruments where a
 strategy reads them, as it waits for candles (D-67).
 
+**D-85. Running on Windows without Docker** (2026-11-09, accepted; amends D-27 for the operator's Windows machine)
+The operator's Windows machine has no Docker, and installing it needs administrator rights. `start-local.ps1` runs
+the official PostgreSQL 17 binaries from a folder in `%LOCALAPPDATA%`, started and stopped by the script, and no
+Redis: nothing in the code talks to Redis directly, so the cache and the default queue use the database, as runbook
+section 2 already allows. The processes run under `concurrently`, which restarts one that dies; the scheduler
+starts with the streams, because without them `platform:health` fails every minute. Docker Compose stays the setup
+for every other machine and for CI.
+
 ## Open
 
 | Id | Question | Blocks |
