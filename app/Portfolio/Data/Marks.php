@@ -19,6 +19,16 @@ final readonly class Marks
         return new self($this->quote, [...$this->prices, (string) $symbol => $price]);
     }
 
+    /**
+     * The prices of one minute, taken together: the prices are copied once, not once for each instrument.
+     *
+     * @param  array<string, Price>  $prices  keyed by unified symbol
+     */
+    public function withAll(array $prices): self
+    {
+        return new self($this->quote, array_replace($this->prices, $prices));
+    }
+
     public function priceOf(Asset $asset): ?Price
     {
         return $this->priceOfCode($asset->code);

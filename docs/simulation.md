@@ -188,8 +188,9 @@ Every report compares the strategy with:
 - cash (zero return), because staying flat is always an option.
 
 Buy and hold and the trend rule run through the same engine, with the benchmark risk profile: all free quote in
-one position, no stop, no loss halts, backtests only (D-40). They read the same candles in the same pass as the
-strategy. The trend rule needs 200 days before the window; when the data does not reach that far, the report says
+one position, no stop, no loss halts, backtests only (D-40). They run in the same pass as the strategy, each on
+the candles of the instruments it follows and no others, so a benchmark next to a strategy over fifty instruments
+does not pay for the fifty. The trend rule needs 200 days before the window; when the data does not reach that far, the report says
 the comparison is missing and why.
 
 A strategy that does not beat cash after costs and risk is not promoted, however busy it looks.
@@ -205,5 +206,8 @@ A strategy that does not beat cash after costs and risk is not promoted, however
   2026-10-01 with its two spot benchmarks reads 1,978,560 candles in 206 to 219 s (short 50/200 rule, short Donchian);
   the funding carry, which follows spot and perpetual, takes 219 to 236 s. About 36 µs per candle and account, below
   the spot runs' 50 µs.
+- A universe strategy, measured on 2026-11-10 on the operator's machine with candles from memory: 50 instruments
+  over 2 days with two spot benchmarks, 146,880 candles in 4.2 s, about 29 µs per candle
+  (`docs/universe.md`, section 5).
 - A 3-year walk-forward with a 50-point parameter neighbourhood: under 30 minutes, spread over the `simulation`
   queue workers. To be measured in Phase 3, where walk-forward is built.

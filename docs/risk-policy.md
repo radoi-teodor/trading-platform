@@ -54,6 +54,10 @@ trigger long before the exchange liquidates.
 | Reconciliation | A mismatch not resolved within 2 events | Halt the account and alert |
 | Clock skew | Local clock more than 1 s away from the exchange server time | Halt the account and alert |
 
+Price sanity and volatility shock are kept for each instrument as a sorted window of the last 15 closes and a
+running sum of the last 60 ranges. That is how they are computed, not what they say: a test compares them minute
+by minute with sorting and summing every time (`tests/Support/ReferenceMarketBreakers.php`).
+
 ## 4. Pre-trade checks on every order
 
 - Quantity rounded down to the lot step; notional at least the exchange minimum.
@@ -61,6 +65,8 @@ trigger long before the exchange liquidates.
 - Exits on perpetuals are reduce-only.
 - Client order id unique and derived from the decision id, so a retry cannot double an order.
 - At most one entry intent per strategy, instrument and candle.
+- No entry in the 60 minutes before an instrument stops trading (reason `delisting`); a position in it is closed
+  in that hour (`docs/universe.md`, section 5).
 - The account mode matches the venue: a live venue refuses an engine started in paper mode and the reverse.
 
 ## 5. Kill switch

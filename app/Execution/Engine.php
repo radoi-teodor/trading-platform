@@ -191,11 +191,15 @@ final class Engine
             $this->log->event(new EngineRecord($time, 'entry_expired', "{$order->id} of {$order->strategy}"));
         }
 
+        $closes = [];
+
         foreach ($event->candles as $symbol => $candle) {
             $parsed = $this->symbols[$symbol] ??= Symbol::parse($symbol);
-            $this->marks = $this->marks->with($parsed, $candle->close);
+            $closes[(string) $parsed] = $candle->close;
             $this->ledger->observe($parsed, $candle->high, $candle->low);
         }
+
+        $this->marks = $this->marks->withAll($closes);
 
         foreach ($event->funding as $symbol => $rate) {
             $this->funding[$symbol] = $rate;

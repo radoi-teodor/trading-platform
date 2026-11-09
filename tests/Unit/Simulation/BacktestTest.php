@@ -85,6 +85,30 @@ it('runs the strategy and its benchmarks over the same candles, trading only ins
         ->and($result->benchmarks[0]->ledger->balance(Asset::of('USDT'))->isLessThan(Decimal::of('5')))->toBeTrue();
 });
 
+it('gives a benchmark the candles of what it follows and no others, and the strategy every candle', function (): void {
+    [$definition, , $benchmarks, $rules, $candles] = backtestSetup();
+    $btc = Symbol::parse('BTC/USDT');
+    $eth = Symbol::parse('ETH/USDT');
+    $rules['ETH/USDT'] = new RulesHistory($eth, [new InstrumentRules(
+        CarbonImmutable::parse('2026-11-08', 'UTC'), Decimal::of('0.01'), Decimal::of('0.001'), Decimal::of('0.001'), null, Decimal::of('5'),
+    )]);
+    $both = new Participant('strategy', new ScriptedStrategy([], symbols: [$btc, $eth]), $definition->policy, $definition->warmupFrom);
+    $alone = new Participant('strategy', new ScriptedStrategy([]), $definition->policy, $definition->warmupFrom);
+    $other = CandleFactory::walk('2026-10-01 00:00:00', 180, seed: 9, price: '20.00');
+
+    $wide = (new Backtest(new InMemoryCandleFeed(['BTC/USDT' => $candles, 'ETH/USDT' => $other])))->run($definition, $both, $rules, $benchmarks);
+    $narrow = (new Backtest(new InMemoryCandleFeed(['BTC/USDT' => $candles])))->run($definition, $alone, $rules, $benchmarks);
+    $hold = $wide->benchmarks[0];
+
+    expect($wide->candles)->toBe(360)
+        ->and($wide->main->marks->priceOfSymbol($eth))->not->toBeNull()
+        ->and($hold->marks->priceOfSymbol($eth))->toBeNull()
+        ->and($hold->marks->priceOfSymbol($btc))->not->toBeNull()
+        // What it holds is worth what it is worth in a run of its instrument alone.
+        ->and($hold->ledger->positions())->toHaveCount(1)
+        ->and((string) $hold->ledger->equity($hold->marks))->toBe((string) $narrow->benchmarks[0]->ledger->equity($narrow->benchmarks[0]->marks));
+});
+
 it('fingerprints every candle it read', function (): void {
     [$definition, $main, , $rules, $candles] = backtestSetup();
     $result = (new Backtest(new InMemoryCandleFeed(['BTC/USDT' => $candles])))->run($definition, $main, $rules);

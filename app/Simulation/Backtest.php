@@ -25,6 +25,10 @@ use Carbon\CarbonImmutable;
  * Runs the engine loop over history (D-8): one SimClock, one pass over the candles, and for each participant (the
  * strategy and its benchmarks) its own simulated venue, ledger and engine. Each minute the venues match their
  * orders against the candles first, then the engines handle the minute that just closed (docs/engine.md, section 2).
+ *
+ * The strategy is given every candle of the run. Any other participant is given the candles of the instruments it
+ * follows: a benchmark that holds one instrument next to a strategy over fifty does not pay for the other fifty
+ * every minute, and nothing it does depends on them.
  */
 final readonly class Backtest
 {
@@ -61,6 +65,7 @@ final readonly class Backtest
 
             return [$participant, $venue, $engine, $log, new EquityTracker($spot->amount->plus($futures), $definition->from)];
         }, $participants);
+        $followed = array_map(self::followed(...), $participants);
 
         $fingerprint = hash_init('sha256');
         $candles = 0;
@@ -75,9 +80,10 @@ final readonly class Backtest
                 ])."\n");
             }
 
-            foreach ($runs as [, $venue, $engine, , $tracker]) {
-                $venue->advance($minute);
-                $equity = $engine->handle($minute);
+            foreach ($runs as $index => [, $venue, $engine, , $tracker]) {
+                $seen = $index === 0 ? $minute : $minute->only($followed[$index]);
+                $venue->advance($seen);
+                $equity = $engine->handle($seen);
 
                 if ($minute->closedAt > $definition->from) {
                     $ledger = $engine->ledger();
@@ -92,6 +98,18 @@ final readonly class Backtest
         );
 
         return new BacktestResult(hash_final($fingerprint), $candles, $feedFrom, $results[0], array_slice($results, 1));
+    }
+
+    /** @return array<string, true> the instruments a participant follows, by unified symbol */
+    private static function followed(Participant $participant): array
+    {
+        $symbols = [];
+
+        foreach ($participant->strategy->subscriptions() as $subscription) {
+            $symbols[(string) $subscription->symbol] = true;
+        }
+
+        return $symbols;
     }
 
     /**

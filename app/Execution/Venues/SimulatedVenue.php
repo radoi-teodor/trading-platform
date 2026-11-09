@@ -67,6 +67,9 @@ final class SimulatedVenue implements Venue
     /** @var array<string, Asset> */
     private array $assets = [];
 
+    /** @var array<string, Symbol> the symbols of the minutes seen, read once each */
+    private array $symbols = [];
+
     /**
      * @param  array<string, RulesHistory>  $rules  by unified symbol
      * @param  list<Money>  $balances
@@ -221,14 +224,14 @@ final class SimulatedVenue implements Venue
     public function advance(MinuteCandles $minute): void
     {
         foreach ($minute->candles as $symbol => $candle) {
-            $this->match(Symbol::parse($symbol), $candle, $minute->marks[$symbol] ?? null);
+            $this->match($this->symbols[$symbol] ??= Symbol::parse($symbol), $candle, $minute->marks[$symbol] ?? null);
         }
 
         // Funding is valued at the mark when the minute has one, at the last price otherwise (D-44, D-79).
         foreach ($minute->funding as $symbol => $rate) {
             if (isset($minute->candles[$symbol])) {
                 $mark = $minute->marks[$symbol] ?? null;
-                $this->settleFunding(Symbol::parse($symbol), $rate, $mark === null ? $minute->candles[$symbol]->close : Price::of((string) $mark->close));
+                $this->settleFunding($this->symbols[$symbol] ??= Symbol::parse($symbol), $rate, $mark === null ? $minute->candles[$symbol]->close : Price::of((string) $mark->close));
             }
         }
     }

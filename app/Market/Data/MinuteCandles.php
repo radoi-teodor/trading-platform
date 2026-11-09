@@ -36,4 +36,37 @@ final readonly class MinuteCandles
         public array $depth = [],
         public array $liquidations = [],
     ) {}
+
+    /**
+     * The minute as one who follows only $symbols sees it: every part of it without the other instruments. A minute
+     * that has nothing of another instrument is given back as it is.
+     *
+     * @param  array<string, true>  $symbols  by unified symbol
+     */
+    public function only(array $symbols): self
+    {
+        $parts = [
+            $this->candles, $this->funding, $this->flow, $this->marks, $this->premium, $this->openInterest, $this->positioning, $this->depth,
+            $this->liquidations,
+        ];
+
+        foreach ($parts as $part) {
+            if (array_diff_key($part, $symbols) !== []) {
+                return new self(
+                    $this->closedAt,
+                    array_intersect_key($this->candles, $symbols),
+                    array_intersect_key($this->funding, $symbols),
+                    array_intersect_key($this->flow, $symbols),
+                    array_intersect_key($this->marks, $symbols),
+                    array_intersect_key($this->premium, $symbols),
+                    array_intersect_key($this->openInterest, $symbols),
+                    array_intersect_key($this->positioning, $symbols),
+                    array_intersect_key($this->depth, $symbols),
+                    array_intersect_key($this->liquidations, $symbols),
+                );
+            }
+        }
+
+        return $this;
+    }
 }

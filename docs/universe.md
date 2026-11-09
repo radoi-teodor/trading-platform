@@ -75,7 +75,9 @@ exits:
   the members are ranked (decimals, ties broken by symbol), then every member decides
   (`App\Strategy\Dsl\Compiler\UniverseStrategy`, `CrossSectionalStrategy::onCloses`).
 - Exits and stop moves of the batch go first. Entries go in rank order once those closes have filled, so freed
-  positions and risk go to the best ranked. Every entry has a stop, as everywhere.
+  positions and risk go to the best ranked. Every entry has a stop, as everywhere. When a close of the batch went
+  to the venue, the entries wait one minute for it; they are held in the engine's memory, so a process that stops
+  in that minute does not place them.
 - The order of entries is the rank in the first ranking of that side's `when`, else of `filters`; `bottom` counts
   from the lowest; a long goes before a short of the same place, then by symbol.
 - A member enters the ranking in the months it is a member (`universe_members`, by the month of the close in UTC)
@@ -104,6 +106,14 @@ exits:
   first when the history starts.
 - Background runs (D-62): a run over a universe has six hours instead of one, and a backtest or grid of more than
   40,000 instrument-days (instruments times days; the top 50 over two years is 36,500) is refused at submission.
+- Speed. The strategy is given every candle of the run; a benchmark is given the candles of the instrument it
+  holds and no others. The price sanity and volatility shock breakers keep a sorted window and a running sum for
+  each instrument instead of sorting and summing every minute; they say what they said before, minute by minute
+  (`MarketBreakersTest` holds the two together). Measured on 2026-11-10 on the operator's machine, 50 synthetic
+  members over 2 days, a 1h strategy, candles from memory: 144,000 candles in 3.6 s, and 4.2 s with two spot
+  benchmarks (6.5 s and 9.4 s before). That is about 40,000 candles a second, so the engine's part of the top 50
+  over two years (52.6 million candles) is about 25 minutes; reading them from PostgreSQL comes on top and is
+  measured in step 8.
 
 ### On an account
 
@@ -135,5 +145,5 @@ it looks.
 | Work | Estimate |
 |------|----------|
 | Import of the top 50 from 2024-11, point in time (300 members, 435 spans) | about 15 GB in PostgreSQL, several hours, once |
-| Backtest of a universe strategy over 2 years | 1 to 2 hours |
+| Backtest of a universe strategy over 2 years | about 25 minutes in the engine (measured on synthetic candles, section 5), plus the reading of 52.6 million candles; under an hour expected, measured in step 8 |
 | Gates | many hours; run them in the background |
