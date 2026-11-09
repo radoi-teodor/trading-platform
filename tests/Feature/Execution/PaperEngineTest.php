@@ -3,7 +3,9 @@
 declare(strict_types=1);
 
 use App\Execution\Models\Account;
+use App\Execution\Models\AccountEquity;
 use App\Execution\Models\AccountSnapshot;
+use App\Execution\Models\AccountTrade;
 use App\Execution\Models\Deployment;
 use App\Execution\Models\EngineCommandRow;
 use App\Execution\Models\JournalEntry;
@@ -110,4 +112,29 @@ it('refuses live accounts and accounts it does not know', function (): void {
         ->and(Artisan::output())->toContain('live trading needs phase 6')
         ->and(Artisan::call('engine:run', ['account' => 'other', '--once' => true]))->toBe(1)
         ->and(Artisan::call('account:create', ['name' => 'real', '--mode' => 'live']))->toBe(1);
+});
+
+it('publishes its closed trades and hourly equity, and a restart writes the same rows again (D-76)', function (): void {
+    // The fixture's candles end at 2026-10-04 00:00: one point an hour from the account's start to there.
+    $account = paperAccount();
+    runPaper(['--until' => '2026-10-04 23:00']);
+
+    $trades = AccountTrade::query()->where('account_id', $account->id)->orderBy('seq')->get()->map(fn (AccountTrade $t): array => [...$t->only(['seq', 'strategy', 'label', 'symbol', 'side', 'net', 'fees']), 'closed_at' => $t->closed_at->toIso8601ZuluString()])->all();
+    $equity = AccountEquity::query()->where('account_id', $account->id)->orderBy('at')->get()->map(fn (AccountEquity $e): array => [$e->at->toIso8601ZuluString(), $e->equity])->all();
+
+    expect($trades)->not->toBe([])
+        ->and($trades[0]['label'])->toBe('ema-cross-test@v1')
+        ->and($equity)->toHaveCount(49)
+        ->and($equity[0][0])->toBe('2026-10-02T00:00:00Z')
+        ->and($equity[48][0])->toBe('2026-10-04T00:00:00Z')
+        ->and($equity[48][1])->toBe(AccountSnapshot::query()->sole()->payload['equity'] ?? null);
+
+    // Ending the rows and running again: the replay rebuilds them, identical.
+    AccountTrade::query()->delete();
+    AccountEquity::query()->delete();
+    runPaper(['--until' => '2026-10-04 23:00']);
+    runPaper(['--until' => '2026-10-04 23:00']);
+
+    expect(AccountTrade::query()->orderBy('seq')->get()->map(fn (AccountTrade $t): array => [...$t->only(['seq', 'strategy', 'label', 'symbol', 'side', 'net', 'fees']), 'closed_at' => $t->closed_at->toIso8601ZuluString()])->all())->toBe($trades)
+        ->and(AccountEquity::query()->orderBy('at')->get()->map(fn (AccountEquity $e): array => [$e->at->toIso8601ZuluString(), $e->equity])->all())->toBe($equity);
 });

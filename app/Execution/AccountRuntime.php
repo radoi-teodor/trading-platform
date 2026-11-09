@@ -12,7 +12,9 @@ use App\Execution\Data\EngineRecord;
 use App\Execution\Data\FeeSchedule;
 use App\Execution\Journal\DatabaseDecisionLog;
 use App\Execution\Models\Account;
+use App\Execution\Models\AccountEquity;
 use App\Execution\Models\AccountSnapshot;
+use App\Execution\Models\AccountTrade;
 use App\Execution\Models\Deployment;
 use App\Execution\Venues\CostModel;
 use App\Execution\Venues\SimulatedVenue;
@@ -64,6 +66,15 @@ final class AccountRuntime
 
     public readonly DatabaseDecisionLog $log;
 
+    /** @var array<string, string> equity at each hour closed since the last publish, replay included (D-76) */
+    private array $hourlyEquity = [];
+
+    /** @var array<string, string> each strategy's label by its identity key */
+    private array $labels = [];
+
+    /** Round trips already written to `account_trades` by this process. */
+    private int $publishedTrips = 0;
+
     /**
      * @param  array<array-key, mixed>  $risk  the `account` section of config/risk.php
      * @param  array<array-key, mixed>  $simulation  config/simulation.php
@@ -78,6 +89,10 @@ final class AccountRuntime
 
         $policy = RiskPolicy::account($risk);
         $strategies = $this->strategies($account, $policy);
+
+        foreach ($strategies as $strategy) {
+            $this->labels[$strategy->identity()->key()] = $strategy->identity()->label();
+        }
         $symbols = [];
 
         foreach ($account->symbols as $symbol) {
@@ -162,6 +177,7 @@ final class AccountRuntime
             }
 
             $this->engine->handle($minute, $commands);
+            $this->recordHour($minute->closedAt);
 
             return;
         }
@@ -169,15 +185,51 @@ final class AccountRuntime
         $this->venueClock->advanceTo($minute->closedAt);
         $this->venue?->advance($minute);
         $this->engine->handle($minute, $commands);
+        $this->recordHour($minute->closedAt);
     }
 
-    /** Writes what the UI reads (D-70). */
+    /** Writes what the UI reads (D-70): the snapshot, the trades closed since the last publish and the hours' equity (D-76). */
     public function publish(CarbonImmutable $minute): void
     {
         $payload = self::plain($this->engine->snapshot());
         AccountSnapshot::query()->updateOrCreate(['account_id' => $this->account->id], [
             'minute' => $minute, 'quiet_decisions' => $this->log->quietDecisions, 'payload' => is_array($payload) ? $payload : [], 'updated_at' => $this->clock->now(),
         ]);
+
+        $trips = $this->engine->ledger()->roundTrips();
+        $rows = [];
+
+        foreach (array_slice($trips, $this->publishedTrips, preserve_keys: true) as $seq => $trip) {
+            $rows[] = [
+                'account_id' => $this->account->id, 'seq' => $seq, 'strategy' => $trip->strategy, 'label' => $this->labels[$trip->strategy] ?? $trip->strategy, 'symbol' => (string) $trip->symbol,
+                'side' => $trip->side->value, 'opened_at' => $trip->openedAt, 'closed_at' => $trip->closedAt, 'quantity' => (string) $trip->quantity,
+                'entry_price' => (string) $trip->entryPrice, 'exit_price' => $trip->exitPrice === null ? null : (string) $trip->exitPrice,
+                'gross' => (string) $trip->grossProfit, 'fees' => (string) $trip->fees, 'slippage' => (string) $trip->slippage,
+                'funding' => (string) ($trip->funding ?? Decimal::zero()), 'net' => (string) $trip->netProfit,
+                'r_multiple' => $trip->rMultiple === null ? null : (string) $trip->rMultiple, 'exit_reason' => $trip->exitReason?->value,
+            ];
+        }
+
+        foreach (array_chunk($rows, 500) as $chunk) {
+            AccountTrade::query()->upsert($chunk, ['account_id', 'seq'], array_keys(array_diff_key($chunk[0], ['account_id' => 0, 'seq' => 0])));
+        }
+
+        $this->publishedTrips = count($trips);
+        $points = array_map(fn (string $at, string $equity): array => ['account_id' => $this->account->id, 'at' => $at, 'equity' => $equity], array_keys($this->hourlyEquity), $this->hourlyEquity);
+
+        foreach (array_chunk($points, 500) as $chunk) {
+            AccountEquity::query()->upsert($chunk, ['account_id', 'at'], ['equity']);
+        }
+
+        $this->hourlyEquity = [];
+    }
+
+    private function recordHour(CarbonImmutable $closedAt): void
+    {
+        // From the account's first minute of trading: the hour it starts at is the baseline of every later change.
+        if ($closedAt->minute === 0 && $closedAt->second === 0 && $closedAt >= $this->tradingFrom) {
+            $this->hourlyEquity[$closedAt->toIso8601ZuluString()] = (string) $this->engine->ledger()->equity($this->engine->marks());
+        }
     }
 
     /** @return list<Strategy> the account's active deployments, compiled from their versions with their parameters */

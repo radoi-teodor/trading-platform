@@ -119,6 +119,8 @@ final class RunEngine extends Command
                 }
 
                 $this->info('The replay matches the journal.');
+                // What the replay rebuilt is published at once: the snapshot, and trades and equity lost from the tables (D-76).
+                $runtime->publish($cursor);
             }
 
             while (true) {
