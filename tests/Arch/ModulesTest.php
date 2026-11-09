@@ -37,3 +37,10 @@ foreach (ALLOWED_DEPENDENCIES as $module => $allowed) {
 arch('agents can never reach execution (D-7)', function (): void {
     expect('App\Agents')->not->toUse('App\Execution');
 });
+
+// The forming minute is for the chart only (D-87): whatever decides reads closed candles (D-8, D-67).
+foreach (['Strategy', 'Risk', 'Portfolio', 'Execution', 'Simulation', 'Agents'] as $deciding) {
+    arch("{$deciding} never reads the forming candle (D-87)", function () use ($deciding): void {
+        expect("App\\{$deciding}")->not->toUse('App\Market\FormingCandles');
+    });
+}

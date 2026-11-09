@@ -7,6 +7,7 @@ use App\Market\CandleRepository;
 use App\Market\Data\Candle;
 use App\Market\Data\CandleSource;
 use App\Market\Data\MarketType;
+use App\Market\FormingCandles;
 use App\Market\Models\Instrument;
 use App\Market\Stream\CandleStream;
 use App\Market\Stream\StreamTransport;
@@ -58,6 +59,49 @@ it('stores closed candles only, as coming from the stream', function (): void {
     expect($transport->connectedTo)->toBe(['wss://data-stream.binance.vision/stream?streams=btcusdt@kline_1m/ethusdt@kline_1m'])
         ->and(DB::table('candles')->count())->toBe(1)
         ->and(DB::table('candles')->value('source'))->toBe(CandleSource::Stream->value);
+});
+
+/** A kline stream message for BTCUSDT at 15:03, still forming unless $closed. */
+function klineMessage(string $close, bool $closed = false): string
+{
+    return json_encode(['stream' => 'btcusdt@kline_1m', 'data' => ['e' => 'kline', 'E' => 1794150186096, 's' => 'BTCUSDT', 'k' => [
+        't' => 1794150180000, 'T' => 1794150239999, 's' => 'BTCUSDT', 'i' => '1m', 'o' => '100', 'c' => $close, 'h' => '110', 'l' => '90',
+        'v' => '2', 'n' => 5, 'x' => $closed, 'q' => '200', 'V' => '1', 'Q' => '100', 'B' => '0',
+    ]]], JSON_THROW_ON_ERROR);
+}
+
+it('keeps the forming minute of each instrument for the chart, at most once a second (D-87)', function (): void {
+    [$stream, , , $btc] = streamWith([[klineMessage('101'), klineMessage('102'), klineMessage('103')]]);
+
+    $stream->run(MarketType::Spot, [$btc], maxSessions: 1);
+    $forming = app(FormingCandles::class)->latest($btc);
+
+    expect(DB::table('candles')->count())->toBe(0)
+        ->and(DB::table('forming_candles')->count())->toBe(1)
+        ->and($forming?->candle->openTime->toIso8601String())->toBe('2026-11-08T15:03:00+00:00')
+        // The clock does not move in this test: the second and third updates fall in the same second.
+        ->and((string) $forming?->candle->close)->toBe('101')
+        ->and($forming?->receivedAt->toIso8601String())->toBe('2026-11-08T15:04:30+00:00');
+});
+
+it('writes the forming minute again once a second has passed, and still stores the closed one', function (): void {
+    [, , , $btc] = streamWith([[klineMessage('101'), klineMessage('102'), klineMessage('104', closed: true)]], '2026-11-08 15:03:10');
+    // A clock that moves a second each time it is read: every update falls in a new second.
+    app()->instance(Clock::class, new class implements Clock
+    {
+        private int $reads = 0;
+
+        public function now(): CarbonImmutable
+        {
+            return CarbonImmutable::parse('2026-11-08 15:03:10', 'UTC')->addSeconds($this->reads++);
+        }
+    });
+
+    app(CandleStream::class)->run(MarketType::Spot, [$btc], maxSessions: 1);
+
+    expect((string) app(FormingCandles::class)->latest($btc)?->candle->close)->toBe('102')
+        ->and(DB::table('candles')->count())->toBe(1)
+        ->and(DB::table('candles')->value('close'))->toStartWith('104');
 });
 
 it('repairs the gap since the last stored candle when it connects', function (): void {

@@ -11,12 +11,14 @@ use App\Market\Binance\Sleeper;
 use App\Market\CandleRepository;
 use App\Market\Data\CandleSource;
 use App\Market\Data\MarketType;
+use App\Market\FormingCandles;
 use App\Market\Heartbeats;
 use App\Market\Models\Instrument;
 use App\Support\Clock\Clock;
 use App\Support\Number\Decimal;
 use App\Support\Timeframe;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\QueryException;
 use Psr\Log\LoggerInterface;
 use UnexpectedValueException;
 
@@ -40,6 +42,9 @@ final class CandleStream
 
     private int $messagesThisSession = 0;
 
+    /** @var array<string, int> the second the forming minute was last written, by venue symbol */
+    private array $formingWrittenAt = [];
+
     public function __construct(
         private readonly StreamTransport $transport,
         private readonly BinanceEndpoints $endpoints,
@@ -50,6 +55,7 @@ final class CandleStream
         private readonly Sleeper $sleeper,
         private readonly LoggerInterface $logger,
         private readonly ScalpingCollector $scalping,
+        private readonly FormingCandles $forming,
     ) {}
 
     /**
@@ -157,12 +163,41 @@ final class CandleStream
             return;
         }
 
-        if ($message === null || ! $message->closed || ! isset($byVenue[$message->venueSymbol])) {
+        if ($message === null || ! isset($byVenue[$message->venueSymbol])) {
+            return;
+        }
+
+        if (! $message->closed) {
+            $this->keepForming($byVenue[$message->venueSymbol], $message, $process);
+
             return;
         }
 
         $this->candles->upsert($byVenue[$message->venueSymbol], CandleSource::Stream, [$message->candle]);
         $this->lastCandleAt = $message->candle->openTime;
+    }
+
+    /**
+     * Keeps the minute still forming for the live chart (D-87), at most once a second per instrument: Binance sends
+     * an update about every second, and the chart reads once a second. It is for display only, so a failed write is
+     * logged and the stream goes on storing closed candles.
+     */
+    private function keepForming(Instrument $instrument, KlineMessage $message, string $process): void
+    {
+        $now = $this->clock->now();
+        $second = $now->getTimestamp();
+
+        if (($this->formingWrittenAt[$message->venueSymbol] ?? null) === $second) {
+            return;
+        }
+
+        $this->formingWrittenAt[$message->venueSymbol] = $second;
+
+        try {
+            $this->forming->put($instrument, $message->candle, $now);
+        } catch (QueryException $failure) {
+            $this->logger->error("{$process}: the forming candle could not be kept", ['symbol' => $message->venueSymbol, 'error' => $failure->getMessage()]);
+        }
     }
 
     /** @param list<Instrument> $instruments */
