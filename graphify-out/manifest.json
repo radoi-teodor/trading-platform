@@ -1322,9 +1322,9 @@
     "semantic_hash": "7a16c82c5d795ba30bf07aded760731f"
   },
   "routes/web.php": {
-    "mtime": 1794193458.70075,
-    "seen": 1794193957.4397469,
-    "ast_hash": "7cf27f9e11fbbbcb9d65edaf4f2160a9",
+    "mtime": 1794216664.2465067,
+    "seen": 1794217226.8822694,
+    "ast_hash": "504ed32ff17f13704c1be3f37e0801ca",
     "semantic_hash": ""
   },
   "tests/Arch/DomainPurityTest.php": {
@@ -1540,9 +1540,9 @@
     "ast_empty": true
   },
   "tests/Pest.php": {
-    "mtime": 1794172633.1189654,
-    "seen": 1794172862.2409446,
-    "ast_hash": "77d67a8604ac10d3f065bf15d12f5176",
+    "mtime": 1794216576.740743,
+    "seen": 1794217226.8834288,
+    "ast_hash": "37afd0a3a51d5fdbb57877825a1afba6",
     "semantic_hash": ""
   },
   "tests/Support/ArchiveFactory.php": {
@@ -3196,15 +3196,15 @@
     "semantic_hash": ""
   },
   "resources/views/layouts/app.blade.php": {
-    "mtime": 1794194227.29087,
-    "seen": 1794195823.5707998,
-    "ast_hash": "1168bcb452efda3b8248ddf5175bf9eb",
+    "mtime": 1794216664.246999,
+    "seen": 1794217226.8821392,
+    "ast_hash": "9fcb92c7daebdae2b859d0ad28f4dd0e",
     "semantic_hash": ""
   },
   "resources/views/livewire/account-screen.blade.php": {
-    "mtime": 1794194669.699596,
-    "seen": 1794195823.5708015,
-    "ast_hash": "846a9a11e9571a598101fb3b08ca38d0",
+    "mtime": 1794216716.6216,
+    "seen": 1794217226.8821406,
+    "ast_hash": "8c4566d6f24f7a30a7c55a56ded5ebba",
     "semantic_hash": ""
   },
   "resources/views/livewire/chart-screen.blade.php": {
@@ -3232,9 +3232,9 @@
     "semantic_hash": ""
   },
   "tests/Feature/Web/ScreensTest.php": {
-    "mtime": 1794193951.5239592,
-    "seen": 1794193957.4403377,
-    "ast_hash": "2cf51c1ab461021ca9dc7a9dbf68fc7a",
+    "mtime": 1794216588.6023712,
+    "seen": 1794217226.8829992,
+    "ast_hash": "463b5948ac9d7f5e2768f6f78d497f8a",
     "semantic_hash": ""
   },
   "app/Agents/Tokens.php": {
@@ -3289,6 +3289,30 @@
     "mtime": 1794216397.995257,
     "seen": 1794216415.9856696,
     "ast_hash": "13ebcc0a81f78b8f2357fbd22ac64f8e",
+    "semantic_hash": ""
+  },
+  "app/Livewire/SettingsScreen.php": {
+    "mtime": 1794216664.2460182,
+    "seen": 1794217226.8749714,
+    "ast_hash": "13b5876c55c56661b2f5a6c9bfaf7bd3",
+    "semantic_hash": ""
+  },
+  "resources/views/livewire/settings-screen.blade.php": {
+    "mtime": 1794216699.4662235,
+    "seen": 1794217226.8822064,
+    "ast_hash": "6f6bc3d4d2209423673b50ee70848805",
+    "semantic_hash": ""
+  },
+  "tests/Feature/Web/SettingsScreenTest.php": {
+    "mtime": 1794216726.8046575,
+    "seen": 1794217226.8830016,
+    "ast_hash": "d17eb061b58938e32498a22dc708193a",
+    "semantic_hash": ""
+  },
+  "tests/Support/web.php": {
+    "mtime": 1794216576.7403352,
+    "seen": 1794217226.8837094,
+    "ast_hash": "b3caffa3fff0ec5ab465c003bd133aa0",
     "semantic_hash": ""
   },
   "package-lock.json": {

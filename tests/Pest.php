@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 require_once __DIR__.'/Support/backtest-fixtures.php';
+require_once __DIR__.'/Support/web.php';
 
 pest()->extend(TestCase::class)
     ->beforeEach(fn () => Http::preventStrayRequests())

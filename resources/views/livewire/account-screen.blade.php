@@ -1,6 +1,6 @@
 <div class="flex flex-col gap-3" wire:poll.2s>
     @if ($current === null)
-        <div class="rounded-card border border-border bg-surface p-card text-sm text-muted">No account yet. Create one with <span class="font-mono">php artisan account:create paper</span>.</div>
+        <div class="rounded-card border border-border bg-surface p-card text-sm text-muted">No account yet. Open one on the <a href="{{ route('settings') }}" class="text-accent hover:underline">Settings</a> screen.</div>
     @else
         @php($p = $snapshot?->payload ?? [])
         <div class="flex flex-wrap items-center gap-2 rounded-card border border-border bg-surface p-card">

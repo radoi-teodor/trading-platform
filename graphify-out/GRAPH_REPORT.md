@@ -1,29 +1,29 @@
 # Graph Report - trading-platform  (2026-11-09)
 
 ## Corpus Check
-- 527 files · ~216,391 words
+- 531 files · ~218,752 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 92 file(s) not represented in the graph (top: .zip 34, .CHECKSUM 34, (none) 18)
 
 ## Summary
-- 4219 nodes · 14449 edges · 190 communities (145 shown, 45 thin omitted)
-- Extraction: 93% EXTRACTED · 7% INFERRED · 0% AMBIGUOUS · INFERRED: 1068 edges (avg confidence: 0.85)
+- 4263 nodes · 14595 edges · 178 communities (132 shown, 46 thin omitted)
+- Extraction: 92% EXTRACTED · 8% INFERRED · 0% AMBIGUOUS · INFERRED: 1097 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `1b3a4430`
+- Built from commit: `24fd4e8f`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - .of
 - EngineTest.php
-- Clock
+- Illuminate\Console\Command
 - BinanceArchive
-- InstrumentRules
+- .zero
 - .parse
 - DocumentChecker
-- ChartScreen.php
+- ParamKind
 - CompiledStrategy.php
 - SimulatedVenueTest.php
 - Instrument
@@ -41,25 +41,25 @@
 - generate.py
 - ReadBack
 - DonchianBreakout
-- AppServiceProvider.php
+- CandleStreamTest.php
 - FundingCarry
 - Symbol
 - .measure
 - Strategy
-- CandleStreamTest.php
+- PhrityTransport
 - StrategyIdentity
 - .zero
-- OpenAccountTest.php
+- InvalidArgumentException
 - InMemoryDecisionLog
 - ExitReason
 - PaperEngineTest.php
-- BackfillTest.php
-- RiskPolicy
+- SimClock
+- .act
 - BacktestTest.php
-- RejectionReason
+- Position
 - ema-cross-scalp-long.strategy.yaml
 - Decimal
-- .assertSameAsset
+- OrderStatus
 - OrderRole
 - User
 - Illuminate\Database\Eloquent\Model
@@ -68,24 +68,25 @@
 - BinanceRestClientTest.php
 - ema-cross-scalp-short.strategy.yaml
 - EnginePerpTest.php
-- SimClock
+- .of
 - Laravel\Mcp\Response
 - postgres
 - InstrumentRules
-- Illuminate\Console\Command
+- OrderManagerTest.php
 - donchian-breakout-short.strategy.yaml
 - IndicatorReferenceTest.php
-- RunEngine.php
+- BinanceVenueTest.php
 - RunBacktestCommandTest.php
 - TelegramTest.php
-- Universe
+- QualityCheck
+- .isFull
 - .__construct
 - donchian-breakout.strategy.yaml
-- MarketType
+- RiskPolicy
 - CandleRepositoryTest.php
 - App\Strategy\Dsl\Document\DocumentChecker
 - .of
-- Carbon\CarbonImmutable
+- Engine
 - ScreensTest.php
 - ArchiveImportTest.php
 - scripts
@@ -97,7 +98,7 @@
 - postgres
 - ma-trend.strategy.yaml
 - DecimalMath
-- FundingRate
+- CompiledStrategyTest.php
 - App\Support\Number\Decimal
 - pint/composer.json
 - MonteCarlo
@@ -105,55 +106,54 @@
 - Timeframe
 - require-dev
 - scripts-descriptions
-- .evaluate
+- Statistics
 - .fromStrings
 - config
 - uses
 - test
 - with
-- Illuminate\Contracts\Config\Repository
+- PreparesBacktests.php
 - run
-- Engine.php
+- Illuminate\Contracts\JsonSchema\JsonSchema
 - psr-4
 - require
 - DatabaseSeeder
 - steps
 - steps
 - lint
-- CandleFeedTest.php
+- TradingTool
 - ClientOrderId
 - StrategyLibrary
 - StrategiesScreen.php
-- RiskState
+- .compute
 - buy-and-hold.strategy.yaml
 - ChartSeriesTest.php
 - TokensTest.php
-- StrategyGates.php
+- GridBacktest.php
 - AppServiceProvider.php
 - Illuminate\Support\Facades\Schema
 - Illuminate\Database\Migrations\Migration
-- .sqrt
+- StrategyVersion
 - funding-carry.strategy.yaml
 - McpServerTest.php
-- Illuminate\Http\Client\Request
-- .zero
+- SettingsScreenTest.php
+- MonteCarlo.php
 - TelegramSettings
-- PreparesBacktests.php
-- ReadBackTest.php
+- Marks
+- settings-screen.blade.php
 - 0001_01_01_000000_create_users_table.php
 - TradingServer.php
 - .encode
 - MarketBreakers
-- BinanceArchive.php
-- StrategySpec
+- BinanceRestClient
+- Clock
 - Account
-- DatabaseCandleFeed
-- .times
-- InvalidArgumentException
-- WalkForward.php
+- Carbon\CarbonImmutable
+- Percent
+- Quantity
+- .__construct
 - 0001_01_01_000002_create_jobs_table.php
-- Agents/TokensTest.php
-- OpenLong
+- Illuminate\Foundation\Testing\RefreshDatabase
 - 0001_01_01_000001_create_cache_table.php
 - 2026_11_08_000004_create_strategy_versions_tables.php
 - 2026_11_08_000006_create_mcp_tables.php
@@ -164,23 +164,12 @@
 - app.blade.php
 - halt
 - remove
-- account-screen.blade.php
-- ExchangeVerificationTest.php
-- QualityCheck
-- .assessEntry
-- .evaluate
-- GoldenReportsTest.php
-- .benchmark
+- command
+- CompiledStrategy
 - SimulationJobsTest.php
 - DocumentCheckerTest.php
-- .handle
 - DirectionalMovement
-- TelegramNotifier
-- Illuminate\Foundation\Testing\RefreshDatabase
-- MinuteCandles
-- VolumeProfile
-- .account
-- EngineMode
+- BarIndicator
 - 2026_11_09_000011_create_notification_settings_table.php
 
 ## God Nodes (most connected - your core abstractions)
@@ -210,83 +199,83 @@
 ## Import Cycles
 - None detected.
 
-## Communities (190 total, 45 thin omitted)
+## Communities (178 total, 46 thin omitted)
 
 ### Community 0 - ".of"
-Cohesion: 0.27
-Nodes (35): account(), accountPolicy(), {closure#1}(), {closure#10}(), {closure#11}(), {closure#12}(), {closure#2}(), {closure#21}() (+27 more)
+Cohesion: 0.05
+Nodes (83): AccountView, RejectionReason, BelowMinimum, Breaker, Cooldown, DuplicateIntent, EntryWorking, GrossExposure (+75 more)
 
 ### Community 1 - "EngineTest.php"
-Cohesion: 0.13
-Nodes (35): ScriptedStrategy, {closure#1}(), {closure#10}(), {closure#13}(), {closure#14}(), {closure#16}(), {closure#17}(), {closure#2}() (+27 more)
+Cohesion: 0.12
+Nodes (36): ScriptedStrategy, {closure#10}(), {closure#13}(), {closure#14}(), {closure#16}(), {closure#17}(), {closure#2}(), {closure#20}() (+28 more)
 
-### Community 2 - "Clock"
+### Community 2 - "Illuminate\Console\Command"
 Cohesion: 0.08
-Nodes (18): FlattenEngine, HaltEngine, IssuesCommands, PauseStrategy, ResumeEngine, CommandKind, Flatten, Halt (+10 more)
+Nodes (16): CreateMcpToken, FlattenEngine, HaltEngine, IssuesCommands, PauseStrategy, ResumeEngine, {closure#5}(), CommandKind (+8 more)
 
 ### Community 3 - "BinanceArchive"
-Cohesion: 0.06
-Nodes (15): ReplayDivergence, ArchiveMissing, ArchivePeriod, BinanceArchive, ChecksumMismatch, {closure#1}(), {closure#2}(), {closure#3}() (+7 more)
+Cohesion: 0.15
+Nodes (5): ReplayDivergence, ArchiveMissing, BinanceArchive, ChecksumMismatch, VerifyMarketData
 
-### Community 4 - "InstrumentRules"
-Cohesion: 0.08
-Nodes (16): Liquidity, Maker, Taker, OrderStatus, Cancelled, Expired, Filled, New (+8 more)
+### Community 4 - ".zero"
+Cohesion: 0.07
+Nodes (10): SimulatedFuturesBook, SimulatedOrder, {closure#1}(), {closure#3}(), {closure#3}(), MonteCarlo, Perpetual, {closure#5}() (+2 more)
 
 ### Community 5 - ".parse"
-Cohesion: 0.10
-Nodes (42): baselinePairs(), {closure#17}(), {closure#7}(), {closure#9}(), {closure#3}(), {closure#4}(), {closure#5}(), {closure#6}() (+34 more)
+Cohesion: 0.11
+Nodes (37): {closure#1}(), baselinePairs(), {closure#17}(), carryDecisions(), {closure#10}(), {closure#11}(), {closure#12}(), {closure#13}() (+29 more)
 
-### Community 7 - "ChartScreen.php"
-Cohesion: 0.06
-Nodes (27): {closure#2}(), ChartScreen, {closure#2}(), {closure#3}(), {closure#4}(), {closure#5}(), FunctionSpec, Group (+19 more)
+### Community 7 - "ParamKind"
+Cohesion: 0.17
+Nodes (10): {closure#2}(), ParamKind, Anchor, Count, Duration, Number, Percent, Series (+2 more)
 
 ### Community 8 - "CompiledStrategy.php"
-Cohesion: 0.15
+Cohesion: 0.21
 Nodes (3): {closure#33}(), Compiler, Program
 
 ### Community 9 - "SimulatedVenueTest.php"
-Cohesion: 0.10
-Nodes (71): Side, Buy, Sell, btc(), {closure#1}(), {closure#10}(), {closure#11}(), {closure#12}() (+63 more)
+Cohesion: 0.15
+Nodes (43): btc(), {closure#1}(), {closure#10}(), {closure#11}(), {closure#12}(), {closure#13}(), {closure#15}(), {closure#16}() (+35 more)
 
 ### Community 10 - "Instrument"
-Cohesion: 0.07
-Nodes (15): Backfill, BackfillStep, {closure#1}(), {closure#2}(), {closure#3}(), {closure#4}(), CandleSource, Archive (+7 more)
+Cohesion: 0.06
+Nodes (17): Backfill, BackfillReport, BackfillStep, CandleRepository, {closure#1}(), {closure#2}(), {closure#3}(), {closure#4}() (+9 more)
 
 ### Community 11 - "SimulatedPerpVenueTest.php"
 Cohesion: 0.21
 Nodes (24): {closure#10}(), {closure#11}(), {closure#12}(), {closure#13}(), {closure#14}(), {closure#15}(), {closure#18}(), {closure#19}() (+16 more)
 
 ### Community 12 - "Candle"
-Cohesion: 0.11
-Nodes (30): Candle, InvalidCandle, {closure#9}(), {closure#1}(), {closure#42}(), candleWith(), {closure#1}(), {closure#10}() (+22 more)
+Cohesion: 0.13
+Nodes (30): Candle, {closure#9}(), {closure#1}(), {closure#42}(), candleWith(), {closure#1}(), {closure#10}(), {closure#11}() (+22 more)
 
 ### Community 13 - "ExchangeVerificationTest.php"
-Cohesion: 0.19
-Nodes (16): {closure#2}(), {closure#1}(), {closure#10}(), {closure#11}(), {closure#12}(), {closure#13}(), {closure#2}(), {closure#4}() (+8 more)
+Cohesion: 0.10
+Nodes (32): VerificationSource, DailyArchive, Rest, {closure#10}(), {closure#11}(), {closure#12}(), {closure#13}(), {closure#2}() (+24 more)
 
 ### Community 14 - "IndicatorsTest.php"
 Cohesion: 0.09
-Nodes (22): Atr, Donchian, Ema, Sma, {closure#5}(), bar(), {closure#1}(), {closure#10}() (+14 more)
+Nodes (21): Atr, Donchian, Ema, Keltner, Sma, bar(), {closure#1}(), {closure#10}() (+13 more)
 
 ### Community 16 - "Node"
-Cohesion: 0.11
-Nodes (29): Binary, Node, {closure#1}(), {closure#2}(), {closure#3}(), {closure#4}(), {closure#5}(), {closure#6}() (+21 more)
+Cohesion: 0.14
+Nodes (20): Binary, Parser, Token, TokenKind, Colon, Comma, Dot, Duration (+12 more)
 
 ### Community 17 - "PolicyLimits"
-Cohesion: 0.15
-Nodes (9): InstrumentDirectory, PolicyLimits, StrategyRepository, {closure#1}(), {closure#2}(), {closure#3}(), {closure#4}(), versions() (+1 more)
+Cohesion: 0.13
+Nodes (6): InstrumentDirectory, StoredInstruments, CompileStrategy, GridPart, PolicyLimits, StrategyRepository
 
 ### Community 18 - "Position"
 Cohesion: 0.05
-Nodes (22): Argument, BoolLiteral, DurationLiteral, Identifier, Lookback, NumberLiteral, OnTimeframe, Parameter (+14 more)
+Nodes (33): Argument, BoolLiteral, Call, DurationLiteral, Identifier, Lookback, Node, NumberLiteral (+25 more)
 
 ### Community 19 - "MarketType"
-Cohesion: 0.09
-Nodes (12): BinanceRestClient, {closure#1}(), Json, RequestFailed, SyncInstruments, InstrumentDefinition, InstrumentStatus, Delisted (+4 more)
+Cohesion: 0.08
+Nodes (25): {closure#1}(), InstrumentDefinition, InstrumentStatus, Delisted, Halted, Trading, MarketType, Perp (+17 more)
 
 ### Community 20 - "LedgerTest.php"
-Cohesion: 0.16
-Nodes (31): Ledger, LedgerViolation, balanceOf(), {closure#10}(), {closure#11}(), {closure#12}(), {closure#13}(), {closure#14}() (+23 more)
+Cohesion: 0.15
+Nodes (30): Ledger, LedgerViolation, balanceOf(), {closure#10}(), {closure#11}(), {closure#12}(), {closure#13}(), {closure#14}() (+22 more)
 
 ### Community 21 - "Illuminate\Database\Schema\Blueprint"
 Cohesion: 0.19
@@ -297,72 +286,72 @@ Cohesion: 0.08
 Nodes (30): atr(), bars(), bb(), change(), dmi(), donchian(), ema(), highest() (+22 more)
 
 ### Community 23 - "ReadBack"
-Cohesion: 0.10
-Nodes (10): {closure#6}(), {closure#7}(), EntrySpec, Expression, {closure#1}(), {closure#2}(), {closure#5}(), {closure#6}() (+2 more)
+Cohesion: 0.09
+Nodes (11): CarryTemplate, ExitSpec, StrategySpec, ReadBack, {closure#1}(), {closure#2}(), {closure#3}(), {closure#4}() (+3 more)
 
 ### Community 24 - "DonchianBreakout"
-Cohesion: 0.06
-Nodes (8): BuyAndHold, DonchianBreakout, MovingAverageTrend, BuildableStrategy, Subscription, EnterOnceStrategy, HoldStrategy, {closure#1}()
+Cohesion: 0.05
+Nodes (14): BuyAndHold, MovingAverageTrend, BuildableStrategy, Close, EntryOrder, OpenLong, OpenShort, StrategyContext (+6 more)
 
-### Community 25 - "AppServiceProvider.php"
-Cohesion: 0.10
-Nodes (14): BinanceEndpoints, Sleeper, SystemSleeper, {closure#3}(), {closure#4}(), {closure#5}(), {closure#6}(), {closure#1}() (+6 more)
+### Community 25 - "CandleStreamTest.php"
+Cohesion: 0.09
+Nodes (13): BinanceEndpoints, Sleeper, CandleStream, StreamTransport, {closure#4}(), {closure#1}(), {closure#2}(), {closure#4}() (+5 more)
+
+### Community 26 - "FundingCarry"
+Cohesion: 0.16
+Nodes (3): DonchianBreakout, FundingCarry, Parameters
 
 ### Community 27 - "Symbol"
 Cohesion: 0.05
-Nodes (26): Income, IncomeKind, Funding, Liquidation, VenueOrder, VenuePosition, {closure#12}(), {closure#2}() (+18 more)
+Nodes (25): VenuePosition, {closure#1}(), {closure#11}(), {closure#12}(), {closure#2}(), {closure#3}(), {closure#9}(), {closure#2}() (+17 more)
 
 ### Community 28 - ".measure"
-Cohesion: 0.16
-Nodes (8): EquityTracker, Performance, {closure#1}(), {closure#2}(), {closure#5}(), {closure#6}(), {closure#8}(), trackedTwoDays()
+Cohesion: 0.15
+Nodes (9): EquityTracker, Performance, {closure#1}(), {closure#2}(), {closure#3}(), {closure#5}(), {closure#6}(), {closure#8}() (+1 more)
 
 ### Community 29 - "Strategy"
 Cohesion: 0.15
-Nodes (19): Participant, Strategy, baselineDocument(), {closure#10}(), {closure#11}(), {closure#12}(), {closure#14}(), {closure#15}() (+11 more)
-
-### Community 30 - "CandleStreamTest.php"
-Cohesion: 0.07
-Nodes (10): KlineMessage, PhrityTransport, StreamFailed, StreamTransport, FakeTransport, {closure#1}(), {closure#2}(), {closure#3}() (+2 more)
+Nodes (19): {closure#2}(), {closure#3}(), Strategy, baselineDocument(), {closure#10}(), {closure#11}(), {closure#12}(), {closure#14}() (+11 more)
 
 ### Community 31 - "StrategyIdentity"
-Cohesion: 0.17
+Cohesion: 0.18
 Nodes (5): StrategyIdentity, RenamedStrategy, {closure#1}(), {closure#2}(), {closure#3}()
 
 ### Community 32 - ".zero"
-Cohesion: 0.09
-Nodes (20): Cscv, DeflatedSharpe, Normal, closeTo(), {closure#1}(), {closure#10}(), {closure#11}(), {closure#12}() (+12 more)
+Cohesion: 0.13
+Nodes (18): Cscv, DeflatedSharpe, closeTo(), {closure#1}(), {closure#10}(), {closure#11}(), {closure#13}(), {closure#14}() (+10 more)
 
-### Community 33 - "OpenAccountTest.php"
-Cohesion: 0.10
-Nodes (8): OpenAccount, CreateAccount, StoreKeys, {closure#1}(), {closure#2}(), {closure#4}(), {closure#5}(), {closure#6}()
+### Community 33 - "InvalidArgumentException"
+Cohesion: 0.06
+Nodes (9): RevokeMcpToken, Tokens, OpenAccount, CreateAccount, StoreKeys, {closure#2}(), {closure#3}(), SettingsScreen (+1 more)
 
 ### Community 34 - "InMemoryDecisionLog"
-Cohesion: 0.16
-Nodes (9): InMemoryDecisionLog, {closure#1}(), {closure#2}(), BacktestResult, ParticipantResult, {closure#1}(), {closure#2}(), {closure#3}() (+1 more)
+Cohesion: 0.12
+Nodes (13): EngineMode, Backtest, Live, Paper, Testnet, InMemoryDecisionLog, {closure#2}(), BacktestResult (+5 more)
 
 ### Community 35 - "ExitReason"
-Cohesion: 0.22
-Nodes (22): ExitReason, Flatten, Liquidation, Signal, Stop, Target, {closure#1}(), {closure#10}() (+14 more)
+Cohesion: 0.18
+Nodes (26): ExitReason, Flatten, Liquidation, Signal, Stop, Target, {closure#1}(), {closure#10}() (+18 more)
 
 ### Community 36 - "PaperEngineTest.php"
 Cohesion: 0.24
 Nodes (11): JournalEntry, {closure#1}(), {closure#2}(), {closure#3}(), {closure#4}(), {closure#5}(), {closure#6}(), {closure#7}() (+3 more)
 
-### Community 37 - "BackfillTest.php"
-Cohesion: 0.14
-Nodes (14): {closure#11}(), {closure#14}(), {closure#15}(), {closure#16}(), {closure#4}(), {closure#6}(), {closure#7}(), {closure#8}() (+6 more)
+### Community 37 - "SimClock"
+Cohesion: 0.07
+Nodes (32): SimClock, WallClock, {closure#11}(), {closure#14}(), {closure#15}(), {closure#16}(), {closure#4}(), {closure#5}() (+24 more)
 
-### Community 38 - "RiskPolicy"
-Cohesion: 0.15
-Nodes (9): RiskProfile, Account, Benchmark, {closure#1}(), RiskPolicy, {closure#1}(), {closure#2}(), {closure#3}() (+1 more)
+### Community 38 - ".act"
+Cohesion: 0.11
+Nodes (6): DecisionLog, DecisionRecord, IntentRecord, {closure#1}(), DatabaseDecisionLog, Intent
 
 ### Community 39 - "BacktestTest.php"
-Cohesion: 0.13
-Nodes (13): CandleFeed, Backtest, RunDefinition, ReportBuilder, InMemoryCandleFeed, backtestSetup(), {closure#1}(), {closure#11}() (+5 more)
+Cohesion: 0.12
+Nodes (17): FeeSchedule, CostModel, Backtest, RunBacktest, {closure#1}(), RunDefinition, ReportBuilder, InMemoryCandleFeed (+9 more)
 
-### Community 40 - "RejectionReason"
-Cohesion: 0.07
-Nodes (26): RejectionReason, BelowMinimum, Breaker, Cooldown, DuplicateIntent, EntryWorking, GrossExposure, Halted (+18 more)
+### Community 40 - "Position"
+Cohesion: 0.09
+Nodes (17): {closure#1}(), RMultipleLiteral, {closure#1}(), {closure#5}(), {closure#8}(), DslError, Position, YamlList (+9 more)
 
 ### Community 41 - "ema-cross-scalp-long.strategy.yaml"
 Cohesion: 0.06
@@ -370,115 +359,115 @@ Nodes (33): entries, long, exits, stop_loss, take_profit, time_stop, when, fails
 
 ### Community 42 - "Decimal"
 Cohesion: 0.05
-Nodes (40): {closure#6}(), RoundTrip, {closure#1}(), {closure#2}(), {closure#3}(), {closure#10}(), {closure#5}(), {closure#4}() (+32 more)
+Nodes (41): {closure#6}(), {closure#1}(), {closure#2}(), RoundTrip, {closure#1}(), {closure#2}(), {closure#3}(), {closure#10}() (+33 more)
+
+### Community 43 - "OrderStatus"
+Cohesion: 0.08
+Nodes (20): Income, IncomeKind, Funding, Liquidation, Liquidity, Maker, Taker, OrderStatus (+12 more)
 
 ### Community 44 - "OrderRole"
-Cohesion: 0.09
-Nodes (32): OrderRole, Entry, Exit, Flatten, Stop, Target, ProtectionPlan, TrackedOrder (+24 more)
-
-### Community 45 - "User"
-Cohesion: 0.11
-Nodes (3): User, CreateUser, UserFactory
+Cohesion: 0.10
+Nodes (18): OrderRole, Entry, Exit, Flatten, Stop, Target, ProtectionPlan, TrackedOrder (+10 more)
 
 ### Community 46 - "Illuminate\Database\Eloquent\Model"
-Cohesion: 0.07
-Nodes (11): {closure#1}(), McpCall, AccountSnapshot, Deployment, ExchangeKey, {closure#1}(), InstrumentFilter, StrategyGateReport (+3 more)
+Cohesion: 0.09
+Nodes (11): McpCall, AccountSnapshot, Deployment, ExchangeKey, InstrumentFilter, StrategyHoldout, StrategyStage, {closure#1}() (+3 more)
 
 ### Community 47 - "package.json"
 Cohesion: 0.07
 Nodes (37): dependencies, codemirror@^6.0.2, @codemirror/lang-yaml@^6.1.3, @codemirror/language@^6.13.1, @lezer/highlight@^1.2.5, lightweight-charts@^5.2.1, devDependencies, concurrently@^10.0.3 (+29 more)
 
-### Community 48 - "SimulatedVenue"
-Cohesion: 0.06
-Nodes (15): {closure#2}(), Venue, Balance, FeeSchedule, CostModel, SimulatedVenue, ForwardingVenue, {closure#12}() (+7 more)
-
 ### Community 49 - "BinanceRestClientTest.php"
-Cohesion: 0.21
-Nodes (11): binanceClient(), {closure#1}(), {closure#11}(), {closure#13}(), {closure#3}(), {closure#4}(), {closure#5}(), {closure#6}() (+3 more)
+Cohesion: 0.12
+Nodes (16): BinanceRequestFailed, LocationRestricted, RateLimited, RequestFailed, {closure#9}(), binanceClient(), {closure#1}(), {closure#11}() (+8 more)
 
 ### Community 50 - "ema-cross-scalp-short.strategy.yaml"
 Cohesion: 0.06
 Nodes (33): entries, short, exits, stop_loss, take_profit, time_stop, when, fails_when (+25 more)
 
 ### Community 51 - "EnginePerpTest.php"
-Cohesion: 0.28
-Nodes (14): {closure#10}(), {closure#11}(), {closure#14}(), {closure#2}(), {closure#5}(), {closure#6}(), {closure#7}(), {closure#8}() (+6 more)
+Cohesion: 0.26
+Nodes (15): {closure#10}(), {closure#11}(), {closure#12}(), {closure#13}(), {closure#14}(), {closure#5}(), {closure#6}(), {closure#7}() (+7 more)
 
-### Community 52 - "SimClock"
-Cohesion: 0.13
-Nodes (14): SimClock, WallClock, {closure#1}(), {closure#1}(), {closure#2}(), {closure#3}(), definition(), {closure#23}() (+6 more)
+### Community 52 - ".of"
+Cohesion: 0.11
+Nodes (26): {closure#2}(), {closure#8}(), {closure#41}(), {closure#44}(), {closure#45}(), {closure#46}(), {closure#47}(), {closure#48}() (+18 more)
 
 ### Community 53 - "Laravel\Mcp\Response"
-Cohesion: 0.08
-Nodes (14): ChartTool, CompileStrategy, GetCandles, GetFunding, GetIndicators, GetJob, GetStrategy, ListTrials (+6 more)
+Cohesion: 0.15
+Nodes (5): GetIndicators, GetJob, ListInstruments, {closure#1}(), StrategyTrial
 
 ### Community 54 - "postgres"
 Cohesion: 0.10
 Nodes (19): POSTGRES_DB, POSTGRES_PASSWORD, POSTGRES_USER, interval, retries, test, timeout, environment (+11 more)
 
 ### Community 55 - "InstrumentRules"
-Cohesion: 0.19
-Nodes (11): {closure#1}(), {closure#1}(), RulesHistory, {closure#4}(), {closure#41}(), {closure#1}(), {closure#2}(), {closure#3}() (+3 more)
+Cohesion: 0.17
+Nodes (14): InstrumentRules, {closure#1}(), RulesHistory, {closure#1}(), {closure#2}(), {closure#3}(), {closure#5}(), {closure#4}() (+6 more)
 
-### Community 56 - "Illuminate\Console\Command"
-Cohesion: 0.12
-Nodes (9): RevokeMcpToken, CheckMarketData, StoredInstruments, {closure#1}(), CompileStrategy, ExportStrategies, GridPart, {closure#2}() (+1 more)
+### Community 56 - "OrderManagerTest.php"
+Cohesion: 0.36
+Nodes (14): btcUsdt(), {closure#10}(), {closure#15}(), {closure#16}(), {closure#2}(), {closure#4}(), {closure#5}(), {closure#6}() (+6 more)
 
 ### Community 57 - "donchian-breakout-short.strategy.yaml"
 Cohesion: 0.07
 Nodes (26): entries, short, default, range, step, default, range, step (+18 more)
 
 ### Community 58 - "IndicatorReferenceTest.php"
-Cohesion: 0.04
-Nodes (35): {closure#34}(), {closure#36}(), BarIndicator, Bollinger, Change, DonchianChannel, Highest, Hma (+27 more)
+Cohesion: 0.05
+Nodes (26): {closure#34}(), Bollinger, Change, Highest, Hma, Lowest, Macd, Obv (+18 more)
 
-### Community 59 - "RunEngine.php"
-Cohesion: 0.09
-Nodes (8): {closure#4}(), {closure#5}(), RunEngine, Notifier, EngineCommand, EngineCommandRow, BinanceApiError, SignedBinanceClient
+### Community 59 - "BinanceVenueTest.php"
+Cohesion: 0.11
+Nodes (14): {closure#2}(), BinanceVenue, BinanceApiError, BinanceUnreachable, SignedBinanceClient, binanceVenue(), {closure#1}(), {closure#4}() (+6 more)
 
 ### Community 60 - "RunBacktestCommandTest.php"
 Cohesion: 0.18
 Nodes (23): BacktestRun, {closure#4}(), {closure#1}(), {closure#10}(), {closure#11}(), {closure#12}(), {closure#13}(), {closure#14}() (+15 more)
 
 ### Community 61 - "TelegramTest.php"
-Cohesion: 0.14
-Nodes (21): SendTelegram, SettingSource, App, Env, None, {closure#1}(), {closure#10}(), {closure#11}() (+13 more)
+Cohesion: 0.10
+Nodes (29): SendTelegram, App, {closure#3}(), {closure#13}(), {closure#12}(), {closure#2}(), {closure#3}(), {closure#1}() (+21 more)
 
-### Community 62 - "Universe"
-Cohesion: 0.14
-Nodes (7): BackfillReport, BackfillMarketData, SelectsInstruments, {closure#1}(), StreamCandles, VerifyMarketData, Universe
+### Community 62 - "QualityCheck"
+Cohesion: 0.10
+Nodes (8): BackfillMarketData, CheckMarketData, SelectsInstruments, {closure#1}(), StreamCandles, Universe, QualityCheck, QualityReport
+
+### Community 63 - ".isFull"
+Cohesion: 0.11
+Nodes (4): DonchianChannel, Stochastic, Vwma, Window
 
 ### Community 64 - ".__construct"
-Cohesion: 0.13
-Nodes (3): AccountRuntime, DatabaseDecisionLog, WarmingVenue
+Cohesion: 0.09
+Nodes (7): AccountRuntime, {closure#4}(), RunEngine, Notifier, WarmingVenue, CandleFeed, {closure#2}()
 
 ### Community 65 - "donchian-breakout.strategy.yaml"
 Cohesion: 0.07
 Nodes (26): entries, long, default, range, step, default, range, step (+18 more)
 
-### Community 66 - "MarketType"
-Cohesion: 0.21
-Nodes (11): MarketType, Perp, Spot, {closure#1}(), {closure#3}(), goldenMinutes(), goldenRates(), perpetualReferencePrice() (+3 more)
+### Community 66 - "RiskPolicy"
+Cohesion: 0.07
+Nodes (40): RiskProfile, Account, Benchmark, {closure#1}(), RiskPolicy, {closure#2}(), Participant, PerformanceMetrics (+32 more)
 
 ### Community 67 - "CandleRepositoryTest.php"
 Cohesion: 0.28
 Nodes (11): candleStore(), {closure#1}(), {closure#2}(), {closure#3}(), {closure#4}(), {closure#5}(), {closure#6}(), {closure#7}() (+3 more)
 
 ### Community 68 - "App\Strategy\Dsl\Document\DocumentChecker"
-Cohesion: 0.06
-Nodes (35): Call, {closure#1}(), {closure#2}(), {closure#5}(), {closure#3}(), {closure#9}(), ParameterSpec, DslWriter (+27 more)
+Cohesion: 0.05
+Nodes (47): {closure#2}(), {closure#3}(), {closure#1}(), {closure#2}(), {closure#3}(), {closure#4}(), {closure#9}(), ParameterSpec (+39 more)
 
 ### Community 69 - ".of"
-Cohesion: 0.09
-Nodes (22): Marks, Asset, {closure#2}(), {closure#1}(), {closure#25}(), {closure#9}(), usdt(), {closure#11}() (+14 more)
+Cohesion: 0.07
+Nodes (26): {closure#1}(), {closure#2}(), Balance, Asset, AssetMismatch, Money, balances(), {closure#22}() (+18 more)
 
-### Community 70 - "Carbon\CarbonImmutable"
-Cohesion: 0.10
-Nodes (8): DecisionLog, DecisionRecord, EngineRecord, IntentRecord, Engine, {closure#1}(), ReconciliationMismatch, Verdict
+### Community 70 - "Engine"
+Cohesion: 0.14
+Nodes (5): EngineRecord, Engine, ReconciliationMismatch, {closure#2}(), {closure#1}()
 
 ### Community 71 - "ScreensTest.php"
-Cohesion: 0.20
-Nodes (9): {closure#1}(), {closure#2}(), {closure#3}(), {closure#4}(), {closure#5}(), {closure#6}(), operator(), web() (+1 more)
+Cohesion: 0.14
+Nodes (12): {closure#1}(), {closure#2}(), {closure#3}(), {closure#4}(), {closure#5}(), {closure#6}(), {closure#7}(), {closure#1}() (+4 more)
 
 ### Community 72 - "ArchiveImportTest.php"
 Cohesion: 0.29
@@ -493,12 +482,12 @@ Cohesion: 0.07
 Nodes (26): entries, short, exits, stop_loss, when, fails_when, family, default (+18 more)
 
 ### Community 75 - "DslError"
-Cohesion: 0.09
-Nodes (16): {closure#1}(), AstPrinter, {closure#1}(), {closure#4}(), {closure#5}(), {closure#8}(), DslError, Lexer (+8 more)
+Cohesion: 0.19
+Nodes (7): AstPrinter, Lexer, {closure#1}(), {closure#2}(), {closure#3}(), {closure#4}(), sexpr()
 
 ### Community 76 - ".walk"
-Cohesion: 0.16
-Nodes (19): CandleAggregator, CandleSequenceBroken, {closure#3}(), {closure#6}(), CandleFactory, aggregate(), {closure#1}(), {closure#10}() (+11 more)
+Cohesion: 0.20
+Nodes (17): CandleAggregator, CandleSequenceBroken, {closure#6}(), aggregate(), {closure#1}(), {closure#10}(), {closure#11}(), {closure#12}() (+9 more)
 
 ### Community 77 - "composer.json"
 Cohesion: 0.17
@@ -517,15 +506,15 @@ Cohesion: 0.07
 Nodes (26): entries, long, exits, stop_loss, when, fails_when, family, default (+18 more)
 
 ### Community 81 - "DecimalMath"
-Cohesion: 0.16
-Nodes (14): DecimalMath, {closure#1}(), {closure#10}(), {closure#11}(), {closure#12}(), {closure#13}(), {closure#14}(), {closure#2}() (+6 more)
+Cohesion: 0.12
+Nodes (15): Normal, DecimalMath, {closure#1}(), {closure#10}(), {closure#11}(), {closure#12}(), {closure#13}(), {closure#14}() (+7 more)
 
-### Community 82 - "FundingRate"
-Cohesion: 0.09
-Nodes (23): FundingRate, Intent, PositionView, StrategyContext, {closure#1}(), {closure#2}(), {closure#18}(), {closure#37}() (+15 more)
+### Community 82 - "CompiledStrategyTest.php"
+Cohesion: 0.15
+Nodes (16): KnownInstruments, aggregatedBars(), {closure#11}(), {closure#13}(), {closure#16}(), {closure#17}(), {closure#2}(), {closure#3}() (+8 more)
 
 ### Community 83 - "App\Support\Number\Decimal"
-Cohesion: 0.07
+Cohesion: 0.08
 Nodes (40): {closure#1}(), {closure#10}(), {closure#11}(), {closure#12}(), {closure#13}(), {closure#14}(), {closure#15}(), {closure#16}() (+32 more)
 
 ### Community 84 - "pint/composer.json"
@@ -533,16 +522,12 @@ Cohesion: 0.20
 Nodes (9): config, sort-packages, description, license, name, require, laravel/pint, php (+1 more)
 
 ### Community 85 - "MonteCarlo"
-Cohesion: 0.23
-Nodes (9): MonteCarlo, {closure#1}(), {closure#2}(), {closure#3}(), {closure#4}(), {closure#5}(), {closure#6}(), mcDecimals() (+1 more)
-
-### Community 86 - "RunSimulation.php"
-Cohesion: 0.13
-Nodes (3): RunSimulation, SimulationJob, SimulationQueue
+Cohesion: 0.28
+Nodes (8): {closure#1}(), {closure#2}(), {closure#3}(), {closure#4}(), {closure#5}(), {closure#6}(), mcDecimals(), percentiles()
 
 ### Community 87 - "Timeframe"
 Cohesion: 0.08
-Nodes (20): {closure#1}(), {closure#2}(), {closure#3}(), {closure#4}(), CarryTemplate, {closure#2}(), {closure#8}(), Timeframe (+12 more)
+Nodes (20): {closure#1}(), {closure#2}(), {closure#3}(), {closure#3}(), {closure#4}(), {closure#2}(), {closure#8}(), Timeframe (+12 more)
 
 ### Community 88 - "require-dev"
 Cohesion: 0.22
@@ -552,9 +537,9 @@ Nodes (9): require-dev, fakerphp/faker, larastan/larastan, laravel/pail, laravel
 Cohesion: 0.25
 Nodes (8): scripts-descriptions, analyse, format, mutate, test, test:network, test:testnet, tools:install
 
-### Community 90 - ".evaluate"
-Cohesion: 0.24
-Nodes (9): Gates, brokenGate(), {closure#1}(), {closure#3}(), {closure#4}(), {closure#6}(), {closure#7}(), gate() (+1 more)
+### Community 90 - "Statistics"
+Cohesion: 0.13
+Nodes (18): Statistics, Gates, brokenGate(), {closure#1}(), {closure#3}(), {closure#4}(), {closure#6}(), {closure#7}() (+10 more)
 
 ### Community 91 - ".fromStrings"
 Cohesion: 0.18
@@ -576,17 +561,17 @@ Nodes (7): test, php, fail-fast, matrix, name, runs-on, strategy
 Cohesion: 0.29
 Nodes (7): with, cache, coverage, extensions, fetch-depth, node-version, php-version
 
-### Community 96 - "Illuminate\Contracts\Config\Repository"
-Cohesion: 0.11
-Nodes (7): FundingRateRepository, ImportStrategies, PreparesBacktests, PromoteStrategy, {closure#1}(), {closure#2}(), RunBacktest
+### Community 96 - "PreparesBacktests.php"
+Cohesion: 0.13
+Nodes (4): {closure#5}(), {closure#7}(), {closure#8}(), PreparesBacktests
 
 ### Community 97 - "run"
 Cohesion: 0.33
 Nodes (6): name, runs-on, steps, audit, run, steps
 
-### Community 98 - "Engine.php"
-Cohesion: 0.08
-Nodes (8): {closure#1}(), {closure#11}(), {closure#2}(), {closure#3}(), {closure#9}(), MoveStop, OpenCarry, {closure#25}()
+### Community 98 - "Illuminate\Contracts\JsonSchema\JsonSchema"
+Cohesion: 0.15
+Nodes (3): RunBacktest, RunGrid, SimulationTool
 
 ### Community 99 - "psr-4"
 Cohesion: 0.40
@@ -608,133 +593,117 @@ Nodes (4): name, runs-on, steps, frontend
 Cohesion: 0.50
 Nodes (4): lint, name, runs-on, steps
 
-### Community 106 - "CandleFeedTest.php"
-Cohesion: 0.44
-Nodes (11): {closure#1}(), {closure#12}(), {closure#13}(), {closure#2}(), {closure#4}(), {closure#5}(), {closure#8}(), {closure#9}() (+3 more)
+### Community 106 - "TradingTool"
+Cohesion: 0.16
+Nodes (4): GetStrategy, SaveStrategy, TradingTool, McpToken
 
 ### Community 108 - "ClientOrderId"
-Cohesion: 0.07
-Nodes (19): {closure#2}(), ClientOrderId, OcoRequest, OrderAck, OrderRequest, OrderType, Limit, Market (+11 more)
+Cohesion: 0.10
+Nodes (14): Venue, ClientOrderId, OcoRequest, OrderAck, OrderRequest, OrderType, Limit, Market (+6 more)
 
 ### Community 117 - "StrategyLibrary"
-Cohesion: 0.16
-Nodes (8): {closure#1}(), ListStrategies, {closure#2}(), StrategiesScreen, StrategyLibrary, CheckResult, SaveResult, StrategyVersion
+Cohesion: 0.29
+Nodes (4): CompileStrategy, StrategiesScreen, {closure#1}(), StrategyLibrary
 
 ### Community 118 - "StrategiesScreen.php"
-Cohesion: 0.14
-Nodes (6): ReauthController, AccountScreen, HaltButton, {closure#1}(), ModeBadge, {closure#1}()
+Cohesion: 0.08
+Nodes (10): Account, ReauthController, AccountScreen, ChartScreen, {closure#4}(), {closure#5}(), HaltButton, {closure#1}() (+2 more)
 
-### Community 119 - "RiskState"
-Cohesion: 0.17
-Nodes (12): RiskEvent, RiskEventKind, DailyLossHalt, DrawdownFlatten, DrawdownHalt, WeeklyLossHalt, RiskState, {closure#13}() (+4 more)
+### Community 119 - ".compute"
+Cohesion: 0.21
+Nodes (3): ChartTool, GetCandles, ChartSeries
 
 ### Community 120 - "buy-and-hold.strategy.yaml"
 Cohesion: 0.12
 Nodes (16): entries, long, exits, stop_loss, fails_when, family, hypothesis, when (+8 more)
 
 ### Community 121 - "ChartSeriesTest.php"
-Cohesion: 0.24
-Nodes (8): chart(), {closure#11}(), {closure#2}(), {closure#3}(), {closure#4}(), {closure#6}(), {closure#7}(), {closure#9}()
+Cohesion: 0.23
+Nodes (11): chart(), {closure#10}(), {closure#11}(), {closure#2}(), {closure#3}(), {closure#4}(), {closure#5}(), {closure#6}() (+3 more)
 
 ### Community 122 - "TokensTest.php"
 Cohesion: 0.31
 Nodes (6): {closure#3}(), {closure#4}(), contrastRatio(), contrastRules(), relativeLuminance(), themeTokens()
 
-### Community 123 - "StrategyGates.php"
-Cohesion: 0.08
-Nodes (13): {closure#2}(), {closure#3}(), {closure#6}(), {closure#8}(), {closure#2}(), {closure#1}(), {closure#2}(), {closure#3}() (+5 more)
+### Community 123 - "GridBacktest.php"
+Cohesion: 0.07
+Nodes (27): {closure#11}(), {closure#12}(), {closure#2}(), {closure#3}(), {closure#4}(), {closure#6}(), {closure#8}(), {closure#2}() (+19 more)
 
 ### Community 124 - "AppServiceProvider.php"
-Cohesion: 0.09
-Nodes (7): AppServiceProvider, {closure#3}(), {closure#4}(), FortifyServiceProvider, {closure#1}(), {closure#2}(), {closure#3}()
+Cohesion: 0.07
+Nodes (12): SystemSleeper, AppServiceProvider, {closure#3}(), {closure#5}(), {closure#6}(), {closure#3}(), {closure#4}(), FortifyServiceProvider (+4 more)
 
-### Community 127 - ".sqrt"
+### Community 127 - "StrategyVersion"
 Cohesion: 0.23
-Nodes (12): Statistics, {closure#1}(), {closure#2}(), {closure#3}(), {closure#1}(), {closure#2}(), {closure#3}(), {closure#4}() (+4 more)
+Nodes (4): {closure#1}(), ListStrategies, {closure#2}(), StrategyVersion
 
 ### Community 128 - "funding-carry.strategy.yaml"
 Cohesion: 0.12
 Nodes (15): fails_when, family, hypothesis, params, enter_when, exit_when, margin_buffer, max_leverage_perp (+7 more)
 
 ### Community 129 - "McpServerTest.php"
-Cohesion: 0.16
-Nodes (13): AuthenticateMcpToken, McpToken, actAsToken(), {closure#2}(), {closure#3}(), {closure#4}(), {closure#5}(), {closure#6}() (+5 more)
+Cohesion: 0.30
+Nodes (11): actAsToken(), {closure#2}(), {closure#3}(), {closure#4}(), {closure#5}(), {closure#6}(), {closure#7}(), {closure#8}() (+3 more)
 
-### Community 130 - "Illuminate\Http\Client\Request"
-Cohesion: 0.18
-Nodes (12): {closure#3}(), {closure#4}(), {closure#6}(), queryOf(), {closure#13}(), {closure#5}(), {closure#12}(), {closure#2}() (+4 more)
-
-### Community 131 - ".zero"
-Cohesion: 0.11
-Nodes (4): Fill, PerpPosition, Position, {closure#16}()
+### Community 130 - "SettingsScreenTest.php"
+Cohesion: 0.28
+Nodes (8): {closure#10}(), {closure#11}(), {closure#3}(), {closure#4}(), {closure#5}(), {closure#6}(), confirmed(), received()
 
 ### Community 132 - "TelegramSettings"
-Cohesion: 0.17
-Nodes (3): NotificationSettings, TelegramClient, TelegramSettings
+Cohesion: 0.12
+Nodes (7): NotificationSettings, SettingSource, Env, None, TelegramClient, TelegramNotifier, TelegramSettings
 
-### Community 133 - "PreparesBacktests.php"
-Cohesion: 0.20
-Nodes (5): {closure#2}(), {closure#3}(), {closure#5}(), {closure#7}(), {closure#8}()
-
-### Community 135 - "ReadBackTest.php"
-Cohesion: 0.44
-Nodes (6): {closure#2}(), {closure#3}(), {closure#4}(), {closure#5}(), readBackDocument(), readBackSpec()
+### Community 135 - "settings-screen.blade.php"
+Cohesion: 0.29
+Nodes (6): confirm, forgetKey, forgetTelegram, notify, revokeToken, testTelegram
 
 ### Community 137 - "0001_01_01_000000_create_users_table.php"
 Cohesion: 0.33
 Nodes (3): {closure#1}(), {closure#2}(), {closure#3}()
 
 ### Community 138 - "TradingServer.php"
-Cohesion: 0.17
-Nodes (3): DslReference, ListInstruments, TradingServer
+Cohesion: 0.12
+Nodes (4): DslReference, GetFunding, ListTrials, TradingServer
 
 ### Community 139 - ".encode"
-Cohesion: 0.24
+Cohesion: 0.30
 Nodes (6): CanonicalJson, {closure#1}(), {closure#2}(), {closure#3}(), {closure#4}(), {closure#5}()
 
 ### Community 140 - "MarketBreakers"
 Cohesion: 0.29
 Nodes (7): {closure#4}(), BreakerEvent, MarketBreakers, breakerMinute(), {closure#1}(), {closure#2}(), {closure#3}()
 
-### Community 141 - "BinanceArchive.php"
-Cohesion: 0.13
-Nodes (9): {closure#1}(), {closure#2}(), EpochTime, ExchangeNumber, {closure#1}(), {closure#2}(), {closure#3}(), {closure#1}() (+1 more)
+### Community 141 - "BinanceRestClient"
+Cohesion: 0.08
+Nodes (18): {closure#1}(), {closure#2}(), BinanceRestClient, EpochTime, ExchangeNumber, Json, SyncInstruments, KlineMessage (+10 more)
 
-### Community 142 - "StrategySpec"
-Cohesion: 0.15
-Nodes (3): StrategyGates, CompiledStrategy, StrategySpec
+### Community 142 - "Clock"
+Cohesion: 0.06
+Nodes (15): AuthenticateMcpToken, FundingRateRepository, Heartbeats, ExportStrategies, GridBacktest, ImportStrategies, PromoteStrategy, ReadsGridOptions (+7 more)
 
 ### Community 143 - "Account"
-Cohesion: 0.13
-Nodes (7): Account, {closure#1}(), {closure#2}(), {closure#3}(), fakeTestnet(), testnetAccount(), {closure#6}()
+Cohesion: 0.15
+Nodes (6): {closure#1}(), {closure#2}(), {closure#3}(), fakeTestnet(), testnetAccount(), {closure#6}()
 
-### Community 144 - "DatabaseCandleFeed"
-Cohesion: 0.18
-Nodes (8): DatabaseCandleFeed, {closure#1}(), Rows, {closure#1}(), {closure#2}(), {closure#2}(), {closure#10}(), {closure#11}()
-
-### Community 145 - ".times"
-Cohesion: 0.10
-Nodes (7): {closure#4}(), {closure#3}(), Keltner, Percent, Perpetual, {closure#14}(), {closure#15}()
-
-### Community 146 - "InvalidArgumentException"
+### Community 144 - "Carbon\CarbonImmutable"
 Cohesion: 0.07
-Nodes (7): {closure#4}(), {closure#5}(), Period, InvalidNumber, Quantity, {closure#10}(), {closure#9}()
+Nodes (17): ArchivePeriod, {closure#1}(), {closure#2}(), {closure#3}(), FundingRate, MinuteCandles, DatabaseCandleFeed, {closure#1}() (+9 more)
 
-### Community 147 - "WalkForward.php"
-Cohesion: 0.14
-Nodes (10): {closure#11}(), {closure#12}(), {closure#1}(), {closure#3}(), {closure#5}(), {closure#6}(), {closure#7}(), {closure#8}() (+2 more)
+### Community 145 - "Percent"
+Cohesion: 0.24
+Nodes (3): Percent, {closure#14}(), {closure#15}()
+
+### Community 146 - "Quantity"
+Cohesion: 0.24
+Nodes (3): Quantity, {closure#10}(), {closure#9}()
 
 ### Community 148 - "0001_01_01_000002_create_jobs_table.php"
 Cohesion: 0.33
 Nodes (3): {closure#1}(), {closure#2}(), {closure#3}()
 
-### Community 150 - "Agents/TokensTest.php"
-Cohesion: 0.14
-Nodes (5): CreateMcpToken, Tokens, {closure#1}(), {closure#2}(), {closure#3}()
-
-### Community 151 - "OpenLong"
-Cohesion: 0.20
-Nodes (4): Close, EntryOrder, OpenLong, OpenShort
+### Community 150 - "Illuminate\Foundation\Testing\RefreshDatabase"
+Cohesion: 0.10
+Nodes (9): {closure#1}(), {closure#2}(), {closure#3}(), {closure#1}(), {closure#2}(), {closure#4}(), {closure#5}(), {closure#6}() (+1 more)
 
 ### Community 157 - "strategies-screen.blade.php"
 Cohesion: 0.40
@@ -744,73 +713,41 @@ Nodes (4): open, promote, run, save
 Cohesion: 0.67
 Nodes (3): extra, laravel, dont-discover
 
-### Community 172 - "ExchangeVerificationTest.php"
-Cohesion: 0.26
-Nodes (12): {closure#10}(), {closure#11}(), {closure#12}(), {closure#13}(), {closure#3}(), {closure#4}(), {closure#5}(), {closure#6}() (+4 more)
-
-### Community 174 - ".assessEntry"
-Cohesion: 0.25
-Nodes (5): AccountView, RiskEngine, LimitedStrategy, StrategyLimits, {closure#23}()
-
-### Community 175 - ".evaluate"
-Cohesion: 0.29
-Nodes (7): WalkForward, {closure#1}(), {closure#2}(), {closure#3}(), {closure#4}(), {closure#5}(), wfSet()
-
-### Community 176 - "GoldenReportsTest.php"
-Cohesion: 0.23
-Nodes (6): PerformanceMetrics, Report, {closure#21}(), {closure#8}(), {closure#9}(), goldenRuns()
-
-### Community 177 - ".benchmark"
-Cohesion: 0.29
-Nodes (9): btcMinutes(), {closure#1}(), {closure#2}(), {closure#3}(), referencePrice(), {closure#13}(), {closure#16}(), {closure#3}() (+1 more)
-
 ### Community 178 - "SimulationJobsTest.php"
 Cohesion: 0.21
 Nodes (4): {closure#1}(), {closure#2}(), {closure#3}(), savedEmaCross()
 
 ### Community 179 - "DocumentCheckerTest.php"
-Cohesion: 0.30
-Nodes (10): checkDocument(), {closure#1}(), {closure#2}(), {closure#4}(), {closure#5}(), {closure#6}(), {closure#7}(), {closure#8}() (+2 more)
+Cohesion: 0.19
+Nodes (12): CheckResult, SaveResult, checkDocument(), {closure#1}(), {closure#2}(), {closure#4}(), {closure#5}(), {closure#6}() (+4 more)
 
-### Community 183 - "Illuminate\Foundation\Testing\RefreshDatabase"
-Cohesion: 0.28
-Nodes (5): {closure#1}(), {closure#1}(), {closure#2}(), {closure#3}(), gatedVersion()
+### Community 181 - "DirectionalMovement"
+Cohesion: 0.18
+Nodes (5): {closure#1}(), {closure#2}(), {closure#3}(), DirectionalMovement, Wilder
 
-### Community 184 - "MinuteCandles"
-Cohesion: 0.29
-Nodes (4): MinuteCandles, {closure#14}(), {closure#3}(), {closure#7}()
-
-### Community 185 - "VolumeProfile"
-Cohesion: 0.38
-Nodes (3): VolumeProfile, {closure#10}(), fiveMinuteBars()
-
-### Community 186 - ".account"
-Cohesion: 0.33
-Nodes (4): Policies, {closure#26}(), {closure#27}(), {closure#28}()
-
-### Community 187 - "EngineMode"
-Cohesion: 0.40
-Nodes (5): EngineMode, Backtest, Live, Paper, Testnet
+### Community 185 - "BarIndicator"
+Cohesion: 0.12
+Nodes (6): {closure#36}(), BarIndicator, Natr, Supertrend, VolumeProfile, Vwap
 
 ## Knowledge Gaps
-- **135 isolated node(s):** `Env`, `None`, `BelowMinimum`, `Breaker`, `Cooldown` (+130 more)
-  These have ≤1 connection - possible missing edges. (Counts symbols only; 855 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **45 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **141 isolated node(s):** `mode-badge`, `halt-button`, `command`, `forgetTelegram`, `testTelegram` (+136 more)
+  These have ≤1 connection - possible missing edges. (Counts symbols only; 863 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **46 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Decimal` connect `Decimal` to `.of`, `EngineTest.php`, `Clock`, `InstrumentRules`, `.parse`, `DocumentChecker`, `ChartScreen.php`, `CompiledStrategy.php`, `SimulatedVenueTest.php`, `SimulatedPerpVenueTest.php`, `Candle`, `IndicatorsTest.php`, `Node`, `PolicyLimits`, `Position`, `MarketType`, `LedgerTest.php`, `ReadBack`, `DonchianBreakout`, `FundingCarry`, `Symbol`, `.measure`, `Strategy`, `.zero`, `InMemoryDecisionLog`, `ExitReason`, `RiskPolicy`, `BacktestTest.php`, `RejectionReason`, `OrderRole`, `Illuminate\Database\Eloquent\Model`, `SimulatedVenue`, `EnginePerpTest.php`, `SimClock`, `InstrumentRules`, `IndicatorReferenceTest.php`, `RunBacktestCommandTest.php`, `.isFull`, `.__construct`, `MarketType`, `App\Strategy\Dsl\Document\DocumentChecker`, `.of`, `Carbon\CarbonImmutable`, `DslError`, `.walk`, `DecimalMath`, `FundingRate`, `App\Support\Number\Decimal`, `MonteCarlo`, `Timeframe`, `.evaluate`, `.fromStrings`, `Illuminate\Contracts\Config\Repository`, `Engine.php`, `CandleFeedTest.php`, `ClientOrderId`, `RiskState`, `ChartSeriesTest.php`, `StrategyGates.php`, `.sqrt`, `.zero`, `PreparesBacktests.php`, `ReadBackTest.php`, `.encode`, `BinanceArchive.php`, `StrategySpec`, `DatabaseCandleFeed`, `.times`, `InvalidArgumentException`, `WalkForward.php`, `OpenLong`, `QualityCheck`, `.assessEntry`, `.evaluate`, `GoldenReportsTest.php`, `.benchmark`, `DocumentCheckerTest.php`, `DirectionalMovement`, `VolumeProfile`, `.roundDownToTick`?**
-  _High betweenness centrality (0.184) - this node is a cross-community bridge._
-- **What connects `Env`, `None`, `BelowMinimum` to the rest of the system?**
-  _135 weakly-connected nodes found - possible missing edges._
+- **Why does `Decimal` connect `Decimal` to `.of`, `EngineTest.php`, `MonteCarlo.php`, `.zero`, `Marks`, `DocumentChecker`, `.parse`, `CompiledStrategy.php`, `SimulatedVenueTest.php`, `SimulatedPerpVenueTest.php`, `Candle`, `BinanceRestClient`, `Clock`, `IndicatorsTest.php`, `Carbon\CarbonImmutable`, `PolicyLimits`, `Position`, `MarketType`, `.__construct`, `LedgerTest.php`, `Percent`, `ReadBack`, `DonchianBreakout`, `Quantity`, `FundingCarry`, `Symbol`, `.measure`, `Strategy`, `.zero`, `InvalidArgumentException`, `InMemoryDecisionLog`, `ExitReason`, `SimClock`, `.act`, `BacktestTest.php`, `Position`, `OrderStatus`, `OrderRole`, `CompiledStrategy`, `SimulatedVenue`, `EnginePerpTest.php`, `.of`, `DirectionalMovement`, `DocumentCheckerTest.php`, `InstrumentRules`, `OrderManagerTest.php`, `BarIndicator`, `IndicatorReferenceTest.php`, `BinanceVenueTest.php`, `RunBacktestCommandTest.php`, `.encode`, `QualityCheck`, `.isFull`, `.__construct`, `RiskPolicy`, `App\Strategy\Dsl\Document\DocumentChecker`, `.of`, `Engine`, `.walk`, `DecimalMath`, `CompiledStrategyTest.php`, `App\Support\Number\Decimal`, `MonteCarlo`, `Timeframe`, `Statistics`, `.fromStrings`, `PreparesBacktests.php`, `ClientOrderId`, `StrategiesScreen.php`, `ChartSeriesTest.php`, `GridBacktest.php`?**
+  _High betweenness centrality (0.180) - this node is a cross-community bridge._
+- **What connects `mode-badge`, `halt-button`, `command` to the rest of the system?**
+  _141 weakly-connected nodes found - possible missing edges._
+- **Should `.of` be split into smaller, more focused modules?**
+  _Cohesion score 0.0518783542039356 - nodes in this community are weakly interconnected._
+- **Why does `Candle` connect `Candle` to `EngineTest.php`, `MonteCarlo.php`, `.zero`, `.parse`, `SimulatedVenueTest.php`, `Instrument`, `SimulatedPerpVenueTest.php`, `MarketBreakers`, `BinanceRestClient`, `Clock`, `IndicatorsTest.php`, `Carbon\CarbonImmutable`, `ExchangeVerificationTest.php`, `MarketType`, `.__construct`, `DonchianBreakout`, `CandleStreamTest.php`, `Symbol`, `.act`, `BacktestTest.php`, `Decimal`, `OrderStatus`, `BinanceRestClientTest.php`, `EnginePerpTest.php`, `DirectionalMovement`, `InstrumentRules`, `OrderManagerTest.php`, `BarIndicator`, `IndicatorReferenceTest.php`, `.isFull`, `RiskPolicy`, `CandleRepositoryTest.php`, `.walk`, `CompiledStrategyTest.php`, `App\Support\Number\Decimal`, `Timeframe`, `.fromStrings`, `ClientOrderId`, `.compute`, `ChartSeriesTest.php`?**
+  _High betweenness centrality (0.068) - this node is a cross-community bridge._
 - **Should `EngineTest.php` be split into smaller, more focused modules?**
-  _Cohesion score 0.12508735150244585 - nodes in this community are weakly interconnected._
-- **Why does `Symbol` connect `Symbol` to `.of`, `McpServerTest.php`, `Clock`, `.zero`, `InstrumentRules`, `PreparesBacktests.php`, `DocumentChecker`, `ChartScreen.php`, `CompiledStrategy.php`, `SimulatedVenueTest.php`, `Instrument`, `SimulatedPerpVenueTest.php`, `.parse`, `ExchangeVerificationTest.php`, `StrategySpec`, `EngineTest.php`, `.encode`, `PolicyLimits`, `.times`, `MarketType`, `LedgerTest.php`, `InvalidArgumentException`, `OpenLong`, `DonchianBreakout`, `ReadBack`, `FundingCarry`, `AppServiceProvider.php`, `.measure`, `Strategy`, `OpenAccountTest.php`, `InMemoryDecisionLog`, `ExitReason`, `BackfillTest.php`, `BacktestTest.php`, `Decimal`, `OrderRole`, `QualityCheck`, `Illuminate\Database\Eloquent\Model`, `ExchangeVerificationTest.php`, `SimulatedVenue`, `.benchmark`, `GoldenReportsTest.php`, `EnginePerpTest.php`, `SimClock`, `Laravel\Mcp\Response`, `InstrumentRules`, `RunEngine.php`, `RunBacktestCommandTest.php`, `Universe`, `.__construct`, `MarketType`, `CandleRepositoryTest.php`, `App\Strategy\Dsl\Document\DocumentChecker`, `.of`, `Carbon\CarbonImmutable`, `DslError`, `FundingRate`, `Timeframe`, `Illuminate\Contracts\Config\Repository`, `Engine.php`, `CandleFeedTest.php`, `ClientOrderId`, `ChartSeriesTest.php`, `StrategyGates.php`?**
-  _High betweenness centrality (0.080) - this node is a cross-community bridge._
-- **Should `Clock` be split into smaller, more focused modules?**
-  _Cohesion score 0.07591836734693877 - nodes in this community are weakly interconnected._
-- **Why does `Timeframe` connect `Timeframe` to `McpServerTest.php`, `Clock`, `BinanceArchive`, `EngineTest.php`, `.parse`, `DocumentChecker`, `ChartScreen.php`, `CompiledStrategy.php`, `SimulatedVenueTest.php`, `Instrument`, `SimulatedPerpVenueTest.php`, `Candle`, `BinanceArchive.php`, `StrategySpec`, `MarketBreakers`, `DatabaseCandleFeed`, `Node`, `Position`, `MarketType`, `InvalidArgumentException`, `IndicatorsTest.php`, `OpenLong`, `DonchianBreakout`, `ReadBack`, `FundingCarry`, `Symbol`, `AppServiceProvider.php`, `Decimal`, `OrderRole`, `EnginePerpTest.php`, `DocumentCheckerTest.php`, `Laravel\Mcp\Response`, `IndicatorReferenceTest.php`, `CandleRepositoryTest.php`, `App\Strategy\Dsl\Document\DocumentChecker`, `DslError`, `.walk`, `FundingRate`, `App\Support\Number\Decimal`, `.fromStrings`, `CandleFeedTest.php`, `ChartSeriesTest.php`, `StrategyGates.php`, `.sqrt`?**
-  _High betweenness centrality (0.043) - this node is a cross-community bridge._
-- **Should `BinanceArchive` be split into smaller, more focused modules?**
-  _Cohesion score 0.062040816326530614 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.12121212121212122 - nodes in this community are weakly interconnected._
+- **Why does `Symbol` connect `Symbol` to `.of`, `McpServerTest.php`, `EngineTest.php`, `.zero`, `.parse`, `DocumentChecker`, `SimulatedVenueTest.php`, `Instrument`, `SimulatedPerpVenueTest.php`, `.encode`, `BinanceRestClient`, `Clock`, `ExchangeVerificationTest.php`, `Carbon\CarbonImmutable`, `PolicyLimits`, `Position`, `MarketType`, `LedgerTest.php`, `ReadBack`, `DonchianBreakout`, `CandleStreamTest.php`, `FundingCarry`, `.measure`, `Strategy`, `InMemoryDecisionLog`, `ExitReason`, `SimClock`, `.act`, `BacktestTest.php`, `Position`, `Decimal`, `OrderStatus`, `OrderRole`, `CompiledStrategy`, `SimulatedVenue`, `EnginePerpTest.php`, `InstrumentRules`, `OrderManagerTest.php`, `BinanceVenueTest.php`, `RunBacktestCommandTest.php`, `QualityCheck`, `.__construct`, `RiskPolicy`, `CandleRepositoryTest.php`, `.of`, `Engine`, `CompiledStrategyTest.php`, `Timeframe`, `PreparesBacktests.php`, `ClientOrderId`, `StrategiesScreen.php`, `.compute`, `ChartSeriesTest.php`?**
+  _High betweenness centrality (0.058) - this node is a cross-community bridge._
+- **Should `Illuminate\Console\Command` be split into smaller, more focused modules?**
+  _Cohesion score 0.08108108108108109 - nodes in this community are weakly interconnected._

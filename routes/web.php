@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Controllers\ReauthController;
 use App\Livewire\AccountScreen;
 use App\Livewire\ChartScreen;
+use App\Livewire\SettingsScreen;
 use App\Livewire\StrategiesScreen;
 use Illuminate\Support\Facades\Route;
 
@@ -14,6 +15,7 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/chart', ChartScreen::class)->name('chart');
     Route::get('/strategies', StrategiesScreen::class)->name('strategies');
     Route::get('/account', AccountScreen::class)->name('account');
+    Route::get('/settings', SettingsScreen::class)->name('settings');
     Route::get('/confirm', [ReauthController::class, 'show'])->name('reauth');
     Route::post('/confirm', [ReauthController::class, 'store'])->middleware('throttle:5,1');
 });

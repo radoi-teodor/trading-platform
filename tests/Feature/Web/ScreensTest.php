@@ -8,37 +8,25 @@ use App\Livewire\AccountScreen;
 use App\Livewire\ChartScreen;
 use App\Livewire\HaltButton;
 use App\Livewire\StrategiesScreen;
+use App\Market\Data\MarketType;
+use App\Market\Models\Instrument;
 use App\Models\User;
 use App\Simulation\Models\SimulationJob;
 use App\Strategy\Dsl\Functions\Library;
 use App\Strategy\Versions\StrategyVersion;
+use App\Support\Symbol;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Testing\PendingCommand;
 use Laravel\Fortify\Contracts\TwoFactorAuthenticationProvider;
 use Livewire\Livewire;
-use Pest\TestSuite;
 use PragmaRX\Google2FA\Google2FA;
-use Tests\TestCase;
 
 uses(RefreshDatabase::class);
 
-const OPERATOR_SECRET = 'JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP';
-
-function web(): TestCase
-{
-    $test = TestSuite::getInstance()->test;
-
-    return $test instanceof TestCase ? $test : throw new LogicException('Runs inside a test.');
-}
-
-function operator(): User
-{
-    $user = new User(['name' => 'Operator', 'email' => 'op@example.test', 'password' => 'a long test password']);
-    $user->forceFill(['two_factor_secret' => encrypt(OPERATOR_SECRET), 'two_factor_recovery_codes' => encrypt('[]'), 'two_factor_confirmed_at' => now()])->save();
-
-    return $user;
-}
+// Accounts follow stored instruments only (D-75).
+beforeEach(fn () => Instrument::register('binance', MarketType::Spot, Symbol::parse('BTC/USDT'), CarbonImmutable::parse('2026-11-01', 'UTC')));
 
 it('sends a visitor to the login, and asks a TOTP code after the password', function (): void {
     operator();
