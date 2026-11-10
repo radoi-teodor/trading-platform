@@ -2,10 +2,16 @@
 
 declare(strict_types=1);
 
+use App\Market\Data\CandleSource;
+use App\Market\Data\FundingRate;
+use App\Market\FundingRateRepository;
+use App\Market\Models\Instrument;
 use App\Simulation\Models\BacktestRun;
 use App\Simulation\Models\StrategyTrial;
 use App\Simulation\Report\CanonicalJson;
 use App\Strategy\Baselines\FundingCarry;
+use App\Support\Number\Decimal;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
@@ -123,6 +129,74 @@ it('refuses a perpetual run over missing funding, and says where it is missing',
 
     expect($exit)->toBe(1)
         ->and(Artisan::output())->toContain('BTC/USDT:USDT: funding missing between 2026-10-02 00:00 and 2026-10-02 16:00')
+        ->and(BacktestRun::query()->count())->toBe(0);
+});
+
+/**
+ * Stores the perpetual fixture's funding again as a contract settled every four hours from 2026-10-01 on, without
+ * the settlements named.
+ *
+ * @param  list<string>  $without  funding times left out
+ */
+function fourHourFunding(Instrument $perp, array $without = []): void
+{
+    DB::table('funding_rates')->where('instrument_id', $perp->id)->delete();
+    $rates = [];
+
+    for ($i = 0; $i <= 12; $i++) {
+        $time = CarbonImmutable::parse('2026-10-01 00:00:00', 'UTC')->addHours(4 * $i);
+
+        if (! in_array($time->format('Y-m-d H:i'), $without, true)) {
+            $rates[] = new FundingRate($time, Decimal::of('0.0001'), 4, null);
+        }
+    }
+
+    app(FundingRateRepository::class)->upsert($perp, CandleSource::Archive, $rates);
+}
+
+it('runs a perpetual over a change of its funding interval', function (): void {
+    backtestFixture();
+    $perp = perpFixture();
+    // Binance moved the contract from eight hours to four at 2026-10-02 08:00: the archive gives that rate the new
+    // interval, though it follows the one before it by the old one (AERGO/USDT:USDT, 2025-04-16).
+    DB::table('funding_rates')->where('instrument_id', $perp->id)->where('funding_time', '>=', '2026-10-02 08:00:00+00')->update(['interval_hours' => 4]);
+    app(FundingRateRepository::class)->upsert($perp, CandleSource::Archive, [
+        new FundingRate(CarbonImmutable::parse('2026-10-02 12:00:00', 'UTC'), Decimal::of('0.0001'), 4, null),
+        new FundingRate(CarbonImmutable::parse('2026-10-02 20:00:00', 'UTC'), Decimal::of('0.0001'), 4, null),
+    ]);
+
+    $exit = Artisan::call('backtest:run', ['strategy' => 'enter-once', '--symbol' => ['BTC/USDT:USDT'], '--from' => '2026-10-02', '--to' => '2026-10-03']);
+
+    expect(Artisan::output())->not->toContain('funding missing')
+        ->and($exit)->toBe(0);
+});
+
+it('runs a perpetual over a settlement the exchange skipped, and refuses a longer hole in its funding', function (): void {
+    backtestFixture();
+    $perp = perpFixture();
+    // Binance settled no funding between 2026-06-24 00:00 and 08:00 on its four hour contracts: eight hours between
+    // two rates is the exchange's own record, and no backfill brings the rate of 04:00.
+    fourHourFunding($perp, without: ['2026-10-02 12:00']);
+
+    $exit = Artisan::call('backtest:run', ['strategy' => 'enter-once', '--symbol' => ['BTC/USDT:USDT'], '--from' => '2026-10-02', '--to' => '2026-10-03']);
+
+    expect(Artisan::output())->not->toContain('funding missing')
+        ->and($exit)->toBe(0);
+
+    fourHourFunding($perp, without: ['2026-10-02 12:00', '2026-10-02 16:00']);
+
+    expect(Artisan::call('backtest:run', ['strategy' => 'enter-once', '--symbol' => ['BTC/USDT:USDT'], '--from' => '2026-10-02', '--to' => '2026-10-03']))->toBe(1)
+        ->and(Artisan::output())->toContain('BTC/USDT:USDT: funding missing between 2026-10-02 08:00 and 2026-10-02 20:00')
+        ->and(BacktestRun::query()->count())->toBe(1);
+});
+
+it('refuses a perpetual run whose funding starts late or stops early, by the contract\'s own interval', function (): void {
+    backtestFixture();
+    $perp = perpFixture();
+    fourHourFunding($perp, without: ['2026-10-02 20:00', '2026-10-03 00:00']);
+
+    expect(Artisan::call('backtest:run', ['strategy' => 'enter-once', '--symbol' => ['BTC/USDT:USDT'], '--from' => '2026-10-02', '--to' => '2026-10-03']))->toBe(1)
+        ->and(Artisan::output())->toContain('BTC/USDT:USDT: funding missing after 2026-10-02 16:00')
         ->and(BacktestRun::query()->count())->toBe(0);
 });
 

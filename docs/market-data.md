@@ -78,6 +78,21 @@ Archive formats differ and the parser checks them instead of guessing:
 The time unit is recognized by the number of digits (13 for milliseconds, 16 for microseconds); anything else is
 an error. Funding `calc_time` can carry a few milliseconds of jitter (`...800005`); it is floored to the second.
 
+Funding rates are not evenly spaced, and the stored `interval_hours` is not the time since the rate before:
+
+- Binance changes a contract's interval (eight hours to four, four to two and back). The archive gives the first
+  rate after a change the new interval, though it follows the rate before it by the old one: AERGO/USDT:USDT at
+  2025-04-16 16:00 says 2 hours and comes 4 hours after the rate of 12:00. The stored funding of the top 50's
+  members from 2024-11 holds 199 such changes.
+- Binance skips settlements. No four hour contract has a rate between 2026-06-24 00:00 and 08:00, and no hourly one
+  between 00:00 and 05:00, in the archives and over `GET /fapi/v1/fundingRate` alike: there is nothing to backfill.
+
+A backtest takes both as the exchange's record: between two stored rates it allows the longest of their two
+intervals and of eight hours, the longest interval Binance settles on. A rate that is not stored is not charged,
+as it was not on the exchange. A longer hole, a first rate later than its own interval after the start, or a last
+rate earlier than its own interval before the end is funding that was not imported, and the run is refused
+(`PreparesBacktests::fundingCoverage`).
+
 ## 4. Live candles
 
 `php artisan market:stream spot` and `php artisan market:stream perp`: one process per market, each holding one

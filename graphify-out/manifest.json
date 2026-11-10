@@ -1436,9 +1436,9 @@
     "semantic_hash": "27836203d1bf0c6ea54c3c7de5d1c4e8"
   },
   "tests/Feature/Simulation/RunBacktestCommandTest.php": {
-    "mtime": 1794260980.3266416,
-    "seen": 1794261633.3901722,
-    "ast_hash": "e693cd2d97978518ce420dfd5d35f67a",
+    "mtime": 1794288808.180228,
+    "seen": 1794289427.6993718,
+    "ast_hash": "4e5ea534e7e3b15c7097ac697b96fdeb",
     "semantic_hash": ""
   },
   "tests/Feature/Support/ClockBindingTest.php": {
@@ -1804,9 +1804,9 @@
     "semantic_hash": ""
   },
   ".claude/skills/bug-fix/SKILL.md": {
-    "mtime": 1794287724.8268747,
-    "seen": 1794288273.5566044,
-    "ast_hash": "fae6300bb45d045191abb596b7f6d652",
+    "mtime": 1794288955.9852993,
+    "seen": 1794289427.7244315,
+    "ast_hash": "5e44055e0d3e8fcda95e049d9a0505d6",
     "semantic_hash": ""
   },
   ".claude/skills/feature-work/SKILL.md": {
@@ -1864,9 +1864,9 @@
     "semantic_hash": ""
   },
   "docs/decisions.md": {
-    "mtime": 1794287724.8268747,
-    "seen": 1794288273.5583053,
-    "ast_hash": "0400b8ad42249fd788caac9110370a2d",
+    "mtime": 1794288955.9852993,
+    "seen": 1794289427.7262988,
+    "ast_hash": "66adc11819467481f8a013c0ea851819",
     "semantic_hash": ""
   },
   "docs/engine.md": {
@@ -1882,9 +1882,9 @@
     "semantic_hash": ""
   },
   "docs/market-data.md": {
-    "mtime": 1794257525.503675,
-    "seen": 1794257535.2133539,
-    "ast_hash": "fd165efa005c2f5891e77df8433c9b21",
+    "mtime": 1794288955.9816406,
+    "seen": 1794289427.7267368,
+    "ast_hash": "230820ff93f2dcd85864d001ceca28f1",
     "semantic_hash": ""
   },
   "docs/risk-policy.md": {
@@ -2344,9 +2344,9 @@
     "semantic_hash": ""
   },
   "app/Simulation/Console/PreparesBacktests.php": {
-    "mtime": 1794287633.9771411,
-    "seen": 1794288273.4632242,
-    "ast_hash": "aa325199680238aa058605358c45b527",
+    "mtime": 1794288843.6960022,
+    "seen": 1794289427.6305192,
+    "ast_hash": "8046b121867898be671a05c67c554b7b",
     "semantic_hash": ""
   },
   "app/Simulation/Models/StrategyTrial.php": {
@@ -3814,9 +3814,9 @@
     "semantic_hash": ""
   },
   "docs/universe.md": {
-    "mtime": 1794287724.8268747,
-    "seen": 1794288273.5601428,
-    "ast_hash": "16590842a4718d20cc39fb52ece8de6c",
+    "mtime": 1794288955.9837222,
+    "seen": 1794289427.7279322,
+    "ast_hash": "8c7c59aa0fc3633d1628cbc6b2790c32",
     "semantic_hash": ""
   },
   "app/Market/Console/FillDailyStats.php": {

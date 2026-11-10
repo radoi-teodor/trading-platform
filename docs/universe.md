@@ -107,6 +107,9 @@ exits:
   instruments that is a break anywhere from the warm-up on; for a universe's member, a break from its first month as
   a member (or the start of the run) on. A break before that, in the member's warm-up, only starts its history
   again, as a gap does.
+- A member's funding must be stored over the same time. Funding is not evenly spaced (a contract's interval
+  changes, and Binance has skipped settlements), so up to eight hours between two stored rates is the exchange's
+  record and a longer hole refuses the run (`docs/market-data.md`, section 3).
 - A perpetual delisted before its exchange filters were ever read has them worked out from its candles
   (`App\Market\Instruments\AssumedRules`: the finest decimal of its prices and volumes in its last stored month,
   a least notional of 5), and the report lists it under `data.filters_assumed_before`.

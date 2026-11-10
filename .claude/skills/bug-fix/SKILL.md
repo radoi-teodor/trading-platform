@@ -196,6 +196,13 @@ Add to the list when a fix reveals a new one.
   trading (`instrument_breaks`, `App\Market\Instruments\TradingBreaks`, D-89): do not fill it, and do not read its
   flat candles as prices. Search: a gap that `market:check` reports from a midnight on for one symbol only;
   `daily_stats` rows with `trades = 0` between days with trades.
+- **Funding is not evenly spaced.** A two-year universe backtest was refused for "funding missing between
+  2025-04-16 12:00 and 16:00" on a contract whose funding was complete. Binance changes a contract's funding
+  interval, and the archive's `funding_interval_hours` on the first rate after a change is the new interval, not
+  the time since the rate before; Binance also skips settlements (2026-06-24 04:00 on every four hour contract,
+  absent from archives and REST). Never judge the distance between two rates by one row's `interval_hours`, and do
+  not try to backfill a rate the exchange never settled (`PreparesBacktests::fundingCoverage`,
+  `docs/market-data.md`, section 3). Search: `intervalHours`, `interval_hours` used in arithmetic.
 - **Packages that bring their own `App\` namespace.** `laravel/pint` maps `App\` to its own internal app, which
   merged into ours. Such tools live in `tools/<name>` with their own composer project. Search:
   `grep "'App\\\\\\\\'" vendor/composer/autoload_psr4.php` must list only `app/`.

@@ -609,6 +609,17 @@ each other) and set to the minute by the stored candles after every candle impor
 feed does not hand out candles stored in it, and a run that could hold the instrument across it is refused; a break
 in the warm-up of a universe's member only starts its history again. The engine is unchanged. The flat candles
 already stored are left in place: deleting data is the operator's decision, and nothing reads them as prices.
+Added 2026-11-10: funding that is not evenly spaced. The second backtest over the real universe was refused for
+"funding missing between 2025-04-16 12:00 and 2025-04-16 16:00" on AERGO/USDT:USDT, whose funding is complete: the
+check allowed each rate its own interval after the one before it, and the archive gives the first rate after a
+change of interval the new one (2 hours) though it follows by the old one (4 hours). A survey of the stored funding
+of the 435 membership spans found 5 spans refused for that and 39 for a settlement Binance skipped on 2026-06-24
+(no rate at 04:00 on four hour contracts, none from 01:00 to 04:00 on an hourly one; REST has none either). The
+check now allows, between two stored rates, the longest of their two intervals and of eight hours, the longest
+interval Binance settles on; the start and the end of a run keep the rate's own interval. What this gives up: one
+missing rate of a contract on a shorter interval than eight hours is no longer told from a skipped settlement. The
+funding import brings whole months, so a hole it leaves is longer than that and is still refused. The engine is
+unchanged: it charges the rates that are stored.
 
 **D-90. Storage at scale** (2026-11-09, accepted with the Phase 7 plan; settles the revision D-31 promised at 50
 million rows)

@@ -317,8 +317,21 @@ trait PreparesBacktests
     }
 
     /**
-     * Why the stored funding cannot carry a perpetual over [$from, $to], or null: no stored rate may follow the one
-     * before it, or the start, by more than its own interval.
+     * The longest time between two stored funding rates that is taken as the exchange's own record: Binance settles
+     * a perpetual's funding every eight hours at most, and a contract on a shorter interval whose settlement it
+     * skipped was settled again within that.
+     */
+    private const int SETTLED_WITHIN_HOURS = 8;
+
+    /**
+     * Why the stored funding cannot carry a perpetual over [$from, $to], or null. The first stored rate may follow
+     * the start, and the end the last one, by no more than that rate's own interval. Between two stored rates the
+     * time allowed is the longest of their two intervals and of SETTLED_WITHIN_HOURS, because the exchange's own
+     * record is not evenly spaced: when Binance changes a contract's interval the archive gives the next rate the new
+     * interval though it follows the one before it by the old one (AERGO/USDT:USDT on 2025-04-16, four hours to
+     * two), and Binance has skipped settlements (none between 2026-06-24 00:00 and 08:00 on four hour contracts,
+     * none between 00:00 and 05:00 on hourly ones, in the archives and over REST alike). A rate that is not stored
+     * is not charged, which is what the exchange did; a hole longer than that is funding that was not imported.
      */
     protected function fundingCoverage(FundingRateRepository $funding, Symbol $symbol, CarbonImmutable $from, CarbonImmutable $to): ?string
     {
@@ -334,14 +347,17 @@ trait PreparesBacktests
             return sprintf('no funding stored between %s and %s', $from->format('Y-m-d H:i'), $to->format('Y-m-d H:i'));
         }
 
-        $previous = $from;
+        $previous = null;
 
         foreach ($rates as $rate) {
-            if ($rate->fundingTime->getTimestamp() - $previous->getTimestamp() > $rate->intervalHours * 3600) {
-                return sprintf('funding missing between %s and %s', $previous->format('Y-m-d H:i'), $rate->fundingTime->format('Y-m-d H:i'));
+            $since = $previous === null ? $from : $previous->fundingTime;
+            $allowedHours = $previous === null ? $rate->intervalHours : max($rate->intervalHours, $previous->intervalHours, self::SETTLED_WITHIN_HOURS);
+
+            if ($rate->fundingTime->getTimestamp() - $since->getTimestamp() > $allowedHours * 3600) {
+                return sprintf('funding missing between %s and %s', $since->format('Y-m-d H:i'), $rate->fundingTime->format('Y-m-d H:i'));
             }
 
-            $previous = $rate->fundingTime;
+            $previous = $rate;
         }
 
         $last = $rates[count($rates) - 1];
