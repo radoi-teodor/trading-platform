@@ -238,6 +238,7 @@ The endpoint is for your own network; anywhere else it must sit behind TLS. Ever
 
 A research tool's statement is stopped after `MCP_STATEMENT_TIMEOUT_MS` (5000), so an agent's read never queues
 behind an import for longer than that; raise it only if honest reads are being refused as too slow.
+`screen_market` and `get_listing_stats` answer `MCP_HEAVY_CALLS_PER_MINUTE` (10) times a minute for a token.
 The rate limit (60 calls a minute per token, `MCP_CALLS_PER_MINUTE`) is kept in the cache store, Redis by default;
 without Redis running, set `CACHE_STORE=file`. A run waits in `simulation_jobs` until the worker takes it, and each
 token has at most 2 runs waiting or running. A window over missing candles fails with the gap named in `get_job`

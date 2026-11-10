@@ -14,6 +14,9 @@ return [
     // The longest one statement of a research tool may hold the database, waiting for a lock included (D-93).
     'statement_timeout_ms' => (int) env('MCP_STATEMENT_TIMEOUT_MS', 5000),
 
+    // Answers each token gets per minute from the tools that read the whole market: screen_market, get_listing_stats (D-93).
+    'heavy_calls_per_minute' => (int) env('MCP_HEAVY_CALLS_PER_MINUTE', 10),
+
     // laravel/mcp's OAuth settings, unused: this endpoint authenticates with bearer tokens only.
     'redirect_domains' => [],
     'custom_schemes' => [],

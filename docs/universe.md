@@ -138,12 +138,28 @@ do not import data or change the universe, and a tool that finds nothing says wh
 | `get_depth` | Bid and ask notional within 1, 2 and 5 % of the price: the stored 5-minute rows, or their average over 15m, 1h, 4h or 1d steps (two decimals), and the days of the window with no row | 1,000 rows |
 | `get_liquidations` | Long and short liquidations, counted and in quote notional: the stored minutes, or their sum over 5m to 1d steps, the days the stream was not heard whole, and a note that the numbers are a lower bound | 1,000 rows; a window the stream never heard is refused, never answered with zeros |
 | `list_instruments` | Every instrument with candles and its first and last stored minute, read from the index (two rows an instrument) instead of grouping every candle | |
-| `screen_market`, `get_listing_stats` | Ranking the market from `daily_stats`, and what a coin did after its listing | Not built yet; with them comes a rate limit of their own |
+| `screen_market` | USDT perpetuals ranked over the days before a date by return, quote volume, funding, open interest change or volatility, from `daily_stats`. It reads only the days before the date, so a past date gives what was known then. Scope: the universe's members of the date's month (the default) or every USDT crypto perpetual, delisted ones included. An instrument without the measure is left out, never ranked as zero | 50 rows, a window of 365 days; 10 answers a minute for a token |
+| `get_listing_stats` | The perpetuals listed in a window: quote volume and return after 1, 7 and 30 days, return up to the last stored day, deepest fall. A 7 or 30 day value is null until every one of those days is stored; symbols whose stored days do not begin on their listing day are named in `not_covered` | 50 listings; 10 answers a minute for a token, shared with `screen_market` |
 
 A series is asked for with `from`, `to` (exclusive) and `every`; more than 1,000 rows is refused with the count, so
 the agent shortens the window or lengthens the step. Every statement of these tools runs under
 `MCP_STATEMENT_TIMEOUT_MS` (5 seconds), waiting for a lock included: a read behind a long import ends with "The
 data took longer than 5 s to read", not with a held connection. `tools/list` answers every tool in its first page.
+
+The two tools that read the whole market share a limit of their own, `MCP_HEAVY_CALLS_PER_MINUTE` (10) for a token,
+counted apart from the 60 calls a minute of D-63; a refused call counts too.
+
+What the screen measures, over the stored days of the window: return is the last close over the first open, less
+one; quote volume is summed; funding is the average of the daily average rates; open interest change is the last
+day's value over the first day's, less one, and is empty when either day has none or the window is one day;
+volatility is the average of each day's range (high less low) over its open. With `whole_window` (the default)
+only instruments with every day of the window are ranked, so a coin listed last week does not top a 30-day screen
+with a week of history.
+
+The fall after a listing is measured from daily candles, which do not say whether a day's high came before its
+low. Each day's low is set against the highest high of the days before it, or the day's own open when that is
+higher. A fall inside one day from that day's own high is not seen, so the true fall is at least as deep as the
+number given, never shallower.
 
 ## 7. Positions and risk (D-94)
 

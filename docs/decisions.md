@@ -634,6 +634,12 @@ Decided while building it (2026-11-10): a series has at most 1,000 rows and is r
 never cut short; the statement timeout is 5 seconds (`MCP_STATEMENT_TIMEOUT_MS`) and covers waiting for a lock;
 liquidations over a window the stream never heard are refused, not answered with zeros; and `tools/list` gives
 every tool in its first page, because the sixteenth tool fell onto a second page a client may never ask for.
+For the two tools that read the whole market (2026-11-10): `screen_market` reads only the days before its date, so a
+past date gives what was known then, ranks the universe's members of that month unless every perpetual is asked
+for, and by default only instruments with every day of the window; `get_listing_stats` answers only for
+perpetuals whose stored days begin on their listing day and names the others; its fall is measured against the
+highs of earlier days, so it is never deeper than the truth. Both share 10 answers a minute for a token
+(`MCP_HEAVY_CALLS_PER_MINUTE`), refused calls counted.
 
 **D-94. Ten positions, raised by the operator** (2026-11-09, accepted with the Phase 7 plan; the operator chose to
 plan for 10 positions)

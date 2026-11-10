@@ -17,7 +17,6 @@ use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Attributes\Description;
 use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
-use Throwable;
 
 #[Name('list_universe')]
 #[Description('The research universe in the month of a day: the USDT perpetuals ranked top N by 30-day quote volume on the first day of that month, as they were ranked then (ones delisted since are still listed), each with its listing and delisting time and the first and last 1-minute candle stored. A universe strategy trades these members.')]
@@ -35,7 +34,8 @@ final class ListUniverse extends TradingTool
     {
         return $this->bounded($read, function () use ($request, $universe, $candles): Response {
             $built = $universe->built() ?? throw new Refused('The research universe is not built yet; the operator builds it (market:universe:build).');
-            $month = self::month($request->get('date'), $built['to']);
+            $date = $request->get('date');
+            $month = $date === null ? CarbonImmutable::parse("{$built['to']}-01", 'UTC') : self::day($date, 'date is a day, YYYY-MM-DD.')->startOfMonth();
             $key = $month->format('Y-m');
 
             if ($key < $built['from'] || $key > $built['to']) {
@@ -61,24 +61,5 @@ final class ListUniverse extends TradingTool
                 ], $members),
             ]);
         });
-    }
-
-    private static function month(mixed $date, string $last): CarbonImmutable
-    {
-        if ($date === null) {
-            return CarbonImmutable::parse("{$last}-01", 'UTC');
-        }
-
-        $unreadable = 'date is a day, YYYY-MM-DD.';
-
-        if (! is_string($date) || preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) !== 1) {
-            throw new Refused($unreadable);
-        }
-
-        try {
-            return CarbonImmutable::parse($date, 'UTC')->startOfMonth();
-        } catch (Throwable $failure) {
-            throw new Refused($unreadable, previous: $failure);
-        }
     }
 }

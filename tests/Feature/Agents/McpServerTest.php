@@ -22,6 +22,7 @@ use App\Agents\Models\McpToken;
 use App\Market\CandleRepository;
 use App\Market\Data\BookDepth;
 use App\Market\Data\CandleSource;
+use App\Market\Data\InstrumentStatus;
 use App\Market\Data\MarketType;
 use App\Market\LiquidationRepository;
 use App\Market\Models\Instrument;
@@ -68,6 +69,30 @@ function rpc(string $method, array $params = [], ?string $token = null): TestRes
         'Authorization' => $token === null ? null : "Bearer {$token}",
         'Accept' => 'application/json, text/event-stream',
     ]));
+}
+
+/**
+ * Stores a USDT perpetual with the daily stats given, as market:daily leaves them.
+ *
+ * @param  array<string, list<string|null>>  $days  by day: open, high, low, close, quote volume, then the funding rate and the open interest value where known
+ */
+function dailyPerp(string $base, array $days, ?string $listed = null, ?string $delisted = null, string $type = 'COIN'): Instrument
+{
+    $perp = Instrument::register('binance', MarketType::Perp, Symbol::parse("{$base}/USDT:USDT"), CarbonImmutable::parse('2026-11-01', 'UTC'), $delisted === null ? InstrumentStatus::Trading : InstrumentStatus::Delisted);
+    $perp->update([
+        'underlying_type' => $type,
+        'listed_at' => $listed === null ? null : CarbonImmutable::parse($listed, 'UTC'),
+        'delisted_at' => $delisted === null ? null : CarbonImmutable::parse($delisted, 'UTC'),
+    ]);
+
+    foreach ($days as $day => $d) {
+        DB::table('daily_stats')->insert([
+            'instrument_id' => $perp->id, 'day' => $day, 'open' => $d[0], 'high' => $d[1], 'low' => $d[2], 'close' => $d[3], 'volume' => '1',
+            'quote_volume' => $d[4], 'trades' => 1, 'funding_rate' => $d[5] ?? null, 'open_interest_value' => $d[6] ?? null,
+        ]);
+    }
+
+    return $perp;
 }
 
 /**
@@ -144,11 +169,12 @@ it('offers only reading, draft versions and simulation runs: no order, limit or 
 
     expect($names)->toBe([
         'compile_strategy', 'dsl_reference', 'get_candles', 'get_depth', 'get_funding', 'get_indicators', 'get_job', 'get_liquidations',
-        'get_strategy', 'list_instruments', 'list_strategies', 'list_trials', 'list_universe', 'run_backtest', 'run_grid', 'save_strategy',
+        'get_listing_stats', 'get_strategy', 'list_instruments', 'list_strategies', 'list_trials', 'list_universe', 'run_backtest', 'run_grid',
+        'save_strategy', 'screen_market',
     ]);
 
     // Everything added for research only reads (D-93).
-    foreach (collect(is_array($tools) ? $tools : [])->whereIn('name', ['get_depth', 'get_liquidations', 'list_universe', 'list_instruments']) as $tool) {
+    foreach (collect(is_array($tools) ? $tools : [])->whereIn('name', ['get_depth', 'get_liquidations', 'get_listing_stats', 'list_universe', 'list_instruments', 'screen_market']) as $tool) {
         expect(data_get($tool, 'annotations.readOnlyHint'))->toBeTrue();
     }
 });
@@ -392,4 +418,158 @@ it('creates a token shown once and stored only as its hash, and revokes it', fun
         ->and(Artisan::output())->toContain('laptop already has a token; revoke it first.')
         ->and(Artisan::call('mcp:revoke', ['name' => 'nobody']))->toBe(1)
         ->and(McpToken::query()->sole()->revoked_at)->toBeNull();
+});
+
+it('screens the market over the days before a date, point in time, by any of five measures (D-93)', function (): void {
+    config()->set('mcp.heavy_calls_per_minute', 100);
+    $token = mcpToken();
+
+    expect(ask($token, 'screen_market'))->toBe('No daily stats are stored; the operator fills them (market:daily).');
+
+    $aaa = dailyPerp('AAA', [
+        '2026-10-01' => ['100', '110', '100', '110', '100', '0.0001', '1000'],
+        '2026-10-02' => ['110', '121', '110', '120', '100', '0.0003', '1200'],
+        '2026-10-03' => ['120', '150', '120', '150', '100', '0.0002', '1500'],
+    ]);
+    $bbb = dailyPerp('BBB', [
+        '2026-10-01' => ['100', '100', '95', '95', '300'],
+        '2026-10-02' => ['90', '99', '90', '90', '300'],
+        '2026-10-03' => ['90', '90', '90', '90', '300'],
+        // The day of the screen itself is not known to it.
+        '2026-10-04' => ['90', '1000', '90', '1000', '9000'],
+    ]);
+    // Listed inside the window: it has two of the three days.
+    dailyPerp('CCC', ['2026-10-02' => ['10', '12', '10', '11', '50'], '2026-10-03' => ['12', '12', '12', '12', '50']], listed: '2026-10-02');
+    // A stock contract is never screened.
+    dailyPerp('TSLA', ['2026-10-01' => ['1', '9', '1', '9', '99999'], '2026-10-02' => ['9', '9', '9', '9', '99999'], '2026-10-03' => ['9', '9', '9', '9', '99999']], type: 'EQUITY');
+
+    $a = ['days' => 3, 'funding' => '0.0002', 'open_interest_change' => '0.5', 'quote_volume' => '300', 'return' => '0.5', 'symbol' => 'AAA/USDT:USDT', 'volatility' => '0.15'];
+    $b = ['days' => 3, 'funding' => null, 'open_interest_change' => null, 'quote_volume' => '900', 'return' => '-0.1', 'symbol' => 'BBB/USDT:USDT', 'volatility' => '0.05'];
+    $c = ['days' => 2, 'funding' => null, 'open_interest_change' => null, 'quote_volume' => '100', 'return' => '0.2', 'symbol' => 'CCC/USDT:USDT', 'volatility' => '0.1'];
+    $ranked = function (array ...$rows): array {
+        $ranked = [];
+
+        foreach (array_values($rows) as $index => $row) {
+            $row['rank'] = $index + 1;
+            ksort($row);
+            $ranked[] = $row;
+        }
+
+        return $ranked;
+    };
+    $all = ['date' => '2026-10-04', 'window_days' => 3, 'scope' => 'all'];
+
+    expect(ask($token, 'screen_market', $all))->toBe([
+        'rows' => $ranked($a, $b),
+        'screen' => ['by' => 'return', 'date' => '2026-10-04', 'from' => '2026-10-01', 'order' => 'desc', 'scope' => 'all', 'to' => '2026-10-03', 'whole_window' => true, 'window_days' => 3],
+    ])
+        ->and(data_get(ask($token, 'screen_market', [...$all, 'by' => 'quote_volume']), 'rows'))->toBe($ranked($b, $a))
+        ->and(data_get(ask($token, 'screen_market', [...$all, 'by' => 'volatility']), 'rows'))->toBe($ranked($a, $b))
+        // An instrument without the measure is left out, not ranked as zero.
+        ->and(data_get(ask($token, 'screen_market', [...$all, 'by' => 'funding']), 'rows'))->toBe($ranked($a))
+        ->and(data_get(ask($token, 'screen_market', [...$all, 'by' => 'open_interest_change']), 'rows'))->toBe($ranked($a))
+        ->and(data_get(ask($token, 'screen_market', [...$all, 'order' => 'asc']), 'rows'))->toBe($ranked($b, $a))
+        ->and(data_get(ask($token, 'screen_market', [...$all, 'whole_window' => false]), 'rows'))->toBe($ranked($a, $c, $b))
+        ->and(data_get(ask($token, 'screen_market', [...$all, 'whole_window' => false, 'limit' => 1]), 'rows'))->toBe($ranked($a));
+
+    // Without a date it screens the days up to the last one stored.
+    $latest = ask($token, 'screen_market', ['scope' => 'all', 'window_days' => 4, 'whole_window' => false]);
+
+    expect(data_get($latest, 'screen.date'))->toBe('2026-10-05')
+        ->and(data_get($latest, 'rows.0.symbol'))->toBe('BBB/USDT:USDT')
+        ->and(data_get($latest, 'rows.0.return'))->toBe('9')
+        ->and(ask($token, 'screen_market', [...$all, 'date' => '2026-10-09']))->toBe('Daily stats are stored up to 2026-10-04; date is at most 2026-10-05.')
+        ->and(ask($token, 'screen_market', [...$all, 'date' => '2026-09-10']))
+        ->toBe('Nothing to rank by return from 2026-09-07 to 2026-09-09: no instrument of that scope has the daily stats for it. Try whole_window false or another window; the operator fills daily stats (market:daily).')
+        // The universe is the scope unless all is asked for.
+        ->and(ask($token, 'screen_market', ['date' => '2026-10-04', 'window_days' => 3]))
+        ->toBe('The universe is not built for 2026-10; ask with scope all, or the operator builds it (market:universe:build).');
+
+    DB::table('universe_members')->insert([
+        ['month' => '2026-10-01', 'instrument_id' => $bbb->id, 'rank' => 1, 'quote_volume_30d' => '900'],
+        ['month' => '2026-10-01', 'instrument_id' => $aaa->id, 'rank' => 2, 'quote_volume_30d' => '300'],
+    ]);
+    $members = ask($token, 'screen_market', ['date' => '2026-10-04', 'window_days' => 3, 'whole_window' => false]);
+
+    expect(data_get($members, 'rows'))->toBe($ranked($a, $b))
+        ->and(data_get($members, 'screen.scope'))->toBe('universe')
+        ->and(ask($token, 'screen_market', [...$all, 'by' => 'luck']))->toBe('by must be one of return, quote_volume, funding, open_interest_change, volatility.')
+        ->and(ask($token, 'screen_market', [...$all, 'window_days' => 400]))->toBe('window_days is a whole number from 1 to 365.')
+        ->and(ask($token, 'screen_market', [...$all, 'limit' => 51]))->toBe('limit is a whole number from 1 to 50.')
+        ->and(ask($token, 'screen_market', [...$all, 'scope' => 'mine']))->toBe('scope must be universe or all.')
+        ->and(ask($token, 'screen_market', [...$all, 'order' => 'up']))->toBe('order must be desc or asc.')
+        ->and(ask($token, 'screen_market', [...$all, 'whole_window' => 'yes']))->toBe('whole_window is true or false.')
+        ->and(ask($token, 'screen_market', [...$all, 'date' => 'soon']))->toBe('date is a day, YYYY-MM-DD.');
+});
+
+it('says what perpetuals did after their listing, only where the days from the listing are stored (D-93)', function (): void {
+    config()->set('mcp.heavy_calls_per_minute', 100);
+    $token = mcpToken();
+    $first = CarbonImmutable::parse('2026-09-01', 'UTC');
+    $days = ['2026-09-01' => ['10', '20', '10', '20', '1000']];
+
+    for ($age = 1; $age <= 30; $age++) {
+        $days[$first->addDays($age)->toDateString()] = match (true) {
+            $age < 6 => ['20', '20', '20', '20', '100'],
+            // The seventh day falls to a quarter of the high and closes the first week at 15.
+            $age === 6 => ['20', '20', '5', '15', '100'],
+            $age < 29 => ['15', '15', '15', '15', '10'],
+            // The thirtieth day closes at 30, the day after at 12.
+            $age === 29 => ['15', '30', '15', '30', '10'],
+            default => ['30', '30', '12', '12', '7'],
+        };
+    }
+
+    dailyPerp('NEW', $days, listed: '2026-09-01 08:00:00');
+    dailyPerp('GONE', [
+        '2026-09-05' => ['10', '10', '8', '8', '50'], '2026-09-06' => ['8', '8', '4', '4', '30'], '2026-09-07' => ['4', '6', '4', '6', '20'],
+    ], listed: '2026-09-05', delisted: '2026-09-08');
+    // Its stored days begin two days after its listing: what it did on its first day is not known.
+    dailyPerp('LATE', ['2026-09-12' => ['1', '1', '1', '1', '1']], listed: '2026-09-10');
+    dailyPerp('OLD', ['2026-09-01' => ['1', '1', '1', '1', '1']], listed: '2024-01-01');
+    dailyPerp('TSLA', ['2026-09-03' => ['1', '1', '1', '1', '1']], listed: '2026-09-03', type: 'EQUITY');
+
+    expect(ask($token, 'get_listing_stats', ['from' => '2026-09-01', 'to' => '2026-10-01']))->toBe([
+        'listings' => [
+            [
+                'days' => 31, 'delisted_at' => null, 'first_day' => '2026-09-01', 'last_day' => '2026-10-01', 'listed_at' => '2026-09-01T08:00:00Z',
+                'max_drawdown' => '-0.75', 'return_1d' => '1', 'return_30d' => '2', 'return_7d' => '0.5', 'return_since_listing' => '0.2',
+                'status' => 'trading', 'symbol' => 'NEW/USDT:USDT', 'volume_1d' => '1000', 'volume_30d' => '1830', 'volume_7d' => '1600',
+            ],
+            [
+                // It did not live a week: its week and month are not numbers.
+                'days' => 3, 'delisted_at' => '2026-09-08T00:00:00Z', 'first_day' => '2026-09-05', 'last_day' => '2026-09-07', 'listed_at' => '2026-09-05T00:00:00Z',
+                'max_drawdown' => '-0.6', 'return_1d' => '-0.2', 'return_30d' => null, 'return_7d' => null, 'return_since_listing' => '-0.4',
+                'status' => 'delisted', 'symbol' => 'GONE/USDT:USDT', 'volume_1d' => '50', 'volume_30d' => null, 'volume_7d' => null,
+            ],
+        ],
+        'not_covered' => ['LATE/USDT:USDT'],
+        'window' => ['from' => '2026-09-01', 'to' => '2026-10-01'],
+    ])
+        ->and(ask($token, 'get_listing_stats', ['from' => '2027-01-01', 'to' => '2027-02-01']))->toBe('No stored USDT perpetual was listed from 2027-01-01 to 2027-02-01.')
+        ->and(ask($token, 'get_listing_stats', ['from' => '2026-10-01', 'to' => '2026-09-01']))->toBe('from is before to; both are days, YYYY-MM-DD.')
+        ->and(ask($token, 'get_listing_stats', ['from' => 'spring', 'to' => '2026-09-01']))->toBe('from is before to; both are days, YYYY-MM-DD.');
+
+    foreach (range(1, 49) as $n) {
+        dailyPerp("N{$n}", [], listed: '2026-09-20');
+    }
+
+    expect(ask($token, 'get_listing_stats', ['from' => '2026-09-01', 'to' => '2026-10-01']))->toBe('That is 52 listings; ask for at most 50, with a shorter window.')
+        ->and(data_get(ask($token, 'get_listing_stats', ['from' => '2026-09-01', 'to' => '2026-09-06']), 'listings.1.symbol'))->toBe('GONE/USDT:USDT');
+});
+
+it('answers the tools that read the whole market a few times a minute for a token (D-93)', function (): void {
+    config()->set('mcp.heavy_calls_per_minute', 2);
+    $token = mcpToken();
+    $other = mcpToken('laptop');
+    $slow = 'screen_market and get_listing_stats answer 2 times a minute for a token; ask again in a minute.';
+    $empty = 'No daily stats are stored; the operator fills them (market:daily).';
+
+    expect(ask($token, 'screen_market'))->toBe($empty)
+        ->and(ask($token, 'get_listing_stats', ['from' => '2027-01-01', 'to' => '2027-02-01']))->toBe('No stored USDT perpetual was listed from 2027-01-01 to 2027-02-01.')
+        ->and(ask($token, 'screen_market'))->toBe($slow)
+        ->and(ask($token, 'get_listing_stats', ['from' => '2027-01-01', 'to' => '2027-02-01']))->toBe($slow)
+        // The other tools and the other tokens are not held back.
+        ->and(ask($token, 'list_instruments'))->toBe(['instruments' => []])
+        ->and(ask($other, 'screen_market'))->toBe($empty);
 });
