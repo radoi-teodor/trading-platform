@@ -39,3 +39,31 @@ test('adds and removes layers, changes the timeframe and shows the table', async
     await checkLayout(page);
     expect(errors).toEqual([]);
 });
+
+test('finds an instrument by typing a part of its symbol', async ({ page }) => {
+    const errors = watchConsole(page);
+    await page.goto('/chart');
+    const instrument = page.getByLabel('Instrument');
+    await expect(instrument).toHaveValue('BTC/USDT');
+
+    // Typing only narrows the list; Enter takes the first instrument that matches.
+    await instrument.fill('doge');
+    await expect(page.getByRole('alert')).toHaveCount(0);
+    await instrument.press('Enter');
+    await expect(instrument).toHaveValue('DOGE/USDT:USDT');
+    await expect(page.getByRole('alert')).toContainText('DOGE/USDT:USDT has no stored candles.');
+
+    // What is not an instrument is not kept.
+    await instrument.fill('nothing listed');
+    await instrument.press('Enter');
+    await instrument.blur();
+    await expect(instrument).toHaveValue('DOGE/USDT:USDT');
+
+    // A whole symbol, as picking it from the list writes it.
+    await instrument.fill('BTC/USDT');
+    await expect(page.getByRole('alert')).toHaveCount(0);
+    await expect(page.getByLabel('Layers')).toContainText('ema(9)a price series');
+
+    await checkLayout(page);
+    expect(errors).toEqual([]);
+});

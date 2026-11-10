@@ -125,7 +125,8 @@ process that runs for weeks crosses months; and the stream would have to keep ab
 is open question O-7.
 
 Status: the document, the compiler, the engine batch, the backtest, the grid and the gates over a universe are done
-(steps 5 and 6). MCP tools are step 7; the import of the members and the example strategy are step 8.
+(steps 5 and 6), and so are the MCP tools, the server's instructions and the Chart's instrument search (step 7).
+The import of the members and the example strategy are step 8.
 
 ## 6. Research over MCP (D-93)
 

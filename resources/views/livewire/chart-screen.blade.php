@@ -1,11 +1,15 @@
 {{-- The chart follows the market (D-87): every second the forming candle moves; layers change when a candle closes. --}}
 <div class="flex flex-col gap-3">
     <div class="flex flex-wrap items-end gap-2 rounded-card border border-border bg-surface p-card">
-        <label class="flex flex-col gap-1">
+        {{-- Hundreds of instruments: a field to search them, not a list to scroll. Only this field changes the symbol. --}}
+        <label class="flex flex-col gap-1" wire:ignore x-data="instrumentPicker(@js($symbol))">
             <span class="text-2xs uppercase tracking-wider text-muted">Instrument</span>
-            <select wire:model.live="symbol" class="h-row rounded-control border border-border bg-surface-2 px-2 font-mono text-sm">
-                @foreach ($instruments as $instrument)<option value="{{ $instrument }}">{{ $instrument }}</option>@endforeach
-            </select>
+            <input x-ref="field" type="text" list="chart-instruments" value="{{ $symbol }}" placeholder="Search a symbol" autocomplete="off" autocapitalize="characters" spellcheck="false"
+                x-on:focus="$el.select()" x-on:input="choose(false)" x-on:keydown.enter.prevent="choose(true)" x-on:blur="restore()"
+                class="h-row w-44 rounded-control border border-border bg-surface-2 px-2 font-mono text-sm text-text focus:border-focus focus:outline-none">
+            <datalist x-ref="list" id="chart-instruments">
+                @foreach ($instruments as $instrument)<option value="{{ $instrument }}"></option>@endforeach
+            </datalist>
         </label>
         <label class="flex flex-col gap-1">
             <span class="text-2xs uppercase tracking-wider text-muted">Timeframe</span>

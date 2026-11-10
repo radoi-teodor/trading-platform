@@ -39,8 +39,21 @@ Trading X research tools. Read candles and evaluate DSL expressions (ema(9), rsi
 on any timeframe with the same formulas backtests use. Write a strategy as a YAML document (call dsl_reference first),
 check it with compile_strategy, save it with save_strategy (a draft version), then run_backtest or run_grid on that
 version and poll get_job for the result. Judge a strategy by its out-of-sample walk-forward, its deflated Sharpe ratio
-and its probability of overfitting, not by its best in-sample return. You cannot place orders, change limits or
-promote a strategy: the operator decides that.
+and its probability of overfitting, not by its best in-sample return.
+
+To look across markets: list_universe gives the USDT perpetuals of a month as they were ranked then, delisted ones
+included. screen_market ranks them by return, volume, funding, open interest change or volatility over the days
+before a date; it reads nothing later, so a past date gives what was known then. get_listing_stats says what newly
+listed perpetuals did in their first days. get_depth and get_liquidations read one instrument's order book depth
+and liquidations; liquidations are a lower bound and exist only from the day they were first collected.
+
+A strategy over many instruments declares universe: instead of market: and ranks its members with rank,
+percentile, top and bottom (dsl_reference, section 1). run_backtest and run_grid run it over the members of each
+month, up to 40,000 instrument-days (instruments times days) a run. An account cannot run a universe strategy yet.
+
+What is not stored is refused or left out, never filled in, and the refusal names what is missing.
+You cannot place orders, change limits or promote a strategy, and you cannot import data or build the universe:
+the operator decides and does that.
 TEXT)]
 final class TradingServer extends Server
 {

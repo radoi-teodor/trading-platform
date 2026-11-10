@@ -640,6 +640,13 @@ for, and by default only instruments with every day of the window; `get_listing_
 perpetuals whose stored days begin on their listing day and names the others; its fall is measured against the
 highs of earlier days, so it is never deeper than the truth. Both share 10 answers a minute for a token
 (`MCP_HEAVY_CALLS_PER_MINUTE`), refused calls counted.
+The Chart's instrument control (2026-11-10, decided under D-29): with hundreds of instruments a select is a list
+to scroll, so it is a text field over the browser's own list of every instrument, with no component library.
+Typing narrows the list and asks nothing of the server; the chart changes when the field holds a whole symbol,
+picked or typed, or on Enter, which takes the first instrument that starts with the text, else the first that
+contains it. Text that is not an instrument is never kept: leaving the field puts the current symbol back. The
+server's instructions and the DSL reference now tell an agent about the tools above, where a universe strategy
+runs and that importing data and building the universe stay with the operator.
 
 **D-94. Ten positions, raised by the operator** (2026-11-09, accepted with the Phase 7 plan; the operator chose to
 plan for 10 positions)

@@ -1310,9 +1310,9 @@
     "semantic_hash": "3d4a7df587c3fa763891ec92b24be4ac"
   },
   "resources/js/app.js": {
-    "mtime": 1794234537.1196008,
-    "seen": 1794237954.2615967,
-    "ast_hash": "31c307e8ec9ef369721134020f08affc",
+    "mtime": 1794270709.4773371,
+    "seen": 1794271775.6615486,
+    "ast_hash": "3e8ccf8d677a722ec337286d4ba22c3e",
     "semantic_hash": ""
   },
   "routes/console.php": {
@@ -1864,9 +1864,9 @@
     "semantic_hash": ""
   },
   "docs/decisions.md": {
-    "mtime": 1794269412.3133605,
-    "seen": 1794269925.5295174,
-    "ast_hash": "918e7543305d6030a3d63c2cbd70d466",
+    "mtime": 1794271195.0407486,
+    "seen": 1794271775.7038412,
+    "ast_hash": "6296cba745e901ef45746d9a7c93d4d2",
     "semantic_hash": ""
   },
   "docs/engine.md": {
@@ -1894,9 +1894,9 @@
     "semantic_hash": ""
   },
   "docs/runbook.md": {
-    "mtime": 1794269412.3133605,
-    "seen": 1794269925.5302854,
-    "ast_hash": "d8bc8ab57424800614fc4cad9ed2337d",
+    "mtime": 1794270137.6916664,
+    "seen": 1794271775.704771,
+    "ast_hash": "4a92bc8b84b6cf9deaf4be10eb3e5f12",
     "semantic_hash": ""
   },
   "docs/security.md": {
@@ -1912,15 +1912,15 @@
     "semantic_hash": ""
   },
   "docs/strategy/agents.md": {
-    "mtime": 1794269412.3133605,
-    "seen": 1794269925.5307813,
-    "ast_hash": "e97081514d3b328e1a48e1b3d32f5953",
+    "mtime": 1794270137.689535,
+    "seen": 1794271775.70515,
+    "ast_hash": "ffea0ab378ba3d728bd04b85b8792aed",
     "semantic_hash": ""
   },
   "docs/strategy/configurator.md": {
-    "mtime": 1794261189.9187462,
-    "seen": 1794261633.4164367,
-    "ast_hash": "64b04297f799cae15850097c2b9f5fa4",
+    "mtime": 1794271116.2794654,
+    "seen": 1794271775.7051609,
+    "ast_hash": "6b2f69fed864faf8b3121e6672fde049",
     "semantic_hash": ""
   },
   "public/robots.txt": {
@@ -2638,15 +2638,15 @@
     "semantic_hash": ""
   },
   "app/Agents/Mcp/TradingServer.php": {
-    "mtime": 1794269237.251657,
-    "seen": 1794269925.3881743,
-    "ast_hash": "885e773076519d3e3aa1dff3121bc7be",
+    "mtime": 1794271255.414754,
+    "seen": 1794271775.5586143,
+    "ast_hash": "a865f1f5765f950a43fb57526fe343bd",
     "semantic_hash": ""
   },
   "app/Agents/Mcp/TradingTool.php": {
-    "mtime": 1794269237.251657,
-    "seen": 1794269925.3881855,
-    "ast_hash": "c71cda737229ef9816db59f311bd6d02",
+    "mtime": 1794270045.9508743,
+    "seen": 1794271775.5586252,
+    "ast_hash": "feff1e277164dd82527c4de0132c92f7",
     "semantic_hash": ""
   },
   "app/Agents/Models/McpCall.php": {
@@ -2674,9 +2674,9 @@
     "semantic_hash": ""
   },
   "config/mcp.php": {
-    "mtime": 1794269168.0051856,
-    "seen": 1794269925.479762,
-    "ast_hash": "3ecc59626820aab557b331f94bf7db42",
+    "mtime": 1794270045.9529364,
+    "seen": 1794271775.6519914,
+    "ast_hash": "4f895c83b32a98be7f34f886c71d4784",
     "semantic_hash": ""
   },
   "database/migrations/2026_11_08_000006_create_mcp_tables.php": {
@@ -2692,9 +2692,9 @@
     "semantic_hash": ""
   },
   "tests/Feature/Agents/McpServerTest.php": {
-    "mtime": 1794269273.9142544,
-    "seen": 1794269925.494132,
-    "ast_hash": "3865caf30a104fcf7bba4b98b1e55967",
+    "mtime": 1794271087.0717094,
+    "seen": 1794271775.66641,
+    "ast_hash": "4f92c14c1a2cb32f9774ad7418da798a",
     "semantic_hash": ""
   },
   "tests/Unit/Simulation/ChartSeriesTest.php": {
@@ -3208,9 +3208,9 @@
     "semantic_hash": ""
   },
   "resources/views/livewire/chart-screen.blade.php": {
-    "mtime": 1794245515.4708922,
-    "seen": 1794246201.2769136,
-    "ast_hash": "8a40e3bc9d203de7c91194b17208eab0",
+    "mtime": 1794270964.4385881,
+    "seen": 1794271775.6637757,
+    "ast_hash": "061d1fd01a0731f6924f36121f0263ad",
     "semantic_hash": ""
   },
   "resources/views/livewire/halt-button.blade.php": {
@@ -3232,9 +3232,9 @@
     "semantic_hash": ""
   },
   "tests/Feature/Web/ScreensTest.php": {
-    "mtime": 1794245342.43219,
-    "seen": 1794246201.2963364,
-    "ast_hash": "2da0e248ed3fe8ce12fc63db5acad812",
+    "mtime": 1794270687.1742957,
+    "seen": 1794271775.6786406,
+    "ast_hash": "08d02098d4d0f8685160b6621ce1ecc3",
     "semantic_hash": ""
   },
   "app/Agents/Tokens.php": {
@@ -3340,9 +3340,9 @@
     "semantic_hash": ""
   },
   "tests/e2e/chart.spec.mjs": {
-    "mtime": 1794242880.748268,
-    "seen": 1794244430.2175238,
-    "ast_hash": "aa0efc574d57cbfdd62d2c32756b68d1",
+    "mtime": 1794270687.1742957,
+    "seen": 1794271775.6994715,
+    "ast_hash": "52ccb2321710e2737dfd75c24fd2fb6b",
     "semantic_hash": ""
   },
   "tests/e2e/env.mjs": {
@@ -3814,9 +3814,9 @@
     "semantic_hash": ""
   },
   "docs/universe.md": {
-    "mtime": 1794269412.3115468,
-    "seen": 1794269925.5309877,
-    "ast_hash": "654ae3ced53ca7dfe6690af12ba6826e",
+    "mtime": 1794271116.2794654,
+    "seen": 1794271775.7051709,
+    "ast_hash": "4883e203aa83c0a442d84a54b513027d",
     "semantic_hash": ""
   },
   "app/Market/Console/FillDailyStats.php": {
@@ -4144,9 +4144,51 @@
     "semantic_hash": ""
   },
   "app/Agents/Mcp/Tools/ListUniverse.php": {
-    "mtime": 1794269010.0935004,
-    "seen": 1794269925.3872557,
-    "ast_hash": "4da47f919f022b06713eb9155fbf1c5e",
+    "mtime": 1794270045.9508743,
+    "seen": 1794271775.5575955,
+    "ast_hash": "3592adca60e90bc1ef9521be8b322400",
+    "semantic_hash": ""
+  },
+  "app/Agents/Mcp/HeavyCalls.php": {
+    "mtime": 1794269995.8351622,
+    "seen": 1794271775.5542397,
+    "ast_hash": "727e6ae30b20578da1aee4b554f32138",
+    "semantic_hash": ""
+  },
+  "app/Agents/Mcp/Tools/GetListingStats.php": {
+    "mtime": 1794270028.8605,
+    "seen": 1794271775.556779,
+    "ast_hash": "79e8f339761675d02758606ba99d21a2",
+    "semantic_hash": ""
+  },
+  "app/Agents/Mcp/Tools/ScreenMarket.php": {
+    "mtime": 1794270017.0163012,
+    "seen": 1794271775.5583882,
+    "ast_hash": "0988fca29705e83e771725d2f742b507",
+    "semantic_hash": ""
+  },
+  "app/Market/Data/ScreenMeasure.php": {
+    "mtime": 1794269967.0398252,
+    "seen": 1794271775.588226,
+    "ast_hash": "290bb5367b87d69a7180f6b81f99a565",
+    "semantic_hash": ""
+  },
+  "app/Market/ListingStudy.php": {
+    "mtime": 1794269991.7190707,
+    "seen": 1794271775.5935128,
+    "ast_hash": "32c98c990d4467d6aa51e7f68d6542c3",
+    "semantic_hash": ""
+  },
+  "app/Market/MarketScreen.php": {
+    "mtime": 1794269976.8726993,
+    "seen": 1794271775.5935235,
+    "ast_hash": "ffbf2730ee6cf0ab3419128e9b1ff464",
+    "semantic_hash": ""
+  },
+  "resources/js/picker.js": {
+    "mtime": 1794270964.4365163,
+    "seen": 1794271775.6619654,
+    "ast_hash": "5040907a699068be8a9176ff02084314",
     "semantic_hash": ""
   },
   "package-lock.json": {

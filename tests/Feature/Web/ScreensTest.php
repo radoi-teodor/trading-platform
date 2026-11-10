@@ -134,6 +134,20 @@ it('draws candles and layers with their types, and says why an expression cannot
     Livewire::test(ChartScreen::class)->set('layers', ['ema(9'])->assertSee('expected ) to close the call to ema');
 });
 
+it('offers every instrument to the chart as a list to search, and says when the one picked has no candles', function (): void {
+    web()->actingAs(operator());
+    backtestFixture(days: 2);
+    Instrument::register('binance', MarketType::Perp, Symbol::parse('DOGE/USDT:USDT'), CarbonImmutable::parse('2026-10-01', 'UTC'));
+
+    Livewire::test(ChartScreen::class)
+        ->assertSeeHtml('list="chart-instruments"')
+        ->assertSeeHtml('<option value="BTC/USDT"></option>')
+        ->assertSeeHtml('<option value="DOGE/USDT:USDT"></option>')
+        ->assertDontSeeHtml('wire:model.live="symbol"')
+        ->set('symbol', 'DOGE/USDT:USDT')
+        ->assertSee('DOGE/USDT:USDT has no stored candles.');
+});
+
 /** The spot fixture of two days, three closed minutes of 2026-10-03, and the minute 00:03 forming (D-87). */
 function liveChartFixture(bool $forming = true): Instrument
 {

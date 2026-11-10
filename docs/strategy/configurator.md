@@ -93,8 +93,10 @@ a list of instruments. Rules:
 - Only a universe strategy may use `rank`, `percentile`, `top`, `bottom` and `count`.
 - An entry that ranks nothing, with no ranking in `filters` either, compiles with a warning: every member whose
   condition holds may enter, in symbol order, until the limits are reached.
-- The document compiles and reads back without the members; running it needs them. Backtests, paper and live runs
-  of a universe strategy come with the engine batch (`docs/universe.md`, section 5).
+- The document compiles and reads back without the members; running it needs them.
+  Backtests, grids and gates run a universe strategy over the members of each month, delisted ones included; a
+  background run takes at most 40,000 instrument-days, instruments times days (`docs/universe.md`, section 5).
+  An account cannot run one yet, in paper, testnet or live (D-92, open question O-7).
 
 ## 2. Expression language
 

@@ -373,7 +373,20 @@ it('reads candles, funding and the DSL reference, refusing what it cannot serve'
     TradingServer::tool(GetFunding::class, ['symbol' => 'BTC/USDT', 'from' => '2026-10-01', 'to' => '2026-10-01'])
         ->assertHasErrors(['BTC/USDT is not a stored perpetual.']);
     TradingServer::tool(DslReference::class)
-        ->assertOk()->assertSee(['## 2. Expression language', 'bb(n = 20: a whole number of candles', 'fields .upper', 'oi_change(n: a whole number of candles', 'strategy: ema-cross-scalp-long']);
+        ->assertOk()->assertSee(['## 2. Expression language', 'bb(n = 20: a whole number of candles', 'fields .upper', 'oi_change(n: a whole number of candles', 'strategy: ema-cross-scalp-long'])
+        // Where a universe strategy runs, as it is today (D-92).
+        ->assertSee(['Backtests, grids and gates run a universe strategy', 'An account cannot run one yet'])
+        ->assertDontSee('come with the engine batch');
+});
+
+it('tells an agent at the start how to look across markets and what stays with the operator (D-93)', function (): void {
+    $instructions = rpc('initialize', ['protocolVersion' => '2025-06-18', 'capabilities' => (object) [], 'clientInfo' => ['name' => 'desk', 'version' => '1']], mcpToken())
+        ->assertOk()->json('result.instructions');
+
+    expect($instructions)->toBeString()
+        ->toContain('list_universe', 'screen_market', 'get_listing_stats', 'get_depth', 'get_liquidations', 'dsl_reference', 'universe:')
+        ->toContain('An account cannot run a universe strategy yet')
+        ->toContain('You cannot place orders, change limits or promote a strategy', 'import data', 'build the universe');
 });
 
 it('refuses candles over incomplete history with the day to fill, which only the operator can do (D-88)', function (): void {
