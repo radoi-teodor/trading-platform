@@ -1,0 +1,30 @@
+strategy: xs-momentum
+title: Cross-sectional momentum over the top 50 perpetuals
+family: trend
+hypothesis: >
+  Among the fifty most traded USDT perpetuals, the ones that rose most over a week keep rising against the ones
+  that fell most, for a few days more. Held long and short in equal number, the position leans little on where
+  the whole market goes.
+fails_when: >
+  The whole market reverses sharply and last week's leaders fall hardest; a squeeze lifts the weakest coins
+  together; fees and funding of a book that turns over every few days eat a small edge.
+
+params:
+  look: { default: 42, range: [18, 84], step: 12 }
+  picks: { default: 3, range: [2, 5], step: 1 }
+
+universe: { rule: top, n: 50, by: quote_volume_30d }
+timeframe: 4h
+
+entries:
+  long:
+    when: top($picks, roc($look))
+  short:
+    when: bottom($picks, roc($look))
+
+exits:
+  stop_loss: 2 * atr(14)
+  when: rank(roc($look)) > 2 * $picks and rank(roc($look)) <= count - 2 * $picks
+
+sizing:
+  risk_per_trade: 0.3%

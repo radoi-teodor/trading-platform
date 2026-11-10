@@ -95,7 +95,12 @@ it('reads benchmarks, stop levels, bands and the carry template', function (stri
 it('reads back every strategy of the catalog', function (string $file): void {
     $text = ReadBack::render(readBackSpec((string) file_get_contents($file)));
 
-    expect($text)->toStartWith('On BTC/USDT:USDT perpetual, every time a 5-minute candle closes:')
+    // One strategy of the catalog trades the universe; the others one perpetual.
+    $start = str_contains(basename($file), 'xs-momentum')
+        ? 'On the top 50 USDT perpetuals by 30-day quote volume, re-ranked on the first day of each month, every time a 4-hour candle closes, for each member:'
+        : 'On BTC/USDT:USDT perpetual, every time a 5-minute candle closes:';
+
+    expect($text)->toStartWith($start)
         ->and($text)->toContain('on the exchange.')
         ->and($text)->not->toContain('$');
 })->with(fn (): array => glob(dirname(__DIR__, 4).'/catalog/strategies/*.strategy.yaml') ?: []);
