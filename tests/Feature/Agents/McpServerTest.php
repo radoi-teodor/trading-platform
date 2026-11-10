@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Agents\Mcp\BoundedRead;
+use App\Agents\Mcp\QueryTooSlow;
 use App\Agents\Mcp\Tools\CompileStrategy;
 use App\Agents\Mcp\Tools\DslReference;
 use App\Agents\Mcp\Tools\GetCandles;
@@ -18,19 +20,25 @@ use App\Agents\Mcp\TradingServer;
 use App\Agents\Models\McpCall;
 use App\Agents\Models\McpToken;
 use App\Market\CandleRepository;
+use App\Market\Data\BookDepth;
 use App\Market\Data\CandleSource;
 use App\Market\Data\MarketType;
+use App\Market\LiquidationRepository;
 use App\Market\Models\Instrument;
+use App\Market\ScalpingRepository;
 use App\Simulation\Charts\ChartSeries;
 use App\Simulation\Models\SimulationJob;
 use App\Strategy\Versions\StrategyVersion;
 use App\Support\Clock\Clock;
 use App\Support\Clock\SimClock;
+use App\Support\Number\Decimal;
 use App\Support\Symbol;
 use App\Support\Timeframe;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Testing\TestResponse;
 use Pest\TestSuite;
 use Symfony\Component\HttpFoundation\Response;
@@ -60,6 +68,27 @@ function rpc(string $method, array $params = [], ?string $token = null): TestRes
         'Authorization' => $token === null ? null : "Bearer {$token}",
         'Accept' => 'application/json, text/event-stream',
     ]));
+}
+
+/**
+ * Calls a tool as an agent does, over HTTP with the token.
+ *
+ * @param  array<string, mixed>  $arguments
+ * @return array<array-key, mixed>|string the tool's JSON answer, or the text of its refusal
+ */
+function ask(string $token, string $tool, array $arguments = []): array|string
+{
+    $result = rpc('tools/call', ['name' => $tool, 'arguments' => $arguments], $token)->assertOk()->json('result');
+    $text = data_get($result, 'content.0.text');
+    $text = is_string($text) ? $text : throw new RuntimeException("{$tool} answered without text.");
+
+    if (data_get($result, 'isError') === true) {
+        return $text;
+    }
+
+    $answer = json_decode($text, true, flags: JSON_THROW_ON_ERROR);
+
+    return is_array($answer) ? $answer : throw new RuntimeException("{$tool} did not answer with an object.");
 }
 
 /** Acts as the token's agent for tools called directly on the server. */
@@ -114,9 +143,148 @@ it('offers only reading, draft versions and simulation runs: no order, limit or 
     $names = collect(is_array($tools) ? $tools : [])->pluck('name')->sort()->values()->all();
 
     expect($names)->toBe([
-        'compile_strategy', 'dsl_reference', 'get_candles', 'get_funding', 'get_indicators', 'get_job', 'get_strategy',
-        'list_instruments', 'list_strategies', 'list_trials', 'run_backtest', 'run_grid', 'save_strategy',
+        'compile_strategy', 'dsl_reference', 'get_candles', 'get_depth', 'get_funding', 'get_indicators', 'get_job', 'get_liquidations',
+        'get_strategy', 'list_instruments', 'list_strategies', 'list_trials', 'list_universe', 'run_backtest', 'run_grid', 'save_strategy',
     ]);
+
+    // Everything added for research only reads (D-93).
+    foreach (collect(is_array($tools) ? $tools : [])->whereIn('name', ['get_depth', 'get_liquidations', 'list_universe', 'list_instruments']) as $tool) {
+        expect(data_get($tool, 'annotations.readOnlyHint'))->toBeTrue();
+    }
+});
+
+it('lists the instruments that have candles with their first and last stored minute', function (): void {
+    backtestFixture();
+    perpFixture();
+    Instrument::register('binance', MarketType::Spot, Symbol::parse('ETH/USDT'), CarbonImmutable::parse('2026-11-08 12:00:00', 'UTC'));
+
+    expect(ask(mcpToken(), 'list_instruments'))->toBe(['instruments' => [
+        ['first_minute' => '2026-10-01T00:00:00Z', 'last_minute' => '2026-10-02T23:59:00Z', 'market' => 'perp', 'status' => 'trading', 'symbol' => 'BTC/USDT:USDT'],
+        ['first_minute' => '2026-10-01T00:00:00Z', 'last_minute' => '2026-10-02T23:59:00Z', 'market' => 'spot', 'status' => 'trading', 'symbol' => 'BTC/USDT'],
+    ]]);
+});
+
+it('lists the members of the universe on a day, with their lifetime and what is stored of them (D-93)', function (): void {
+    $token = mcpToken();
+
+    expect(ask($token, 'list_universe'))->toBe('The research universe is not built yet; the operator builds it (market:universe:build).');
+
+    universeFixture();
+    $october = ask($token, 'list_universe', ['date' => '2026-10-15']);
+
+    expect($october)->toBeArray()
+        ->and(data_get($october, 'universe'))->toBe(['by' => 'quote_volume_30d', 'from' => '2026-10', 'n' => 6, 'rule' => 'top', 'to' => '2026-10'])
+        ->and(data_get($october, 'month'))->toBe('2026-10')
+        ->and(data_get($october, 'members.0'))->toBe([
+            'delisted_at' => null, 'first_minute' => '2026-10-01T00:00:00Z', 'last_minute' => '2026-10-02T23:59:00Z', 'listed_at' => null,
+            'quote_volume_30d' => '600', 'rank' => 1, 'status' => 'trading', 'symbol' => 'AAA/USDT:USDT',
+        ])
+        ->and(data_get($october, 'members.5'))->toBe([
+            'delisted_at' => '2026-10-02T12:00:00Z', 'first_minute' => '2026-10-01T00:00:00Z', 'last_minute' => '2026-10-02T11:59:00Z', 'listed_at' => null,
+            'quote_volume_30d' => '100', 'rank' => 6, 'status' => 'delisted', 'symbol' => 'FFF/USDT:USDT',
+        ])
+        // Without a day it answers for the last month built.
+        ->and(ask($token, 'list_universe'))->toBe($october)
+        ->and(ask($token, 'list_universe', ['date' => '2026-12-01']))->toBe('The universe is built from 2026-10 to 2026-10; 2026-12 is outside it.')
+        ->and(ask($token, 'list_universe', ['date' => 'soon']))->toBe('date is a day, YYYY-MM-DD.');
+});
+
+it('reads order book depth as stored or averaged over longer steps, and says which days have none (D-93)', function (): void {
+    backtestFixture();
+    $perp = perpFixture();
+    $token = mcpToken();
+    $at = fn (string $time, int $bid): BookDepth => new BookDepth(
+        CarbonImmutable::parse($time, 'UTC'), Decimal::of($bid), Decimal::of($bid * 2), Decimal::of($bid * 5), Decimal::of($bid + 10), Decimal::of($bid * 2 + 10), Decimal::of($bid * 5 + 10),
+    );
+    app(ScalpingRepository::class)->upsertDepth($perp, CandleSource::Archive, [
+        $at('2026-10-01 00:00:00', 100), $at('2026-10-01 00:05:00', 301), $at('2026-10-01 01:00:00', 500), $at('2026-10-01 02:00:00', 900),
+    ]);
+    $window = ['symbol' => 'BTC/USDT:USDT', 'from' => '2026-10-01T00:00:00Z', 'to' => '2026-10-01T02:00:00Z'];
+
+    expect(ask($token, 'get_depth', $window))->toBe(['depth' => [
+        ['ask_1' => '110', 'ask_2' => '210', 'ask_5' => '510', 'bid_1' => '100', 'bid_2' => '200', 'bid_5' => '500', 'time' => '2026-10-01T00:00:00Z'],
+        ['ask_1' => '311', 'ask_2' => '612', 'ask_5' => '1515', 'bid_1' => '301', 'bid_2' => '602', 'bid_5' => '1505', 'time' => '2026-10-01T00:05:00Z'],
+        ['ask_1' => '510', 'ask_2' => '1010', 'ask_5' => '2510', 'bid_1' => '500', 'bid_2' => '1000', 'bid_5' => '2500', 'time' => '2026-10-01T01:00:00Z'],
+    ], 'every' => '5m', 'missing_days' => []])
+        ->and(ask($token, 'get_depth', [...$window, 'every' => '1h']))->toBe(['depth' => [
+            ['ask_1' => '210.5', 'ask_2' => '411', 'ask_5' => '1012.5', 'bid_1' => '200.5', 'bid_2' => '401', 'bid_5' => '1002.5', 'time' => '2026-10-01T00:00:00Z'],
+            ['ask_1' => '510', 'ask_2' => '1010', 'ask_5' => '2510', 'bid_1' => '500', 'bid_2' => '1000', 'bid_5' => '2500', 'time' => '2026-10-01T01:00:00Z'],
+        ], 'every' => '1h', 'missing_days' => []])
+        ->and(data_get(ask($token, 'get_depth', [...$window, 'to' => '2026-10-03T00:00:00Z', 'every' => '1d']), 'missing_days'))->toBe(['2026-10-02'])
+        ->and(ask($token, 'get_depth', [...$window, 'to' => '2026-10-05T00:00:00Z']))->toBe('That is 1152 rows; ask for at most 1000, with a shorter window or a longer step in every.')
+        ->and(ask($token, 'get_depth', [...$window, 'every' => '1m']))->toBe('every must be one of 5m, 15m, 1h, 4h, 1d.')
+        ->and(ask($token, 'get_depth', [...$window, 'from' => '2026-10-02T00:00:00Z', 'to' => '2026-10-02T06:00:00Z']))
+        ->toBe('No depth is stored for BTC/USDT:USDT in that window; the operator imports it (market:backfill --depth).')
+        ->and(ask($token, 'get_depth', [...$window, 'symbol' => 'BTC/USDT']))->toBe('BTC/USDT is not a stored perpetual.')
+        ->and(ask($token, 'get_depth', [...$window, 'to' => '2026-10-01T00:00:00Z']))->toBe('from is before to; both are times in UTC, such as 2026-09-01T00:00:00Z.');
+});
+
+it('reads liquidations by the minute or summed over longer steps, as a lower bound, and says what was not collected (D-93)', function (): void {
+    backtestFixture();
+    $perp = perpFixture();
+    $token = mcpToken();
+    $start = CarbonImmutable::parse('2026-10-01 00:00:00', 'UTC');
+    $stored = app(LiquidationRepository::class);
+    $stored->store($perp, $start, 2, '1000', 0, '0');
+    $stored->store($perp, $start->addMinute(), 0, '0', 1, '250.5');
+    $stored->store($perp, $start->addMinutes(61), 1, '10', 0, '0');
+    $stored->cover(array_map(fn (int $minute): CarbonImmutable => $start->addMinutes($minute), range(0, 119)));
+    $window = ['symbol' => 'BTC/USDT:USDT', 'from' => '2026-10-01T00:00:00Z', 'to' => '2026-10-01T02:00:00Z'];
+    $minutes = ask($token, 'get_liquidations', $window);
+
+    expect(data_get($minutes, 'liquidations'))->toBe([
+        ['long_count' => 2, 'long_notional' => '1000', 'short_count' => 0, 'short_notional' => '0', 'time' => '2026-10-01T00:00:00Z'],
+        ['long_count' => 0, 'long_notional' => '0', 'short_count' => 1, 'short_notional' => '250.5', 'time' => '2026-10-01T00:01:00Z'],
+        ['long_count' => 1, 'long_notional' => '10', 'short_count' => 0, 'short_notional' => '0', 'time' => '2026-10-01T01:01:00Z'],
+    ])
+        ->and(data_get($minutes, 'incomplete_days'))->toBe([])
+        ->and(data_get($minutes, 'note'))->toBe('A lower bound: the exchange streams at most one liquidation per symbol per second. A step without a row had none that was heard.')
+        ->and(data_get(ask($token, 'get_liquidations', [...$window, 'every' => '1h']), 'liquidations'))->toBe([
+            ['long_count' => 2, 'long_notional' => '1000', 'short_count' => 1, 'short_notional' => '250.5', 'time' => '2026-10-01T00:00:00Z'],
+            ['long_count' => 1, 'long_notional' => '10', 'short_count' => 0, 'short_notional' => '0', 'time' => '2026-10-01T01:00:00Z'],
+        ])
+        // The stream was heard for two hours of that day only.
+        ->and(data_get(ask($token, 'get_liquidations', [...$window, 'to' => '2026-10-01T12:00:00Z']), 'incomplete_days'))->toBe(['2026-10-01'])
+        ->and(ask($token, 'get_liquidations', [...$window, 'to' => '2026-10-02T00:00:00Z']))->toBe('That is 1440 rows; ask for at most 1000, with a shorter window or a longer step in every.')
+        ->and(ask($token, 'get_liquidations', [...$window, 'every' => '1w']))->toBe('every must be one of 1m, 5m, 15m, 1h, 4h, 1d.')
+        ->and(ask($token, 'get_liquidations', [...$window, 'from' => '2026-10-02T00:00:00Z', 'to' => '2026-10-02T06:00:00Z']))
+        ->toBe('No liquidations were collected in that window: they come from the live stream only (market:stream perp), from the day it was started.')
+        ->and(ask($token, 'get_liquidations', [...$window, 'symbol' => 'ETH/USDT:USDT']))->toBe('ETH/USDT:USDT is not a stored perpetual.');
+});
+
+it('stops a read that takes longer than its bound and leaves the connection as it was (D-93)', function (): void {
+    config()->set('mcp.statement_timeout_ms', 150);
+    $read = app(BoundedRead::class);
+    $bound = fn (): mixed => data_get(DB::selectOne('show statement_timeout'), 'statement_timeout');
+    $before = $bound();
+
+    expect($read->run(fn (): int => 7))->toBe(7)
+        ->and($bound())->toBe($before)
+        ->and(fn (): mixed => $read->run(fn (): array => DB::select('select pg_sleep(2)')))
+        ->toThrow(QueryTooSlow::class, 'The data took longer than 0.15 s to read; ask for a shorter window or fewer rows.')
+        ->and($bound())->toBe($before)
+        // Another failure is not taken for a slow read.
+        ->and(fn (): mixed => $read->run(fn (): array => DB::select('select * from no_such_table')))->toThrow(QueryException::class);
+});
+
+it('answers a tool whose read is too slow with the bound, not with a failure', function (): void {
+    config()->set('mcp.statement_timeout_ms', 150);
+    $token = mcpToken();
+    // Another session holds the table, as a long import or a rebuild of the universe does.
+    config()->set('database.connections.other', config('database.connections.'.DB::getDefaultConnection()));
+    $other = DB::connection('other');
+    $other->beginTransaction();
+
+    try {
+        $other->statement('lock table universe_members in access exclusive mode');
+
+        expect(ask($token, 'list_universe'))->toBe('The data took longer than 0.15 s to read; ask for a shorter window or fewer rows.');
+    } finally {
+        $other->rollBack();
+        DB::purge('other');
+    }
+
+    expect(ask($token, 'list_universe'))->toBe('The research universe is not built yet; the operator builds it (market:universe:build).');
 });
 
 it('evaluates indicators exactly as the chart service does', function (): void {

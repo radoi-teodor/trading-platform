@@ -236,6 +236,8 @@ Connect a client to `http://<host>:8000/mcp` with the header `Authorization: Bea
 `claude mcp add --transport http trading-x http://127.0.0.1:8000/mcp --header "Authorization: Bearer <token>"`.
 The endpoint is for your own network; anywhere else it must sit behind TLS. Every call is listed in `mcp_calls`.
 
+A research tool's statement is stopped after `MCP_STATEMENT_TIMEOUT_MS` (5000), so an agent's read never queues
+behind an import for longer than that; raise it only if honest reads are being refused as too slow.
 The rate limit (60 calls a minute per token, `MCP_CALLS_PER_MINUTE`) is kept in the cache store, Redis by default;
 without Redis running, set `CACHE_STORE=file`. A run waits in `simulation_jobs` until the worker takes it, and each
 token has at most 2 runs waiting or running. A window over missing candles fails with the gap named in `get_job`

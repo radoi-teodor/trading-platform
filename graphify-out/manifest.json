@@ -337,10 +337,10 @@
     "semantic_hash": "8c1691e2d37888c015cef2065eba4026"
   },
   "app/Market/CandleRepository.php": {
-    "mtime": 1794234536.6574216,
-    "seen": 1794237954.2581203,
-    "ast_hash": "1e823c1bbd5348d3c82496283a5b70a6",
-    "semantic_hash": "1e823c1bbd5348d3c82496283a5b70a6"
+    "mtime": 1794269168.0114934,
+    "seen": 1794269925.411248,
+    "ast_hash": "1721dd102012a8b210f109911ccbd483",
+    "semantic_hash": ""
   },
   "app/Market/Console/BackfillMarketData.php": {
     "mtime": 1794256159.0980048,
@@ -511,10 +511,10 @@
     "semantic_hash": "fe22b17bf09895fda6a756b5b97ef2ee"
   },
   "app/Market/Persistence/Rows.php": {
-    "mtime": 1794234536.7025833,
-    "seen": 1794237954.2584994,
-    "ast_hash": "b5bd30c47112c15bbbe2357d2aa58402",
-    "semantic_hash": "b5bd30c47112c15bbbe2357d2aa58402"
+    "mtime": 1794269315.702325,
+    "seen": 1794269925.4225154,
+    "ast_hash": "50bd191cd94c8610f8c55a5655952399",
+    "semantic_hash": ""
   },
   "app/Market/Quality/ExchangeVerification.php": {
     "mtime": 1794234536.704648,
@@ -1864,9 +1864,9 @@
     "semantic_hash": ""
   },
   "docs/decisions.md": {
-    "mtime": 1794264781.5891154,
-    "seen": 1794267424.0805721,
-    "ast_hash": "b80ae1753321aeca1742961b169a7b05",
+    "mtime": 1794269412.3133605,
+    "seen": 1794269925.5295174,
+    "ast_hash": "918e7543305d6030a3d63c2cbd70d466",
     "semantic_hash": ""
   },
   "docs/engine.md": {
@@ -1894,9 +1894,9 @@
     "semantic_hash": ""
   },
   "docs/runbook.md": {
-    "mtime": 1794256832.894202,
-    "seen": 1794256860.4400308,
-    "ast_hash": "e9770e3c9d29ba94f053ab0119ae6a52",
+    "mtime": 1794269412.3133605,
+    "seen": 1794269925.5302854,
+    "ast_hash": "d8bc8ab57424800614fc4cad9ed2337d",
     "semantic_hash": ""
   },
   "docs/security.md": {
@@ -1912,9 +1912,9 @@
     "semantic_hash": ""
   },
   "docs/strategy/agents.md": {
-    "mtime": 1794234537.0354881,
-    "seen": 1794237954.263448,
-    "ast_hash": "588ad325113bfa6c085c3d49b71859ba",
+    "mtime": 1794269412.3133605,
+    "seen": 1794269925.5307813,
+    "ast_hash": "e97081514d3b328e1a48e1b3d32f5953",
     "semantic_hash": ""
   },
   "docs/strategy/configurator.md": {
@@ -2596,9 +2596,9 @@
     "semantic_hash": ""
   },
   "app/Agents/Mcp/Tools/ListInstruments.php": {
-    "mtime": 1794234536.5493305,
-    "seen": 1794237954.2560472,
-    "ast_hash": "f172ed0f4ed3887900a8b67737f0db11",
+    "mtime": 1794269164.9845338,
+    "seen": 1794269925.3868248,
+    "ast_hash": "6ecf6b684030713c5c361567336d610f",
     "semantic_hash": ""
   },
   "app/Agents/Mcp/Tools/ListStrategies.php": {
@@ -2638,15 +2638,15 @@
     "semantic_hash": ""
   },
   "app/Agents/Mcp/TradingServer.php": {
-    "mtime": 1794234536.555571,
-    "seen": 1794237954.2561216,
-    "ast_hash": "d47e38148ad980c493c9f4d8fa63d8f7",
+    "mtime": 1794269237.251657,
+    "seen": 1794269925.3881743,
+    "ast_hash": "885e773076519d3e3aa1dff3121bc7be",
     "semantic_hash": ""
   },
   "app/Agents/Mcp/TradingTool.php": {
-    "mtime": 1794234536.557639,
-    "seen": 1794237954.2561321,
-    "ast_hash": "40f2a01b19e3dc07ae15b97cee2a86cd",
+    "mtime": 1794269237.251657,
+    "seen": 1794269925.3881855,
+    "ast_hash": "c71cda737229ef9816db59f311bd6d02",
     "semantic_hash": ""
   },
   "app/Agents/Models/McpCall.php": {
@@ -2674,9 +2674,9 @@
     "semantic_hash": ""
   },
   "config/mcp.php": {
-    "mtime": 1794234536.9861102,
-    "seen": 1794237954.2612107,
-    "ast_hash": "def05f49305692ef7684d1282ea59e13",
+    "mtime": 1794269168.0051856,
+    "seen": 1794269925.479762,
+    "ast_hash": "3ecc59626820aab557b331f94bf7db42",
     "semantic_hash": ""
   },
   "database/migrations/2026_11_08_000006_create_mcp_tables.php": {
@@ -2692,9 +2692,9 @@
     "semantic_hash": ""
   },
   "tests/Feature/Agents/McpServerTest.php": {
-    "mtime": 1794260980.3266416,
-    "seen": 1794261633.3821163,
-    "ast_hash": "f21dc95fe65927e5da6ecdc064e33eae",
+    "mtime": 1794269273.9142544,
+    "seen": 1794269925.494132,
+    "ast_hash": "3865caf30a104fcf7bba4b98b1e55967",
     "semantic_hash": ""
   },
   "tests/Unit/Simulation/ChartSeriesTest.php": {
@@ -3538,9 +3538,9 @@
     "semantic_hash": ""
   },
   "app/Market/ScalpingRepository.php": {
-    "mtime": 1794256020.1337717,
-    "seen": 1794256860.3136897,
-    "ast_hash": "88f3215778efd315ac33600739b41a20",
+    "mtime": 1794269315.7044315,
+    "seen": 1794269925.4236357,
+    "ast_hash": "248174446f23bbcd202bb5b867b7b5bb",
     "semantic_hash": ""
   },
   "database/migrations/2026_11_09_000015_create_scalping_tables.php": {
@@ -3814,9 +3814,9 @@
     "semantic_hash": ""
   },
   "docs/universe.md": {
-    "mtime": 1794268179.8400824,
-    "seen": 1794268673.7185488,
-    "ast_hash": "43e075c2fbfe7a98085570fccbdaf9cd",
+    "mtime": 1794269412.3115468,
+    "seen": 1794269925.5309877,
+    "ast_hash": "654ae3ced53ca7dfe6690af12ba6826e",
     "semantic_hash": ""
   },
   "app/Market/Console/FillDailyStats.php": {
@@ -3868,9 +3868,9 @@
     "semantic_hash": ""
   },
   "app/Market/Instruments/ResearchUniverse.php": {
-    "mtime": 1794263107.1365974,
-    "seen": 1794263853.4955215,
-    "ast_hash": "2ea931aec7bde03c8c433e9313e88f37",
+    "mtime": 1794269168.0088658,
+    "seen": 1794269925.4207714,
+    "ast_hash": "4a8ce41e81e00c99cc2c10f2ed6db667",
     "semantic_hash": ""
   },
   "database/migrations/2026_11_09_000023_create_universe_members_table.php": {
@@ -3964,9 +3964,9 @@
     "semantic_hash": ""
   },
   "app/Market/LiquidationRepository.php": {
-    "mtime": 1794256934.7437344,
-    "seen": 1794257535.1126535,
-    "ast_hash": "ebe10d05e74bbbd6a0e18410c38a0d45",
+    "mtime": 1794269315.7044315,
+    "seen": 1794269925.4217048,
+    "ast_hash": "6a54e12174ec815a002309c55cb7844e",
     "semantic_hash": ""
   },
   "app/Market/Stream/LiquidationCollector.php": {
@@ -4105,6 +4105,48 @@
     "mtime": 1794267631.7942665,
     "seen": 1794268673.7038674,
     "ast_hash": "d90f986108c5582f3cd185029dc10d23",
+    "semantic_hash": ""
+  },
+  "app/Agents/Mcp/BoundedRead.php": {
+    "mtime": 1794268984.3501644,
+    "seen": 1794269925.3849692,
+    "ast_hash": "12b93db06cc2cc9a8f87cecbe71ace70",
+    "semantic_hash": ""
+  },
+  "app/Agents/Mcp/QueryTooSlow.php": {
+    "mtime": 1794268985.7821052,
+    "seen": 1794269925.3849845,
+    "ast_hash": "8a9d9e03a6a927e4d7964fef3f8927b0",
+    "semantic_hash": ""
+  },
+  "app/Agents/Mcp/Refused.php": {
+    "mtime": 1794268987.0738213,
+    "seen": 1794269925.3849947,
+    "ast_hash": "5e400bbbc7caa4b2eb275975fddca559",
+    "semantic_hash": ""
+  },
+  "app/Agents/Mcp/SeriesWindow.php": {
+    "mtime": 1794269000.0050428,
+    "seen": 1794269925.3850048,
+    "ast_hash": "80722ff3b36fd8e73732a7b85d3870a3",
+    "semantic_hash": ""
+  },
+  "app/Agents/Mcp/Tools/GetDepth.php": {
+    "mtime": 1794269019.360095,
+    "seen": 1794269925.385956,
+    "ast_hash": "be21c5002a534ab2bc1a915b20236fe4",
+    "semantic_hash": ""
+  },
+  "app/Agents/Mcp/Tools/GetLiquidations.php": {
+    "mtime": 1794269028.8162487,
+    "seen": 1794269925.3866072,
+    "ast_hash": "62a0ca70cd651585d59e7f8f7f785016",
+    "semantic_hash": ""
+  },
+  "app/Agents/Mcp/Tools/ListUniverse.php": {
+    "mtime": 1794269010.0935004,
+    "seen": 1794269925.3872557,
+    "ast_hash": "4da47f919f022b06713eb9155fbf1c5e",
     "semantic_hash": ""
   },
   "package-lock.json": {

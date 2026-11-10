@@ -161,14 +161,14 @@ final readonly class ResearchUniverse
     /**
      * The members of a month, by rank, with what the screen shows of them.
      *
-     * @return list<object{rank: int, symbol: string, status: string, listed_at: string|null, quote_volume_30d: string}>
+     * @return list<object{instrument_id: int, rank: int, symbol: string, status: string, listed_at: string|null, delisted_at: string|null, quote_volume_30d: string}>
      */
     public function membersOf(CarbonImmutable $month): array
     {
-        /** @var list<object{rank: int, symbol: string, status: string, listed_at: string|null, quote_volume_30d: string}> */
+        /** @var list<object{instrument_id: int, rank: int, symbol: string, status: string, listed_at: string|null, delisted_at: string|null, quote_volume_30d: string}> */
         return array_values($this->db->table('universe_members as u')->join('instruments as i', 'i.id', '=', 'u.instrument_id')
             ->where('u.month', $month->utc()->startOfMonth()->format('Y-m-d'))->orderBy('u.rank')
-            ->get(['u.rank', 'i.symbol', 'i.status', 'i.listed_at', 'u.quote_volume_30d'])->all());
+            ->get(['i.id as instrument_id', 'u.rank', 'i.symbol', 'i.status', 'i.listed_at', 'i.delisted_at', 'u.quote_volume_30d'])->all());
     }
 
     /** @return list<string> every instrument that was ever a member, by symbol */

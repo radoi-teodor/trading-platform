@@ -60,6 +60,32 @@ final readonly class CandleRepository
         return is_string($latest) ? CarbonImmutable::parse($latest)->utc() : null;
     }
 
+    /**
+     * The first and last stored 1-minute candle of every instrument that has one, or of those of $ids. Read from the
+     * index, two rows an instrument, never by grouping the candles: that takes minutes over the whole history.
+     *
+     * @param  list<int>|null  $ids
+     * @return array<int, array{CarbonImmutable, CarbonImmutable}> by instrument id
+     */
+    public function coverage(?array $ids = null): array
+    {
+        if ($ids === []) {
+            return [];
+        }
+
+        $only = $ids === null ? '' : 'where i.id in ('.implode(', ', array_fill(0, count($ids), '?')).')';
+        $edge = fn (string $order): string => "cross join lateral (select open_time from candles where instrument_id = i.id and timeframe = '1m' order by open_time {$order} limit 1)";
+        $coverage = [];
+
+        foreach ($this->db->select("select i.id, f.open_time as first, l.open_time as last from instruments i {$edge('asc')} f {$edge('desc')} l {$only}", $ids ?? []) as $row) {
+            if (is_object($row)) {
+                $coverage[Rows::int($row, 'id')] = [Rows::time($row, 'first'), Rows::time($row, 'last')];
+            }
+        }
+
+        return $coverage;
+    }
+
     /** @return list<Candle> candles with $from <= open time <= $to, oldest first */
     public function range(Instrument $instrument, Timeframe $timeframe, CarbonImmutable $from, CarbonImmutable $to): array
     {

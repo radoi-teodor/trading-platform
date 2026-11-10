@@ -630,6 +630,10 @@ universe runs have six hours, and a background backtest or grid reads at most 40
 Read-only tools `list_universe`, `screen_market`, `get_depth`, `get_liquidations` and `get_listing_stats`, with row
 and window caps, a separate rate limit for heavy tools and a statement timeout. Building the universe and importing
 data stay with the operator.
+Decided while building it (2026-11-10): a series has at most 1,000 rows and is refused with its count beyond that,
+never cut short; the statement timeout is 5 seconds (`MCP_STATEMENT_TIMEOUT_MS`) and covers waiting for a lock;
+liquidations over a window the stream never heard are refused, not answered with zeros; and `tools/list` gives
+every tool in its first page, because the sixteenth tool fell onto a second page a client may never ask for.
 
 **D-94. Ten positions, raised by the operator** (2026-11-09, accepted with the Phase 7 plan; the operator chose to
 plan for 10 positions)

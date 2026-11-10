@@ -7,13 +7,16 @@ namespace App\Agents\Mcp;
 use App\Agents\Mcp\Tools\CompileStrategy;
 use App\Agents\Mcp\Tools\DslReference;
 use App\Agents\Mcp\Tools\GetCandles;
+use App\Agents\Mcp\Tools\GetDepth;
 use App\Agents\Mcp\Tools\GetFunding;
 use App\Agents\Mcp\Tools\GetIndicators;
 use App\Agents\Mcp\Tools\GetJob;
+use App\Agents\Mcp\Tools\GetLiquidations;
 use App\Agents\Mcp\Tools\GetStrategy;
 use App\Agents\Mcp\Tools\ListInstruments;
 use App\Agents\Mcp\Tools\ListStrategies;
 use App\Agents\Mcp\Tools\ListTrials;
+use App\Agents\Mcp\Tools\ListUniverse;
 use App\Agents\Mcp\Tools\RunBacktest;
 use App\Agents\Mcp\Tools\RunGrid;
 use App\Agents\Mcp\Tools\SaveStrategy;
@@ -39,11 +42,17 @@ promote a strategy: the operator decides that.
 TEXT)]
 final class TradingServer extends Server
 {
+    /** Every tool in the first page of tools/list: an agent that does not ask for the next page still sees them all. */
+    public int $defaultPaginationLength = 50;
+
     protected array $tools = [
         ListInstruments::class,
         GetCandles::class,
         GetIndicators::class,
         GetFunding::class,
+        ListUniverse::class,
+        GetDepth::class,
+        GetLiquidations::class,
         DslReference::class,
         CompileStrategy::class,
         SaveStrategy::class,

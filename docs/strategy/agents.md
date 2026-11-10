@@ -72,7 +72,7 @@ that touches money is deterministic code.
 
 | Actor | Runs | Reads | Writes | May | May not |
 |-------|------|-------|--------|-----|---------|
-| Research agent (external, over MCP) | When the operator works with it | Candles, indicators, funding, the DSL reference, saved versions, backtest and grid results, trials | Draft strategy versions, simulation runs | Compile, save drafts, backtest, grid, walk-forward | Promote anything; edit risk limits; place, change or cancel orders |
+| Research agent (external, over MCP) | When the operator works with it | Candles, indicators, funding, order book depth, liquidations, the research universe, the DSL reference, saved versions, backtest and grid results, trials | Draft strategy versions, simulation runs | Compile, save drafts, backtest, grid, walk-forward | Promote anything; edit risk limits; place, change or cancel orders |
 | Operator | Any time | Everything | Everything, through commands and the UI | Promote, resume, raise risk with the delay of D-19 | Place orders directly (only through strategies or flatten) |
 | Risk engine and gates | Every engine event; on promotion | Everything | Verdicts, halts, demotions, gate reports | Halt, demote, reject, promote a draft to Backtested when every gate passes | Promote to any live stage (D-16) |
 
@@ -125,6 +125,8 @@ to paper, paper goes back to draft with a review note. The operator is told why,
 - Every backtest the agent runs is recorded and counted: the number of trials of a family feeds the deflated
   Sharpe ratio (`docs/simulation.md`), so trying many variants raises the bar each one must clear.
 - Each MCP token may make 60 calls a minute and keep 2 simulation runs waiting at a time (D-63).
+- A series read over MCP has at most 1,000 rows, and no statement of a research tool holds the database for more
+  than 5 seconds (D-93, `docs/universe.md`, section 6).
 - There is no automatic regeneration of strategies: the legacy loop that asked for a new strategy every time one
   finished is forbidden.
 

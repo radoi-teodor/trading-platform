@@ -9,6 +9,7 @@ use App\Market\Models\Instrument;
 use App\Market\Persistence\Rows;
 use App\Support\Clock\Clock;
 use App\Support\Number\Decimal;
+use App\Support\Timeframe;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\ConnectionInterface;
 
@@ -41,6 +42,27 @@ final readonly class LiquidationRepository
         return array_values($this->db->table('liquidation_minutes')->where('instrument_id', $instrument->id)
             ->whereBetween('open_time', [Rows::timestamp($from), Rows::timestamp($to)])->orderBy('open_time')->get()
             ->map(fn (object $r): Liquidations => self::row($r))->all());
+    }
+
+    /**
+     * The liquidations from $from to $to summed over each step of $every, oldest first; a step with no stored minute
+     * is left out.
+     *
+     * @return list<Liquidations>
+     */
+    public function sums(Instrument $instrument, CarbonImmutable $from, CarbonImmutable $to, Timeframe $every): array
+    {
+        return array_values($this->db->table('liquidation_minutes')->where('instrument_id', $instrument->id)
+            ->whereBetween('open_time', [Rows::timestamp($from), Rows::timestamp($to)])
+            ->selectRaw(Rows::step('open_time').' as open_time, sum(long_count) as long_count, sum(long_notional) as long_notional, sum(short_count) as short_count, sum(short_notional) as short_notional', Rows::stepBindings($every))
+            ->groupByRaw('1')->orderByRaw('1')->get()
+            ->map(fn (object $r): Liquidations => self::row($r))->all());
+    }
+
+    /** How many minutes from $from to $to the stream heard whole. */
+    public function heard(CarbonImmutable $from, CarbonImmutable $to): int
+    {
+        return $this->db->table('liquidation_coverage')->whereBetween('minute', [Rows::timestamp($from), Rows::timestamp($to)])->count();
     }
 
     public static function row(object $r): Liquidations

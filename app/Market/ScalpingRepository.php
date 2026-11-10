@@ -15,6 +15,7 @@ use App\Market\Models\Instrument;
 use App\Market\Persistence\Rows;
 use App\Support\Clock\Clock;
 use App\Support\Number\Decimal;
+use App\Support\Timeframe;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\ConnectionInterface;
 use UnexpectedValueException;
@@ -130,6 +131,21 @@ final readonly class ScalpingRepository
     public function depth(Instrument $instrument, CarbonImmutable $from, CarbonImmutable $to): array
     {
         return array_map(self::depthRow(...), $this->rows('book_depth', $instrument, $from, $to));
+    }
+
+    /**
+     * The depth from $from to $to as the average of the stored rows of each step of $every, oldest first, to two
+     * decimals; a step with no row is left out.
+     *
+     * @return list<BookDepth>
+     */
+    public function depthAverages(Instrument $instrument, CarbonImmutable $from, CarbonImmutable $to, Timeframe $every): array
+    {
+        $averages = 'round(avg(bid_1), 2) as bid_1, round(avg(bid_2), 2) as bid_2, round(avg(bid_5), 2) as bid_5, round(avg(ask_1), 2) as ask_1, round(avg(ask_2), 2) as ask_2, round(avg(ask_5), 2) as ask_5';
+
+        return array_map(self::depthRow(...), array_values($this->db->table('book_depth')->where('instrument_id', $instrument->id)
+            ->whereBetween('time', [Rows::timestamp($from), Rows::timestamp($to)])
+            ->selectRaw(Rows::step('time').' as time, '.$averages, Rows::stepBindings($every))->groupByRaw('1')->orderByRaw('1')->get()->all()));
     }
 
     public static function depthRow(object $r): BookDepth

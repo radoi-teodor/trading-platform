@@ -129,9 +129,21 @@ Status: the document, the compiler, the engine batch, the backtest, the grid and
 
 ## 6. Research over MCP (D-93)
 
-Read-only tools: `list_universe`, `screen_market`, `get_depth`, `get_liquidations`, `get_listing_stats`, with row and
-window caps and their own rate limit. Agents read, save drafts and run simulations; they do not import data or
-change the universe.
+Read-only tools, each marked read-only to the agent's client. Agents read, save drafts and run simulations; they
+do not import data or change the universe, and a tool that finds nothing says which operator command brings it.
+
+| Tool | Answers | Bounds |
+|------|---------|--------|
+| `list_universe` | The members of the month of a day, by rank, as they were ranked then: symbol, status, listing and delisting time, 30-day quote volume, first and last stored minute. Without a day, the last month built | One month an answer; a month outside what was built is refused |
+| `get_depth` | Bid and ask notional within 1, 2 and 5 % of the price: the stored 5-minute rows, or their average over 15m, 1h, 4h or 1d steps (two decimals), and the days of the window with no row | 1,000 rows |
+| `get_liquidations` | Long and short liquidations, counted and in quote notional: the stored minutes, or their sum over 5m to 1d steps, the days the stream was not heard whole, and a note that the numbers are a lower bound | 1,000 rows; a window the stream never heard is refused, never answered with zeros |
+| `list_instruments` | Every instrument with candles and its first and last stored minute, read from the index (two rows an instrument) instead of grouping every candle | |
+| `screen_market`, `get_listing_stats` | Ranking the market from `daily_stats`, and what a coin did after its listing | Not built yet; with them comes a rate limit of their own |
+
+A series is asked for with `from`, `to` (exclusive) and `every`; more than 1,000 rows is refused with the count, so
+the agent shortens the window or lengthens the step. Every statement of these tools runs under
+`MCP_STATEMENT_TIMEOUT_MS` (5 seconds), waiting for a lock included: a read behind a long import ends with "The
+data took longer than 5 s to read", not with a held connection. `tools/list` answers every tool in its first page.
 
 ## 7. Positions and risk (D-94)
 
