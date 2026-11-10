@@ -14,6 +14,7 @@ use App\Market\Feed\DatabaseCandleFeed;
 use App\Market\FundingRateRepository;
 use App\Market\Instruments\AssumedRules;
 use App\Market\Instruments\StoredInstruments;
+use App\Market\Instruments\TradingBreaks;
 use App\Market\LiquidationRepository;
 use App\Market\Models\Instrument;
 use App\Market\Quality\QualityCheck;
@@ -233,9 +234,11 @@ trait PreparesBacktests
         CarbonImmutable $warmupFrom, CarbonImmutable $from, CarbonImmutable $to, array $stops,
     ): ?string {
         $runs = $strategy instanceof UniverseStrategy ? $strategy->schedule()->runs() : null;
+        $breaks = $this->laravel->make(TradingBreaks::class);
 
         foreach ($symbols as $symbol) {
-            $spans = [[$warmupFrom, $to]];
+            // Each span with the moment the instrument can first be held in it.
+            $spans = [[$warmupFrom, $to, $warmupFrom]];
 
             if ($runs !== null) {
                 $spans = [];
@@ -246,18 +249,41 @@ trait PreparesBacktests
                     $end = min($to->getTimestamp(), $after->addDay()->getTimestamp(), $stop->getTimestamp());
 
                     if ($start->getTimestamp() < $end) {
-                        $spans[] = [$start, CarbonImmutable::createFromTimestampUTC($end)];
+                        $spans[] = [$start, CarbonImmutable::createFromTimestampUTC($end), $first > $from ? $first : $from];
                     }
                 }
             }
 
-            foreach ($spans as [$start, $end]) {
+            foreach ($spans as [$start, $end, $held]) {
                 $problem = $this->coverage($quality, $symbol, $start, $end) ?? $this->fundingCoverage($funding, $symbol, $start, $end)
-                    ?? ($from < $end ? $this->scalpingCoverage($strategy, $symbol, $start > $from ? $start : $from, $end) : null);
+                    ?? ($from < $end ? $this->scalpingCoverage($strategy, $symbol, $start > $from ? $start : $from, $end) : null)
+                    ?? $this->breakProblem($breaks, $symbol, $held, $end);
 
                 if ($problem !== null) {
                     return "{$symbol}: {$problem}";
                 }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Why $symbol cannot be held over [$from, $to), or null: it stopped trading for a while in it (D-89). The engine
+     * knows a listing and a delisting, not a market that closes and opens again with a position in it, so such a run
+     * is refused. A break before that, in the warm-up of a universe's member, only starts its history again.
+     */
+    protected function breakProblem(TradingBreaks $breaks, Symbol $symbol, CarbonImmutable $from, CarbonImmutable $to): ?string
+    {
+        $instrument = self::instrument($symbol);
+
+        foreach ($instrument === null ? [] : $breaks->of($instrument) as $break) {
+            if ($break['from'] < $to && $break['to'] > $from) {
+                return sprintf(
+                    'it did not trade from %s to %s, and a run over a break in trading is not supported',
+                    $break['from']->format('Y-m-d H:i'),
+                    $break['to']->format('Y-m-d H:i'),
+                );
             }
         }
 

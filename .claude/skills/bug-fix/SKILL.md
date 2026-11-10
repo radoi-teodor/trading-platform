@@ -190,6 +190,12 @@ Add to the list when a fix reveals a new one.
   `/market` (`wss://fstream.binance.com/market/stream?...`). A silent stream looks like a quiet market; check the
   heartbeat's `last_candle_open` and probe the URL directly before blaming the location. Search: stream hosts in
   `config/exchanges.php`.
+- **A symbol delisted and listed again.** AERGO/USDT:USDT did not trade from 2025-03-28 to 2025-04-16 11:00. Its
+  archives hold flat candles without volume for some of those days and nothing before the relisting minute, so a
+  two-year universe backtest was refused for a 660 minute gap that no backfill can fill. Such a time is a break in
+  trading (`instrument_breaks`, `App\Market\Instruments\TradingBreaks`, D-89): do not fill it, and do not read its
+  flat candles as prices. Search: a gap that `market:check` reports from a midnight on for one symbol only;
+  `daily_stats` rows with `trades = 0` between days with trades.
 - **Packages that bring their own `App\` namespace.** `laravel/pint` maps `App\` to its own internal app, which
   merged into ours. Such tools live in `tools/<name>` with their own composer project. Search:
   `grep "'App\\\\\\\\'" vendor/composer/autoload_psr4.php` must list only `app/`.

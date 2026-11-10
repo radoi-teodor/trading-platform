@@ -18,6 +18,13 @@ reads all of it over MCP. Decisions: D-89 to D-94.
   crypto perpetuals only: USDC and BUSD duplicates and contracts on stocks or gold are left out.
 - Minutes before `listed_at` and from `delisted_at` on are not gaps. Backfill does not ask REST for them,
   `market:check` does not report them, and the feed does not expect them.
+- A break in trading. Binance has delisted a perpetual and listed it again under the same symbol: AERGO/USDT:USDT
+  did not trade from 2025-03-28 to 2025-04-16 11:00, the only such case in the stored days of every perpetual. The
+  archives hold flat candles without volume for some of those days and nothing for the hours before the relisting.
+  `instrument_breaks` records the time (`App\Market\Instruments\TradingBreaks`): two days with trades in
+  `daily_stats` that do not follow each other, set to the minute by the stored candles, worked out again after
+  every candle import. Its minutes are not gaps, `market:check` names it, and the feed does not hand out a candle
+  stored inside it. The flat candles stay stored; they are never read as prices.
 
 ## 2. The research universe (D-89)
 
@@ -95,6 +102,11 @@ exits:
 - A member is needed around its months as a member: from a month before them, which is its warmup as the import
   brings it, to a day after them, where what is held in an instrument that left is closed, and not past the moment
   it stopped trading. A gap inside that refuses the run, as for any instrument.
+- A run that could hold an instrument across a break in trading is refused: the engine knows a listing and a
+  delisting, not a market that closes and opens again with a position in it. For a strategy that names its
+  instruments that is a break anywhere from the warm-up on; for a universe's member, a break from its first month as
+  a member (or the start of the run) on. A break before that, in the member's warm-up, only starts its history
+  again, as a gap does.
 - A perpetual delisted before its exchange filters were ever read has them worked out from its candles
   (`App\Market\Instruments\AssumedRules`: the finest decimal of its prices and volumes in its last stored month,
   a least notional of 5), and the report lists it under `data.filters_assumed_before`.
@@ -173,6 +185,6 @@ it looks.
 
 | Work | Estimate |
 |------|----------|
-| Import of the top 50 from 2024-11, point in time (300 members, 435 spans) | about 15 GB in PostgreSQL, several hours, once |
+| Import of the top 50 from 2024-11, point in time (300 members, 435 spans) | 70.6 million candles, about 13.5 GB in PostgreSQL, about 4.5 hours, once (measured 2026-11-10 on the operator's machine) |
 | Backtest of a universe strategy over 2 years | about 25 minutes in the engine (measured on synthetic candles, section 5), plus the reading of 52.6 million candles; under an hour expected, measured in step 8 |
 | Gates | many hours; run them in the background |

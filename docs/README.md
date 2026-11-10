@@ -71,7 +71,9 @@ every run: a portable PostgreSQL 17 in `%LOCALAPPDATA%\TradingPlatform` (no serv
 databases `trading`, `trading_test` and `trading_e2e`), `.env` with the cache and the default queue on the
 database instead of Redis, the dependencies, the app key, the front-end build and pending migrations. Then it runs
 the web process on http://127.0.0.1:8000, the simulation worker and the notifications worker in one window, and
-restarts one that dies. Ctrl+C stops them and PostgreSQL; `.\start-local.ps1 -Stop` does it after the window was
+restarts one that dies. Only one that fails: a process that ends without an error is left stopped, so
+`php artisan queue:restart` stops both workers for good. To give the workers new code, stop the window and start
+it again. Ctrl+C stops them and PostgreSQL; `.\start-local.ps1 -Stop` does it after the window was
 closed. `-Stream` adds the market data streams and the scheduler, `-Scheduler` the scheduler alone, `-Engine paper`
 an engine. The processes it starts run with `memory_limit=2G`, through an ini file in
 `%LOCALAPPDATA%\TradingPlatform\php`, since PHP's usual 128 MB is too little for backtests over months of 1-minute

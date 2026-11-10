@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Market\Quality;
 
+use App\Market\Instruments\TradingBreaks;
 use App\Market\Models\Instrument;
 use App\Market\Persistence\Rows;
 use App\Support\Number\Decimal;
@@ -23,7 +24,7 @@ final readonly class QualityCheck
 
     private const string OUTLIER_FRACTION = '0.05';
 
-    public function __construct(private ConnectionInterface $db) {}
+    public function __construct(private ConnectionInterface $db, private TradingBreaks $breaks) {}
 
     public function run(Instrument $instrument, CarbonImmutable $from, CarbonImmutable $to): QualityReport
     {
@@ -32,6 +33,8 @@ final readonly class QualityCheck
         $to = Timeframe::OneMinute->openTimeContaining($instrument->delisted_at === null ? $to : $to->min($instrument->delisted_at->subMinute()));
         $first = $from->getTimestamp();
         $last = $to->getTimestamp();
+        // Nor are the minutes of a break in trading, and a candle stored in one is not a price: it is passed over.
+        $breaks = $this->breaks->among([$instrument->id])[$instrument->id] ?? [];
 
         // One pass over the rows, a day at a time, so that any window fits in memory (two years are a million rows).
         $stored = 0;
@@ -41,15 +44,16 @@ final readonly class QualityCheck
         $evaluated = 0;
 
         foreach ($this->rows($instrument, $first, $last) as [$time, $close, $zeroVolume]) {
-            $stored++;
-
-            if ($time > $expected) {
-                $gaps[] = self::range($expected, $time - 60);
+            if (TradingBreaks::covers($breaks, $time)) {
+                continue;
             }
+
+            $stored++;
+            array_push($gaps, ...self::missing($expected, $time, $breaks));
 
             $expected = $time + 60;
 
-            if ($runStart !== null && (! $zeroVolume || $previous + 60 !== $time)) {
+            if ($runStart !== null && $previous !== null && (! $zeroVolume || $previous + 60 !== $time)) {
                 $this->closeRun($runs, $runStart, $previous);
                 $runStart = null;
             }
@@ -69,11 +73,12 @@ final readonly class QualityCheck
 
         $this->evaluateOutliers($window, $evaluated, $outliers, true);
 
-        if ($expected <= $last) {
-            $gaps[] = self::range($expected, $last);
-        }
-
+        array_push($gaps, ...self::missing($expected, $last + 60, $breaks));
         $expectedMinutes = intdiv($last - $first, 60) + 1;
+
+        foreach ($breaks as [$stopped, $resumed]) {
+            $expectedMinutes -= max(0, intdiv(min($resumed, $last + 60) - max($stopped, $first), 60));
+        }
 
         return new QualityReport(
             expectedMinutes: $expectedMinutes,
@@ -108,6 +113,35 @@ final readonly class QualityCheck
                 ];
             }
         }
+    }
+
+    /**
+     * The minutes from $from up to $until that are in no break, as ranges.
+     *
+     * @param  list<array{int, int}>  $breaks  oldest first
+     * @return list<array{from: CarbonImmutable, to: CarbonImmutable}>
+     */
+    private static function missing(int $from, int $until, array $breaks): array
+    {
+        $gaps = [];
+
+        foreach ($breaks as [$stopped, $resumed]) {
+            if ($resumed <= $from || $stopped >= $until) {
+                continue;
+            }
+
+            if ($stopped > $from) {
+                $gaps[] = self::range($from, $stopped - 60);
+            }
+
+            $from = $resumed;
+        }
+
+        if ($from < $until) {
+            $gaps[] = self::range($from, $until - 60);
+        }
+
+        return $gaps;
     }
 
     /** @return array{from: CarbonImmutable, to: CarbonImmutable} */

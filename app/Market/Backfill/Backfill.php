@@ -21,6 +21,7 @@ use App\Market\Data\PriceMinute;
 use App\Market\Data\TradeFlow;
 use App\Market\Data\UpsertResult;
 use App\Market\FundingRateRepository;
+use App\Market\Instruments\TradingBreaks;
 use App\Market\Models\Instrument;
 use App\Market\ScalpingRepository;
 use App\Support\Clock\Clock;
@@ -45,6 +46,7 @@ final readonly class Backfill
         private FundingRateRepository $fundingRates,
         private Clock $clock,
         private ScalpingRepository $scalping,
+        private TradingBreaks $breaks,
     ) {}
 
     /**
@@ -136,6 +138,9 @@ final readonly class Backfill
         } catch (BinanceRequestFailed|ChecksumMismatch|InvalidArgumentException|UnexpectedValueException $failure) {
             return new BackfillReport($steps, $failure->getMessage());
         }
+
+        // A symbol delisted and listed again: what its days show as a break is set to the minute by the new candles.
+        $this->breaks->find($instrument);
 
         return new BackfillReport($steps, null);
     }

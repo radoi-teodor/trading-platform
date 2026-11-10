@@ -45,6 +45,23 @@ it('does not count minutes before the listing or from the delisting as gaps (D-8
         ->and($report->gaps)->toBe([]);
 });
 
+it('does not count the minutes of a break in trading as gaps, nor the candles stored in it (D-89)', function (): void {
+    $btc = qualityInstrument();
+    // Delisted at minute 3 and listed again at minute 8: the archive holds flat candles for a part of the break.
+    DB::table('instrument_breaks')->insert(['instrument_id' => $btc->id, 'stopped_at' => CandleFactory::time(3), 'resumed_at' => CandleFactory::time(8)]);
+    app(CandleRepository::class)->upsert($btc, CandleSource::Archive, [
+        CandleFactory::at(0), CandleFactory::at(1), CandleFactory::at(3, '100', '0'), CandleFactory::at(4, '100', '0'), CandleFactory::at(8), CandleFactory::at(10),
+    ]);
+
+    $report = app(QualityCheck::class)->run($btc, CandleFactory::time(0), CandleFactory::time(10));
+
+    expect($report->expectedMinutes)->toBe(6)
+        ->and($report->storedMinutes)->toBe(4)
+        ->and($report->missingMinutes)->toBe(2)
+        ->and(array_map(fn (array $gap): string => $gap['from']->format('H:i').'-'.$gap['to']->format('H:i'), $report->gaps))->toBe(['00:02-00:02', '00:09-00:09'])
+        ->and($report->zeroVolumeRuns)->toBe([]);
+});
+
 it('reports missing minutes as ranges', function (): void {
     $btc = qualityInstrument();
     storeMinutes($btc, [0, 1, 2, 5, 6, 9]);
@@ -107,6 +124,15 @@ it('exits with an error code when a gap is found', function (): void {
 
     expect(Artisan::call('market:check', ['symbol' => 'BTC/USDT', '--from' => '2026-10-01', '--to' => '2026-10-01 00:02']))->toBe(1)
         ->and(Artisan::output())->toContain('1 missing')->toContain('00:01');
+});
+
+it('names a break in trading inside the checked window and does not fail for it (D-89)', function (): void {
+    $btc = qualityInstrument();
+    storeMinutes($btc, [0, 1, 5]);
+    DB::table('instrument_breaks')->insert(['instrument_id' => $btc->id, 'stopped_at' => CandleFactory::time(2), 'resumed_at' => CandleFactory::time(5)]);
+
+    expect(Artisan::call('market:check', ['symbol' => 'BTC/USDT', '--from' => '2026-10-01', '--to' => '2026-10-01 00:05']))->toBe(0)
+        ->and(Artisan::output())->toContain('3 of 3 minutes, 0 missing')->toContain('did not trade 2026-10-01 00:02 to 2026-10-01 00:05');
 });
 
 it('finds gaps, zero-volume runs and outliers across the days it reads one at a time', function (): void {

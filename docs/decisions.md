@@ -601,6 +601,14 @@ the public archive listing for delisted ones. `instruments` gains `listed_at`, `
 A research universe is a rule (top N USDT-quoted crypto perpetuals by 30-day quote volume, re-ranked monthly),
 stored as dated `universe_members`, so a backtest sees only the members of its time. Minutes outside an
 instrument's lifetime are not gaps; flat archive candles after a delisting are cut. `docs/universe.md`.
+Added 2026-11-10: a break in trading. The first backtest over the real universe was refused for 660 missing
+minutes of AERGO/USDT:USDT, which Binance delisted after 2025-03-27 and listed again on 2025-04-16 at 11:00 under
+the same symbol; no backfill can bring those minutes, and the archives hold flat candles without volume for the days
+before them. `instrument_breaks` records such a time, found from `daily_stats` (days with trades that do not follow
+each other) and set to the minute by the stored candles after every candle import. Its minutes are not gaps, the
+feed does not hand out candles stored in it, and a run that could hold the instrument across it is refused; a break
+in the warm-up of a universe's member only starts its history again. The engine is unchanged. The flat candles
+already stored are left in place: deleting data is the operator's decision, and nothing reads them as prices.
 
 **D-90. Storage at scale** (2026-11-09, accepted with the Phase 7 plan; settles the revision D-31 promised at 50
 million rows)

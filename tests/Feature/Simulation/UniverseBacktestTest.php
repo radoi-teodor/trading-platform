@@ -69,6 +69,24 @@ it('gives the same report for the same universe run (D-92)', function (): void {
     expect(BacktestRun::query()->pluck('report_hash')->unique())->toHaveCount(1);
 });
 
+it('runs over a member that did not trade for a while before the run, without the candles of the break (D-89)', function (): void {
+    universeFixture();
+    universeBacktest();
+    $whole = data_get(storedReport(BacktestRun::query()->sole()), 'data.candles');
+    BacktestRun::query()->delete();
+    // CCC was delisted and listed again on the day before the run. The archive holds candles for two of the three
+    // hours of the break; none of the three is a gap, and none of its candles reaches the run.
+    $ccc = DB::table('instruments')->where('symbol', 'CCC/USDT:USDT')->value('id');
+    DB::table('instrument_breaks')->insert(['instrument_id' => $ccc, 'stopped_at' => '2026-10-01 06:00:00+00', 'resumed_at' => '2026-10-01 09:00:00+00']);
+    DB::table('candles')->where('instrument_id', $ccc)->whereBetween('open_time', ['2026-10-01 08:00:00+00', '2026-10-01 08:59:00+00'])->delete();
+
+    [$exit, $output] = universeBacktest();
+
+    expect($exit)->toBe(0, $output)
+        ->and($whole)->toBeInt()
+        ->and(data_get(storedReport(BacktestRun::query()->sole()), 'data.candles'))->toBe(is_int($whole) ? $whole - 180 : null);
+});
+
 it('refuses a universe run it cannot answer for', function (Closure $arrange, string $document, string $from, string $to, string $message): void {
     universeFixture();
     $arrange();
@@ -94,6 +112,13 @@ it('refuses a universe run it cannot answer for', function (Closure $arrange, st
             ->whereBetween('open_time', ['2026-10-02 03:00:00+00', '2026-10-02 03:02:00+00'])->delete(),
         UNIVERSE_FIXTURE_DOCUMENT, '2026-10-02', '2026-10-03',
         'CCC/USDT:USDT: 3 minutes missing in 1 gaps, the first from 2026-10-02 03:00 to 2026-10-02 03:02',
+    ],
+    'a member that stopped trading for a while during the run' => [
+        fn () => DB::table('instrument_breaks')->insert([
+            'instrument_id' => DB::table('instruments')->where('symbol', 'CCC/USDT:USDT')->value('id'), 'stopped_at' => '2026-10-02 03:00:00+00', 'resumed_at' => '2026-10-02 05:00:00+00',
+        ]),
+        UNIVERSE_FIXTURE_DOCUMENT, '2026-10-02', '2026-10-03',
+        'CCC/USDT:USDT: it did not trade from 2026-10-02 03:00 to 2026-10-02 05:00, and a run over a break in trading is not supported',
     ],
     'a member with funding missing' => [
         fn () => DB::table('funding_rates')->where('instrument_id', DB::table('instruments')->where('symbol', 'BBB/USDT:USDT')->value('id'))->delete(),

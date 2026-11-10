@@ -55,6 +55,20 @@ function readFeed(array $symbols, string $from, string $to, int $chunkMinutes = 
     )]);
 }
 
+it('does not hand out the candles stored inside a break in trading (D-89)', function (): void {
+    $btc = feedInstrument('BTC/USDT');
+    $eth = feedInstrument('ETH/USDT');
+    storeCandles($btc, array_map(fn (int $m) => CandleFactory::at($m), range(0, 9)));
+    storeCandles($eth, array_map(fn (int $m) => CandleFactory::at($m), range(0, 9)));
+    DB::table('instrument_breaks')->insert(['instrument_id' => $eth->id, 'stopped_at' => CandleFactory::time(3), 'resumed_at' => CandleFactory::time(8)]);
+
+    $minutes = readFeed(['BTC/USDT', 'ETH/USDT'], '2026-10-01 00:00', '2026-10-01 00:10');
+    $withEth = array_values(array_filter(array_map(fn (MinuteCandles $m): ?string => isset($m->candles['ETH/USDT']) ? $m->closedAt->format('H:i') : null, $minutes)));
+
+    expect($minutes)->toHaveCount(10)
+        ->and($withEth)->toBe(['00:01', '00:02', '00:03', '00:09', '00:10']);
+});
+
 it('streams a day of 50 instruments without holding the day in memory (D-90)', function (): void {
     $symbols = [];
 

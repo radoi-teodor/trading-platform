@@ -6,6 +6,7 @@ use App\Market\Backfill\Backfill;
 use App\Market\Backfill\BackfillReport;
 use App\Market\Data\InstrumentStatus;
 use App\Market\Data\MarketType;
+use App\Market\Instruments\TradingBreaks;
 use App\Market\Models\Instrument;
 use App\Support\Clock\Clock;
 use App\Support\Clock\SimClock;
@@ -104,6 +105,22 @@ it('stores a full monthly archive without holding the month in memory', function
         ->and($report->failure)->toBeNull()
         ->and(DB::table('candles')->count())->toBe(44640)
         ->and(memory_get_peak_usage() - $before)->toBeLessThan(48 * 1024 * 1024);
+});
+
+it('records a break in trading that the instrument\'s days show, once its candles are in (D-89)', function (): void {
+    fakeBinanceForBackfill();
+    app()->instance(Clock::class, new SimClock(CarbonImmutable::parse('2026-11-03 12:00:00', 'UTC')));
+    $instrument = Instrument::register('binance', MarketType::Spot, Symbol::parse('BTC/USDT'), CarbonImmutable::parse('2026-11-03', 'UTC'));
+
+    foreach (['2026-10-30' => 5, '2026-10-31' => 0, '2026-11-01' => 0, '2026-11-02' => 9] as $day => $trades) {
+        DB::table('daily_stats')->insert([
+            'instrument_id' => $instrument->id, 'day' => $day, 'open' => '1', 'high' => '1', 'low' => '1', 'close' => '1', 'volume' => '1', 'quote_volume' => '1', 'trades' => $trades,
+        ]);
+    }
+
+    app(Backfill::class)->candles($instrument, CarbonImmutable::parse('2026-10-01', 'UTC'), CarbonImmutable::parse('2026-11-03 12:00:00', 'UTC'));
+
+    expect(app(TradingBreaks::class)->of($instrument))->toHaveCount(1);
 });
 
 it('starts at the listing, without asking for archives or REST before it (D-89)', function (): void {

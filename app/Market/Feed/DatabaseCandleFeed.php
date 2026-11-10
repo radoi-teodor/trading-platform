@@ -15,6 +15,7 @@ use App\Market\Data\OpenInterest;
 use App\Market\Data\Positioning;
 use App\Market\Data\PriceMinute;
 use App\Market\Data\TradeFlow;
+use App\Market\Instruments\TradingBreaks;
 use App\Market\LiquidationRepository;
 use App\Market\Models\Instrument;
 use App\Market\Persistence\Rows;
@@ -44,6 +45,8 @@ final readonly class DatabaseCandleFeed implements CandleFeed
         // A chunk holds at most about MAX_ROWS candles, whatever the number of instruments (D-90): a day of 50
         // perpetuals held at once was 370 MB. Chunks are whole hours, and never longer than asked.
         $chunkMinutes = max(60, min($this->chunkMinutes, intdiv(intdiv(self::MAX_ROWS, max(1, count($symbolsById))), 60) * 60));
+        // A candle the archive holds inside a break in trading is not a price: it is not handed out (D-89).
+        $breaks = (new TradingBreaks($this->db))->among(array_keys($symbolsById));
 
         for ($chunk = $from; $chunk < $to; $chunk = $chunk->addMinutes($chunkMinutes)) {
             $end = $chunk->addMinutes($chunkMinutes)->min($to);
@@ -51,7 +54,14 @@ final readonly class DatabaseCandleFeed implements CandleFeed
 
             foreach ($this->rows(array_keys($symbolsById), $chunk, $end) as $row) {
                 $candle = CandleRepository::candleFromRow($row);
-                $minutes[$candle->openTime->getTimestamp()][$symbolsById[Rows::int($row, 'instrument_id')]] = $candle;
+                $id = Rows::int($row, 'instrument_id');
+                $time = $candle->openTime->getTimestamp();
+
+                if (isset($breaks[$id]) && TradingBreaks::covers($breaks[$id], $time)) {
+                    continue;
+                }
+
+                $minutes[$time][$symbolsById[$id]] = $candle;
             }
 
             ksort($minutes);

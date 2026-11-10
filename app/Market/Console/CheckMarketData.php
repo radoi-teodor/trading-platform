@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Market\Console;
 
+use App\Market\Instruments\TradingBreaks;
 use App\Market\Instruments\Universe;
 use App\Market\Quality\QualityCheck;
 use App\Support\Clock\Clock;
@@ -25,7 +26,7 @@ final class CheckMarketData extends Command
 
     protected $description = 'Check stored candles for gaps, OHLC violations, zero-volume runs and outliers';
 
-    public function handle(QualityCheck $check, Universe $universe, Clock $clock): int
+    public function handle(QualityCheck $check, Universe $universe, Clock $clock, TradingBreaks $breaks): int
     {
         try {
             $symbols = $this->selectedSymbols($universe);
@@ -48,6 +49,13 @@ final class CheckMarketData extends Command
                 $instrument->symbol, $instrument->market->value, $report->storedMinutes, $report->expectedMinutes,
                 $report->missingMinutes, $report->ohlcViolations, count($report->zeroVolumeRuns), count($report->outliers),
             ));
+
+            // A break in trading inside the window is said, since its minutes are counted neither as expected nor as missing.
+            foreach ($breaks->of($instrument) as $break) {
+                if ($break['from'] <= $to && $break['to'] > $from) {
+                    $this->line("  did not trade {$break['from']->format('Y-m-d H:i')} to {$break['to']->format('Y-m-d H:i')}");
+                }
+            }
 
             foreach (array_slice($report->gaps, 0, self::MAX_LISTED) as $gap) {
                 $this->line("  gap {$gap['from']->format('Y-m-d H:i')} to {$gap['to']->format('Y-m-d H:i')}");
