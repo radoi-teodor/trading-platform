@@ -678,5 +678,6 @@ unimplemented and the docs say so.
 
 | Id | Question | Blocks |
 |----|----------|--------|
+| O-8 | A backtest whose account trips the drawdown halt stays halted to its end, since only the operator lifts a halt (D-16): the two-year run of the cross-sectional example reports under four months of trading and 20 empty months, and its CAGR is spread over the two years (`universe.md`, section 9). Should a report say when it was halted, and should its yearly figures stop there? | Reading any long backtest that reaches the drawdown limit |
 | O-7 | An account running a universe strategy, paper first: the account's process must wait only for the members that trade, take the next month's members while it runs, and the stream must follow about 50 instruments (D-92). | A universe strategy leaving simulation for paper, and so everything after it |
 | O-6 | Pay Binance fees in BNB (25 % off spot)? Needs a small BNB balance whose price moves. | Live cost model (D-28 reads it from the account either way) |

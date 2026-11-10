@@ -127,8 +127,9 @@ exits:
   (`MarketBreakersTest` holds the two together). Measured on 2026-11-10 on the operator's machine, 50 synthetic
   members over 2 days, a 1h strategy, candles from memory: 144,000 candles in 3.6 s, and 4.2 s with two spot
   benchmarks (6.5 s and 9.4 s before). That is about 40,000 candles a second, so the engine's part of the top 50
-  over two years (52.6 million candles) is about 25 minutes; reading them from PostgreSQL comes on top and is
-  measured in step 8.
+  over two years (52.6 million candles) is about 25 minutes; reading them from PostgreSQL comes on top. Measured in
+  step 8 on the stored universe: 72.9 million candles in 1 hour 56 minutes, about 10,500 candles a second, with
+  the reading and the minute breakers of 292 instruments in it (section 9).
 
 ### On an account
 
@@ -141,7 +142,8 @@ is open question O-7.
 
 Status: the document, the compiler, the engine batch, the backtest, the grid and the gates over a universe are done
 (steps 5 and 6), and so are the MCP tools, the server's instructions and the Chart's instrument search (step 7).
-The import of the members and the example strategy are step 8.
+The members are imported and the example strategy has run over two years of them (step 8, section 9). Its gates
+on the real universe have not run: about two days of one worker, and the operator starts them.
 
 ## 6. Research over MCP (D-93)
 
@@ -189,5 +191,38 @@ it looks.
 | Work | Estimate |
 |------|----------|
 | Import of the top 50 from 2024-11, point in time (300 members, 435 spans) | 70.6 million candles, about 13.5 GB in PostgreSQL, about 4.5 hours, once (measured 2026-11-10 on the operator's machine) |
-| Backtest of a universe strategy over 2 years | about 25 minutes in the engine (measured on synthetic candles, section 5), plus the reading of 52.6 million candles; under an hour expected, measured in step 8 |
-| Gates | many hours; run them in the background |
+| Backtest of a universe strategy over 2 years | 1 hour 56 minutes for 292 instruments and 72.9 million candles, about 450 MB of memory (measured 2026-11-10 on the operator's machine, with the local stack running). The estimate was under an hour |
+| Gates | about two days with one worker for the example's 24 parameter sets, estimated from the run above and not measured; run them in the background |
+
+## 9. The example on the real universe (step 8)
+
+`catalog/strategies/xs-momentum.strategy.yaml` is a draft: every four hours it goes long the three members with the
+highest return over 42 candles and short the three with the lowest, with a stop of 2 ATR and 0.3 % of equity at
+risk in each. It is an example of the DSL and was never searched for; nothing saves it to an account, and an
+account refuses a universe strategy (O-7).
+
+`php artisan backtest:run --file=catalog/strategies/xs-momentum.strategy.yaml --from=2024-11-01 --to=2026-11-01`,
+run on 2026-11-10 (report `78bcfc97...`, 10,000 USDT, the account profile's limits):
+
+| | |
+|---|---|
+| Instruments | 292, the members of the 24 months; 26 of them were delisted later |
+| Return | -7.67 % (BTC buy-and-hold over the same time +10.06 %, with a drawdown of 54.1 %) |
+| Maximum drawdown | 10.41 % |
+| Sharpe | -0.96 |
+| Trades | 326 in 69 instruments, 37.7 % won, profit factor 0.80, expectancy -2.35 USDT (95 % interval -5.49 to 0.79) |
+| By side | long: 187 trades, -799.16 USDT; short: 139 trades, +32.58 USDT |
+| Costs | fees 110.33, slippage 109.55, funding received 14.07 USDT |
+| Exits | 234 by the signal, 92 by the stop |
+| Entries refused | 817 for the six positions, 813 by a market breaker, 241 for a liquidation price too close, 3 before a delisting |
+
+It lost, and it stopped early. On 2025-02-24 the equity was 10 % under its peak, the account's drawdown limit
+halted it (`docs/risk-policy.md`, section 1), and a halt is lifted by the operator, whom a backtest does not have:
+the last position closed on 2025-02-26 and the remaining 20 months hold no trade (21,294 entries refused as
+halted). The figures above are those of under four months; the CAGR the report prints (-3.91 %) spreads them over
+two years. Whether a backtest should say more about the time after a halt is open question O-8.
+
+What the run proves is the path, not the strategy: a universe document compiles, ranks the members of each month,
+trades instruments that were later delisted and is stopped by the same limits as any account. The gates for this
+draft have not run on the real universe (`strategy:import`, then `strategy:gates xs-momentum@v1`): they would
+take about two days of one worker and spend the version's hold-out on a draft that loses in-sample.
